@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1067217434942",
+    "project_id": "kine-8c247",
+    "storage_bucket": "kine-8c247.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1067217434942:android:9f568f0d211ce7e7e5546f",
+        "android_client_info": {
+          "package_name": "com.example.kine_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpPJuANliHY_VAA-GCNXDc1TnIBX7hGa8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
