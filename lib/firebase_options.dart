@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'kine-8c247.firebasestorage.app',
     measurementId: 'G-QX0BN91F5N',
   );
+
 }
