@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class IntroScreen extends StatefulWidget {
-  const IntroScreen({super.key});
+class Index extends StatefulWidget {
+  const Index({super.key});
 
   @override
-  State<IntroScreen> createState() => _IntroScreenState();
+  State<Index> createState() => _IndexState();
 }
 
-class _IntroScreenState extends State<IntroScreen>
+class _IndexState extends State<Index>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
@@ -95,7 +95,7 @@ class _IntroScreenState extends State<IntroScreen>
                 // Imagen animada
                 FadeTransition(
                   opacity: _imageAnimation,
-                  child: Image.asset('assets/kinesiology.png', height: 250),
+                  child: Image.asset('kinesiology.png', height: 250),
                 ),
                 const SizedBox(height: 48),
 
