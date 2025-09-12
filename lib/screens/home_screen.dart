@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 //import screens
 import 'package:kine_app/screens/exercises_screen.dart';
-import 'package:kine_app/screens/profile_screen.dart';
 
 
 class HomeScreen extends StatelessWidget {
@@ -23,7 +22,9 @@ class HomeScreen extends StatelessWidget {
           children: [
             Center(child: Text('Contenido de Inicio')),
             ExercisesScreen(),
-            ProfileScreen(),
+
+            Center(child: Text('Contenido de Perfil')),
+
           ],
         ),
         
