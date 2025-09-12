@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 //import screens
 import 'package:kine_app/screens/exercises_screen.dart';
-
+import 'package:kine_app/screens/unkineamigo_index.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -16,18 +16,17 @@ class HomeScreen extends StatelessWidget {
           title: const Text('Mi App con Pestañas'),
           automaticallyImplyLeading: false, // Oculta el botón de "atrás"
         ),
-        
+
         // Aquí se define el contenido de cada pestaña
         body: const TabBarView(
           children: [
-            Center(child: Text('Contenido de Inicio')),
+            IntroScreen(),
             ExercisesScreen(),
 
             Center(child: Text('Contenido de Perfil')),
-
           ],
         ),
-        
+
         // Esta es la clave: el TabBar se mueve a la navegación inferior
         bottomNavigationBar: const TabBar(
           tabs: [
