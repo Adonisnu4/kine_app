@@ -1,29 +1,22 @@
 import 'package:flutter/material.dart';
 
-<<<<<<< Updated upstream
-=======
 //import screens
 import 'package:kine_app/screens/exercises_screen.dart';
 import 'package:kine_app/screens/profile_screen.dart';
 
 
->>>>>>> Stashed changes
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: Text(
-            "Hola", style: TextStyle(color: Colors.white, fontSize: 24)
-          ),
+    return DefaultTabController(
+      length: 3, // Número de pestañas
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Mi App con Pestañas'),
+          automaticallyImplyLeading: false, // Oculta el botón de "atrás"
         ),
-<<<<<<< Updated upstream
-      )
-=======
         
         // Aquí se define el contenido de cada pestaña
         body: const TabBarView(
@@ -43,7 +36,6 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
->>>>>>> Stashed changes
     );
   }
 }

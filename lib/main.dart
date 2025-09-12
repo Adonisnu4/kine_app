@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
             return const HomeScreen(); // O la pantalla que tengas con el BottomNavigationBar
           } else {
             // Usuario no logeado
-            return const LoginPage();
+            return const HomeScreen();
           }
         },
       ),
