@@ -1,8 +1,12 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Importa el servicio de ejercicios
 import 'package:kine_app/services/exercises_service.dart';
+// Importa la nueva pantalla de detalles
+import 'package:kine_app/screens/excersice_detail_screen.dart';
+
 
 class ExercisesScreen extends StatelessWidget {
   const ExercisesScreen({super.key});
@@ -36,23 +40,45 @@ class ExercisesScreen extends StatelessWidget {
           if (snapshot.hasData) {
             final documents = snapshot.data!;
             
+            // Si no hay documentos, muestra un mensaje
+            if (documents.isEmpty) {
+              return const Center(child: Text('No hay ejercicios disponibles.'));
+            }
+
             return ListView.builder(
               itemCount: documents.length,
               itemBuilder: (context, index) {
                 // Obtiene los datos de cada documento
                 final data = documents[index];
                 
+                // Obtiene la URL de la imagen, con un fallback por si no existe
+                final imageUrl = data['imagen'] ?? 'https://via.placeholder.com/150?text=No+Image';
+
                 return Card(
                   elevation: 4,
                   margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    
+                    // CORRECCIÓN APLICADA AQUÍ: Usa SizedBox y ClipRRect para un cuadrado
+                    leading: SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8.0), // Esquinas redondeadas
+                        child: CachedNetworkImage(
+        imageUrl: "https://kineapp.blob.core.windows.net/imagenes/imagen_test.jpg",
+        placeholder: (context, url) => CircularProgressIndicator(),
+        errorWidget: (context, url, error) => Icon(Icons.error),
+                        ),
+                      ),
+                    ),
+
                     title: Text(
-                      // Usa el nombre del ejercicio
                       data['nombre'] ?? 'Nombre no disponible',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                     ),
-                    // Muestra la dificultad y la categoría en el subtítulo
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -66,10 +92,15 @@ class ExercisesScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    leading: const Icon(Icons.fitness_center, color: Colors.blueAccent),
+                    trailing: const Icon(Icons.arrow_forward_ios, color: Colors.blueAccent, size: 18),
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Presionaste en ${data['nombre'] ?? 'un ejercicio'}')),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ExerciseDetailsScreen(
+                            exerciseId: data['id'],
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -78,7 +109,6 @@ class ExercisesScreen extends StatelessWidget {
             );
           }
           
-          // En caso de que no haya datos, muestra un mensaje
           return const Center(child: Text('No hay ejercicios disponibles.'));
         },
       ),

@@ -1,10 +1,13 @@
-// Tu código main.dart no cambia. Es exactamente como lo vimos antes.
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
-import 'screens/login_page.dart';
-import 'screens/home_screen.dart'; // Asegúrate de tener tu pantalla principal aquí
+
+//SCREENSz
+import 'package:kine_app/screens/login_screen.dart';
+import 'package:kine_app/screens/home_screen.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,10 +30,10 @@ class MyApp extends StatelessWidget {
           }
           if (snapshot.hasData) {
             // Usuario logeado
-            return const HomeScreen(); // O la pantalla que tengas con el BottomNavigationBar
+            return const HomeScreen();
           } else {
             // Usuario no logeado
-            return const HomeScreen();
+            return const LoginScreen();
           }
         },
       ),
