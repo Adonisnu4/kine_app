@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:google_sign_in/google_sign_in.dart';
-import 'home_screen.dart';
-import 'register_screen.dart';
+import 'home_screen.dart'; // Asegúrate de que este sea el path correcto a tu HomeScreen
+import 'register_screen.dart'; // Importa la pantalla de registro
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -47,11 +49,13 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     setState(() => _isLoading = true);
 
+
     try {
       await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+
       _navigateToHome();
     } on FirebaseAuthException catch (e) {
       String message;
@@ -230,6 +234,35 @@ class _LoginScreenState extends State<LoginScreen> {
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.email),
               ),
+      } else {
+        message = 'Ocurrió un error. Inténtalo de nuevo.';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Login'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(labelText: 'Correo Electrónico'),
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 16),
@@ -332,6 +365,18 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 40),
 
             // 6. Enlace a la Pantalla de Registro (Sin cambios)
+              decoration: const InputDecoration(labelText: 'Contraseña'),
+              obscureText: true,
+            ),
+            const SizedBox(height: 24),
+            _isLoading
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: _login,
+                    child: const Text('Iniciar Sesión'),
+                  ),
+            const SizedBox(height: 12),
+
             TextButton(
               onPressed: () {
                 Navigator.push(

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'login_screen.dart'; // Asegúrate de que esta pantalla exista para la navegación
+
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -11,6 +13,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+
   // -------------------------
   // 1. CONTROLADORES Y ESTADO
   // -------------------------
@@ -65,11 +68,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+
     setState(() {
       _isLoading = true;
     });
 
     try {
+
       // 1. Creación de la cuenta de autenticación en Firebase Auth
       UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(
@@ -105,6 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Navigator.pop(context); // Vuelve a la pantalla de Login
           _showSnackBar(
             '✅ ¡Registro exitoso! Se ha enviado un correo de verificación. Por favor, revísalo para activar tu cuenta.',
+
           );
         }
       }
@@ -120,6 +126,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         message = '❌ Error desconocido: ${e.message}';
       }
       _showSnackBar(message);
+
     } finally {
       if (mounted) {
         setState(() {
@@ -132,10 +139,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // -------------------------
   // 4. WIDGET BUILD (Interfaz de Usuario)
   // -------------------------
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+
         title: const Text('Crear Nueva Cuenta'),
         centerTitle: true,
         elevation: 0,
@@ -318,3 +327,4 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
+
