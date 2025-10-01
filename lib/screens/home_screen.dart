@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 //import screens
-import 'package:kine_app/screens/exercises_screen.dart';
+import 'package:kine_app/screens/planes_ejercicio_screen.dart';
 import 'package:kine_app/screens/image_test_screen.dart';
 import 'package:kine_app/screens/index.dart';
 import 'package:kine_app/screens/profile_screen.dart';
 import 'package:kine_app/screens/services_screen.dart';
+import 'package:kine_app/screens/exercises_screen.dart';
 
 
 class HomeScreen extends StatelessWidget {
@@ -25,7 +26,8 @@ class HomeScreen extends StatelessWidget {
         body: const TabBarView(
           children: [
             Index(),
-            ExercisesScreen(),
+            PlanesDeEjercicio(),
+            // ExercisesScreen(),
             ServicesScreen(),
             ProfileScreen()
             // ImageTestScreen(), Para testear la imagen, se dejara en caso de necesitar hacer test de componentes 
