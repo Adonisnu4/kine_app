@@ -8,7 +8,8 @@ Future<Map<String, dynamic>?> getUserData() async {
     return null;
   }
 
-  DocumentSnapshot<Map<String, dynamic>> userDoc = await FirebaseFirestore.instance
+  DocumentSnapshot<Map<String, dynamic>> userDoc = await FirebaseFirestore
+      .instance
       .collection('usuarios')
       .doc(userId)
       .get();
@@ -16,22 +17,43 @@ Future<Map<String, dynamic>?> getUserData() async {
   if (userDoc.exists) {
     final Map<String, dynamic> userData = userDoc.data()!;
 
-    // 1. Obtener la referencia de documento
     final dynamic tipoUsuarioRef = userData['tipo_usuario'];
 
-    // 2. Verificar que es una referencia de documento
     if (tipoUsuarioRef is DocumentReference) {
-      // 3. Obtener el documento referenciado
-      DocumentSnapshot<Map<String, dynamic>> tipoUsuarioDoc = await tipoUsuarioRef.get() as DocumentSnapshot<Map<String, dynamic>>;
+      DocumentSnapshot<Map<String, dynamic>> tipoUsuarioDoc =
+          await tipoUsuarioRef.get() as DocumentSnapshot<Map<String, dynamic>>;
 
-      // 4. Si el documento existe, agregar el nombre a los datos del usuario
       if (tipoUsuarioDoc.exists) {
-        userData['tipo_usuario_nombre'] = tipoUsuarioDoc.data()?['nombre'] ?? 'No especificado';
+        final tipoData = tipoUsuarioDoc.data();
+
+        userData['tipo_usuario_nombre'] =
+            tipoData?['nombre'] ?? 'No especificado';
+
+        final id = tipoData?['id'];
+
+        // ************************************************
+        // ********** CAMBIO CLAVE DE LECTURA DE ID *******
+        // ************************************************
+        if (id != null) {
+          // Intentamos leer el ID asegurando que sea un entero.
+          if (id is num) {
+            // Si es un número (int o double), lo convertimos a entero.
+            userData['tipo_usuario_id'] = id.toInt();
+          } else {
+            // Si no es un número (ej. String por error), usamos 1.
+            userData['tipo_usuario_id'] = 1;
+          }
+        } else {
+          // Si el campo 'id' no existe en el documento de rol, usamos 1.
+          userData['tipo_usuario_id'] = 1;
+        }
       } else {
-        userData['tipo_usuario_nombre'] = 'Desconocido';
+        userData['tipo_usuario_nombre'] = 'Desconocido (Ref no encontrada)';
+        userData['tipo_usuario_id'] = 1;
       }
     } else {
-      userData['tipo_usuario_nombre'] = 'Desconocido';
+      userData['tipo_usuario_nombre'] = 'Desconocido (No es Referencia)';
+      userData['tipo_usuario_id'] = 1;
     }
 
     return userData;
