@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'package:google_sign_in/google_sign_in.dart';
-import 'home_screen.dart'; // Asegúrate de que este sea el path correcto a tu HomeScreen
-import 'register_screen.dart'; // Importa la pantalla de registro
-
+import 'register_screen.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,13 +25,15 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // --- Métodos de Autenticación y Navegación ---
+  // --- M茅todos de Autenticaci贸n y Navegaci贸n ---
 
   void _navigateToHome() {
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        // CORRECCI脫N 1: HomeScreen no es Home_screen.
+        // CORRECCI脫N 2: No se usa 'const' en el constructor del widget porque se crea dentro de una funci贸n de construcci贸n ('builder').
+        MaterialPageRoute(builder: (context) => HomeScreen()),
       );
     }
   }
@@ -49,24 +49,22 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     setState(() => _isLoading = true);
 
-
     try {
       await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-
       _navigateToHome();
     } on FirebaseAuthException catch (e) {
       String message;
       if (e.code == 'user-not-found') {
-        message = 'No se encontró un usuario con ese correo.';
+        message = 'No se encontro un usuario con ese correo.';
       } else if (e.code == 'wrong-password') {
         message = 'La contraseña es incorrecta.';
       } else if (e.code == 'invalid-email') {
-        message = 'El formato del correo es inválido.';
+        message = 'El formato del correo es invalido.';
       } else {
-        message = 'Error de inicio de sesión: ${e.message}';
+        message = 'Error de inicio de sesion: ${e.message}';
       }
       _showSnackBar(message);
     } finally {
@@ -76,14 +74,14 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // --- 🚀 Google Sign-In (Sin cambios) ---
+  // --- 馃殌 Google Sign-In (Sin cambios) ---
   Future<void> _loginWithGoogle() async {
     setState(() => _isLoading = true);
 
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        return; // Usuario canceló
+        return; // Usuario cancel贸
       }
 
       final GoogleSignInAuthentication googleAuth =
@@ -98,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on FirebaseAuthException catch (e) {
       _showSnackBar('Error con Google Sign-In: ${e.message}');
     } catch (e) {
-      _showSnackBar('Ocurrió un error inesperado al iniciar con Google.');
+      _showSnackBar('Ocurrio un error inesperado al iniciar con Google.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -106,50 +104,45 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // --- 📘 Facebook Sign-In Placeholder (Sin cambios) ---
+  // --- 馃摌 Facebook Sign-In Placeholder (Sin cambios) ---
   Future<void> _loginWithFacebook() async {
     _showSnackBar(
-      'Facebook Login: ¡Esta funcionalidad requiere configuración adicional!',
+      'Facebook Login: Esta funcionalidad requiere configuracion adicional!',
     );
   }
 
   // =========================================================
-  // === 🔑 NUEVOS MÉTODOS PARA RECUPERACIÓN DE CONTRASEÑA ===
+  // === 馃攽 M脡TODOS PARA RECUPERACI脫N DE CONTRASE脩A ===
   // =========================================================
 
-  // 1. Lógica central para el envío de correo de recuperación.
   Future<void> _sendPasswordResetEmail(String email) async {
-    if (email.isEmpty) return; // Validación de seguridad
+    if (email.isEmpty) return;
 
-    // El indicador de carga se activa aquí
     setState(() => _isLoading = true);
 
     try {
       await _auth.sendPasswordResetEmail(email: email);
       _showSnackBar(
-        'Se ha enviado un correo de recuperación a $email. Revisa tu bandeja de entrada.',
+        'Se ha enviado un correo de recuperacion a $email. Revisa tu bandeja de entrada.',
       );
     } on FirebaseAuthException catch (e) {
       String message;
       if (e.code == 'user-not-found') {
         message = 'No existe una cuenta con ese correo.';
       } else if (e.code == 'invalid-email') {
-        message = 'El formato del correo es inválido.';
+        message = 'El formato del correo es invalido.';
       } else {
-        message = 'Error al enviar el correo de recuperación: ${e.message}';
+        message = 'Error al enviar el correo de recuperacion: ${e.message}';
       }
       _showSnackBar(message);
     } finally {
-      // El indicador de carga se desactiva
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
   }
 
-  // 2. Método para mostrar el Diálogo de Recuperación (la nueva interfaz).
   Future<void> _showResetPasswordDialog() async {
-    // Usamos un nuevo controlador para que no interfiera con el campo de login
     final resetEmailController = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
@@ -163,7 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: TextFormField(
               controller: resetEmailController,
               decoration: const InputDecoration(
-                labelText: 'Ingresa tu correo electrónico',
+                labelText: 'Ingresa tu correo electronico',
                 hintText: 'ejemplo@correo.com',
               ),
               keyboardType: TextInputType.emailAddress,
@@ -171,9 +164,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 if (value == null || value.isEmpty) {
                   return 'El correo es obligatorio.';
                 }
-                // Validación básica de formato
                 if (!value.contains('@') || !value.contains('.')) {
-                  return 'Ingresa un correo válido.';
+                  return 'Ingresa un correo valido.';
                 }
                 return null;
               },
@@ -189,10 +181,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ? null
                   : () async {
                       if (formKey.currentState!.validate()) {
-                        // Cierra el diálogo antes de iniciar la operación
                         Navigator.of(dialogContext).pop();
 
-                        // Llama a la lógica de envío
                         await _sendPasswordResetEmail(
                           resetEmailController.text.trim(),
                         );
@@ -220,49 +210,20 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Inicio de Sesión'), centerTitle: true),
+      appBar: AppBar(title: const Text('Inicio de Sesion'), centerTitle: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 1. Campos de Correo y Contraseña (Sin cambios)
+            // 1. Campos de Correo y Contrase帽a
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(
-                labelText: 'Correo Electrónico',
+                labelText: 'Correo Electronico',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.email),
               ),
-      } else {
-        message = 'Ocurrió un error. Inténtalo de nuevo.';
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Correo Electrónico'),
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 16),
@@ -278,19 +239,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
             const SizedBox(height: 12),
 
-            // 2. Botón de Recuperar Contraseña (CAMBIO AQUÍ)
+            // 2. Bot贸n de Recuperar Contrase帽a
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                // ¡AQUÍ LLAMAMOS AL NUEVO DIÁLOGO!
+                // Se corrigi贸 el uso de 'const' en la llamada a la funci贸n (no aplica).
                 onPressed: _isLoading ? null : _showResetPasswordDialog,
-                child: const Text('¿Olvidaste tu contraseña?'),
+                child: const Text('Olvidaste tu contraseña?'),
               ),
             ),
 
             const SizedBox(height: 24),
 
-            // 3. Botón de Iniciar Sesión (Correo/Contraseña) (Sin cambios)
+            // 3. Bot贸n de Iniciar Sesi贸n (Correo/Contrase帽a)
             SizedBox(
               width: double.infinity,
               child: _isLoading
@@ -303,7 +264,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         foregroundColor: Colors.white,
                       ),
                       child: const Text(
-                        'Iniciar Sesión',
+                        'Iniciar Sesion',
                         style: TextStyle(fontSize: 18),
                       ),
                     ),
@@ -311,14 +272,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
             const SizedBox(height: 30),
 
-            // 4. Separador "o" (Sin cambios)
+            // 4. Separador "o"
             const Row(
               children: [
                 Expanded(child: Divider()),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 10),
                   child: Text(
-                    'O inicia sesión con',
+                    'O inicia sesion con',
                     style: TextStyle(color: Colors.grey),
                   ),
                 ),
@@ -328,11 +289,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
             const SizedBox(height: 30),
 
-            // 5. Botones de Redes Sociales (Sin cambios)
+            // 5. Botones de Redes Sociales
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                // Botón de Google Sign-In
+                // Bot贸n de Google Sign-In
                 SizedBox(
                   width: 150,
                   child: OutlinedButton.icon(
@@ -347,7 +308,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
-                // Botón de Facebook Sign-In
+                // Bot贸n de Facebook Sign-In
                 SizedBox(
                   width: 150,
                   child: OutlinedButton.icon(
@@ -364,30 +325,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
             const SizedBox(height: 40),
 
-            // 6. Enlace a la Pantalla de Registro (Sin cambios)
-              decoration: const InputDecoration(labelText: 'Contraseña'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 24),
-            _isLoading
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: _login,
-                    child: const Text('Iniciar Sesión'),
-                  ),
-            const SizedBox(height: 12),
-
+            // 6. Enlace a la Pantalla de Registro
             TextButton(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const RegisterScreen(),
+                    // CORRECCI脫N 3: No se usa 'const' en el constructor del widget.
+                    builder: (context) => RegisterScreen(),
                   ),
                 );
               },
               child: const Text(
-                '¿No tienes una cuenta? Regístrate aquí',
+                'No tienes una cuenta? Registrate aqui',
                 style: TextStyle(decoration: TextDecoration.underline),
               ),
             ),
