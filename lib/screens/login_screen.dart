@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-// ERROR CORREGIDO: Las importaciones deben apuntar a la ubicaci贸n correcta.
-// Si RegisterScreen y HomeScreen est谩n en la misma carpeta que LoginScreen:
-import 'register_screen.dart'; // Importaci贸n de RegisterScreen
-import 'home_screen.dart'; // Importaci贸n de HomeScreen
+import 'register_screen.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -60,13 +58,13 @@ class _LoginScreenState extends State<LoginScreen> {
     } on FirebaseAuthException catch (e) {
       String message;
       if (e.code == 'user-not-found') {
-        message = 'No se encontr贸 un usuario con ese correo.';
+        message = 'No se encontro un usuario con ese correo.';
       } else if (e.code == 'wrong-password') {
-        message = 'La contrase帽a es incorrecta.';
+        message = 'La contraseña es incorrecta.';
       } else if (e.code == 'invalid-email') {
-        message = 'El formato del correo es inv谩lido.';
+        message = 'El formato del correo es invalido.';
       } else {
-        message = 'Error de inicio de sesi贸n: ${e.message}';
+        message = 'Error de inicio de sesion: ${e.message}';
       }
       _showSnackBar(message);
     } finally {
@@ -98,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on FirebaseAuthException catch (e) {
       _showSnackBar('Error con Google Sign-In: ${e.message}');
     } catch (e) {
-      _showSnackBar('Ocurri贸 un error inesperado al iniciar con Google.');
+      _showSnackBar('Ocurrio un error inesperado al iniciar con Google.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -109,7 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
   // --- 馃摌 Facebook Sign-In Placeholder (Sin cambios) ---
   Future<void> _loginWithFacebook() async {
     _showSnackBar(
-      'Facebook Login: 隆Esta funcionalidad requiere configuraci贸n adicional!',
+      'Facebook Login: Esta funcionalidad requiere configuracion adicional!',
     );
   }
 
@@ -125,16 +123,16 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _auth.sendPasswordResetEmail(email: email);
       _showSnackBar(
-        'Se ha enviado un correo de recuperaci贸n a $email. Revisa tu bandeja de entrada.',
+        'Se ha enviado un correo de recuperacion a $email. Revisa tu bandeja de entrada.',
       );
     } on FirebaseAuthException catch (e) {
       String message;
       if (e.code == 'user-not-found') {
         message = 'No existe una cuenta con ese correo.';
       } else if (e.code == 'invalid-email') {
-        message = 'El formato del correo es inv谩lido.';
+        message = 'El formato del correo es invalido.';
       } else {
-        message = 'Error al enviar el correo de recuperaci贸n: ${e.message}';
+        message = 'Error al enviar el correo de recuperacion: ${e.message}';
       }
       _showSnackBar(message);
     } finally {
@@ -152,13 +150,13 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Recuperar Contrase帽a'),
+          title: const Text('Recuperar Contraseña'),
           content: Form(
             key: formKey,
             child: TextFormField(
               controller: resetEmailController,
               decoration: const InputDecoration(
-                labelText: 'Ingresa tu correo electr贸nico',
+                labelText: 'Ingresa tu correo electronico',
                 hintText: 'ejemplo@correo.com',
               ),
               keyboardType: TextInputType.emailAddress,
@@ -167,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   return 'El correo es obligatorio.';
                 }
                 if (!value.contains('@') || !value.contains('.')) {
-                  return 'Ingresa un correo v谩lido.';
+                  return 'Ingresa un correo valido.';
                 }
                 return null;
               },
@@ -212,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Inicio de Sesi贸n'), centerTitle: true),
+      appBar: AppBar(title: const Text('Inicio de Sesion'), centerTitle: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -222,7 +220,7 @@ class _LoginScreenState extends State<LoginScreen> {
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(
-                labelText: 'Correo Electr贸nico',
+                labelText: 'Correo Electronico',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.email),
               ),
@@ -232,7 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
             TextField(
               controller: _passwordController,
               decoration: const InputDecoration(
-                labelText: 'Contrase帽a',
+                labelText: 'Contraseña',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.lock),
               ),
@@ -247,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: TextButton(
                 // Se corrigi贸 el uso de 'const' en la llamada a la funci贸n (no aplica).
                 onPressed: _isLoading ? null : _showResetPasswordDialog,
-                child: const Text('驴Olvidaste tu contrase帽a?'),
+                child: const Text('Olvidaste tu contraseña?'),
               ),
             ),
 
@@ -266,7 +264,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         foregroundColor: Colors.white,
                       ),
                       child: const Text(
-                        'Iniciar Sesi贸n',
+                        'Iniciar Sesion',
                         style: TextStyle(fontSize: 18),
                       ),
                     ),
@@ -281,7 +279,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 10),
                   child: Text(
-                    'O inicia sesi贸n con',
+                    'O inicia sesion con',
                     style: TextStyle(color: Colors.grey),
                   ),
                 ),
@@ -339,7 +337,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 );
               },
               child: const Text(
-                '驴No tienes una cuenta? Reg铆strate aqu铆',
+                'No tienes una cuenta? Registrate aqui',
                 style: TextStyle(decoration: TextDecoration.underline),
               ),
             ),
