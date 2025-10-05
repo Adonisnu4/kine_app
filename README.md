@@ -30,4 +30,5 @@ Aplicación Móvil (para pacientes y kinesiólogos).
 Servicios en la nube de Firebase (actúa como el back-end donde se almacenan y gestionan los datos). (Hacer el back-end de tu aplicación Flutter con Firebase)
 # Supply Chain	
 No especificado en el documento.
-# Gobernanza de datos	Implícito en la gestión de Base de datos y la necesidad de que la información se almacene de forma segura.
+# Gobernanza de datos	
+Implícito en la gestión de Base de datos y la necesidad de que la información se almacene de forma segura.
