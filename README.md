@@ -32,3 +32,5 @@ Servicios en la nube de Firebase (actúa como el back-end donde se almacenan y g
 No especificado en el documento.
 # Gobernanza de datos	
 Implícito en la gestión de Base de datos y la necesidad de que la información se almacene de forma segura.
+# Base de datos multimedia
+Se utilizara un blob storage de microsoft azure en donde se guardaran todos los archivos multimedia
