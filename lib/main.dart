@@ -4,9 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'auth/auth_gate.dart';
 import 'firebase_options.dart';
 
+
 //SCREENS
 import 'package:kine_app/screens/login_screen.dart';
 import 'package:kine_app/screens/home_screen.dart';
+import 'package:kine_app/screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,7 +35,8 @@ class MyApp extends StatelessWidget {
             return const HomeScreen();
           } else {
             // Usuario no logeado
-            return const LoginScreen();
+            return const WelcomeScreen();
+            // return const LoginScreen();
           }
         },
       ),
