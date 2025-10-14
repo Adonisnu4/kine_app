@@ -44,8 +44,8 @@ class _ContactsScreenState extends State<ContactsScreen> {
 
     // 2. Definir el título basado en el tipo de usuario (usando String)
     String title = _currentUserTypeId == '1'
-        ? 'Contactar Kines (tipo 3)'
-        : 'Contactar Pacientes (tipo 1)';
+        ? 'Contactar Kines '
+        : 'Contactar Pacientes ';
 
     return Scaffold(
       appBar: AppBar(title: Text(title)),
