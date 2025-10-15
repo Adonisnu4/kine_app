@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:kine_app/services/get_user_data.dart';
 
+import 'package:kine_app/screens/plan_ejercicios_screen.dart';
 import 'package:kine_app/screens/contacts_screen.dart';
-import 'package:kine_app/screens/planes_ejercicio_screen.dart';
 import 'package:kine_app/screens/index.dart';
 import 'package:kine_app/screens/profile_screen.dart';
 import 'package:kine_app/screens/kine_directory_screen.dart';
@@ -122,6 +122,15 @@ class _HomeScreenState extends State<HomeScreen>
           controller: _tabController,
           physics: const NeverScrollableScrollPhysics(),
           children: _getTabViews(),
+        // Contenido de cada pestaña
+        body: const TabBarView(
+          children: [
+            Index(),
+            PlanEjercicioScreen(),
+            ServicesScreen(),
+            ContactsScreen(), // Pestaña de Mensajes
+            ProfileScreen(),
+          ],
         ),
 
         // Usamos el TabBar con el controller para la navegación
