@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+// Asegúrate de que los archivos 'register_screen.dart' y 'home_screen.dart' existan
 import 'register_screen.dart';
 import 'home_screen.dart';
 
@@ -12,6 +13,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // ===================================
+  // 1. CONTROLADORES Y ESTADO
+  // ===================================
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -25,15 +29,15 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // --- M茅todos de Autenticaci贸n y Navegaci贸n ---
+  // ===================================
+  // 2. MÉTODOS DE UTILIDAD Y NAVEGACIÓN
+  // ===================================
 
   void _navigateToHome() {
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        // CORRECCI脫N 1: HomeScreen no es Home_screen.
-        // CORRECCI脫N 2: No se usa 'const' en el constructor del widget porque se crea dentro de una funci贸n de construcci贸n ('builder').
-        MaterialPageRoute(builder: (context) => HomeScreen()),
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     }
   }
@@ -46,25 +50,61 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // ===================================
+  // 3. LÓGICA DE LOGIN (CORREO/CONTRASEÑA)
+  // OBLIGANDO LA VERIFICACIÓN DEL EMAIL
+  // ===================================
+
   Future<void> _login() async {
     setState(() => _isLoading = true);
 
     try {
-      await _auth.signInWithEmailAndPassword(
+      // 3.1. Intentar iniciar sesión con correo y contraseña
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      _navigateToHome();
+
+      final User? user = userCredential.user;
+
+      if (user != null) {
+        // 3.2. OBLIGAR LA RECARGA DE DATOS: Necesario para obtener el estado actual de 'emailVerified'.
+        await user.reload();
+
+        // Obtener el estado actualizado del usuario después de la recarga
+        final User? reloadedUser = _auth.currentUser;
+
+        // 3.3. VERIFICACIÓN DEL EMAIL
+        if (reloadedUser != null && reloadedUser.emailVerified) {
+          // Si está verificado, permite el acceso
+          _showSnackBar('✅ ¡Inicio de sesión exitoso!');
+          _navigateToHome();
+        } else {
+          // Si NO está verificado:
+
+          // Cerrar sesión para que no quede logueado
+          await _auth.signOut();
+
+          // Mostrar mensaje y ofrecer reenvío de enlace
+          _showSnackBar(
+            '🔒 Cuenta no verificada. Revisa tu bandeja de entrada o spam para el enlace de verificación.',
+          );
+
+          // Opcional: Reenviar correo
+          if (user.email != null) {
+            await user.sendEmailVerification();
+          }
+        }
+      }
     } on FirebaseAuthException catch (e) {
       String message;
-      if (e.code == 'user-not-found') {
-        message = 'No se encontro un usuario con ese correo.';
-      } else if (e.code == 'wrong-password') {
-        message = 'La contraseña es incorrecta.';
+      // 3.4. Manejo de errores de autenticación
+      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
+        message = '❌ Error: Correo o contraseña incorrectos.';
       } else if (e.code == 'invalid-email') {
-        message = 'El formato del correo es invalido.';
+        message = '❌ Error: El formato del correo es inválido.';
       } else {
-        message = 'Error de inicio de sesion: ${e.message}';
+        message = '❌ Error de inicio de sesión: ${e.message}';
       }
       _showSnackBar(message);
     } finally {
@@ -74,14 +114,19 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // --- 馃殌 Google Sign-In (Sin cambios) ---
+  // -----------------------------------------------------------
+
+  // ===================================
+  // 4. LÓGICA DE LOGIN (SOCIAL)
+  // ===================================
+
   Future<void> _loginWithGoogle() async {
     setState(() => _isLoading = true);
 
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        return; // Usuario cancel贸
+        return; // Usuario canceló
       }
 
       final GoogleSignInAuthentication googleAuth =
@@ -96,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on FirebaseAuthException catch (e) {
       _showSnackBar('Error con Google Sign-In: ${e.message}');
     } catch (e) {
-      _showSnackBar('Ocurrio un error inesperado al iniciar con Google.');
+      _showSnackBar('Ocurrió un error inesperado al iniciar con Google.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -104,15 +149,16 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // --- 馃摌 Facebook Sign-In Placeholder (Sin cambios) ---
   Future<void> _loginWithFacebook() async {
     _showSnackBar(
-      'Facebook Login: Esta funcionalidad requiere configuracion adicional!',
+      'Facebook Login: Esta funcionalidad requiere configuración adicional!',
     );
   }
 
+  // -----------------------------------------------------------
+
   // =========================================================
-  // === 馃攽 M脡TODOS PARA RECUPERACI脫N DE CONTRASE脩A ===
+  // 5. MÉTODOS PARA RECUPERACIÓN DE CONTRASEÑA
   // =========================================================
 
   Future<void> _sendPasswordResetEmail(String email) async {
@@ -123,16 +169,16 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _auth.sendPasswordResetEmail(email: email);
       _showSnackBar(
-        'Se ha enviado un correo de recuperacion a $email. Revisa tu bandeja de entrada.',
+        'Se ha enviado un correo de recuperación a $email. Revisa tu bandeja de entrada.',
       );
     } on FirebaseAuthException catch (e) {
       String message;
       if (e.code == 'user-not-found') {
         message = 'No existe una cuenta con ese correo.';
       } else if (e.code == 'invalid-email') {
-        message = 'El formato del correo es invalido.';
+        message = 'El formato del correo es inválido.';
       } else {
-        message = 'Error al enviar el correo de recuperacion: ${e.message}';
+        message = 'Error al enviar el correo de recuperación: ${e.message}';
       }
       _showSnackBar(message);
     } finally {
@@ -156,7 +202,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: TextFormField(
               controller: resetEmailController,
               decoration: const InputDecoration(
-                labelText: 'Ingresa tu correo electronico',
+                labelText: 'Ingresa tu correo electrónico',
                 hintText: 'ejemplo@correo.com',
               ),
               keyboardType: TextInputType.emailAddress,
@@ -165,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   return 'El correo es obligatorio.';
                 }
                 if (!value.contains('@') || !value.contains('.')) {
-                  return 'Ingresa un correo valido.';
+                  return 'Ingresa un correo válido.';
                 }
                 return null;
               },
@@ -205,22 +251,26 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // --- Widget Build ---
+  // -----------------------------------------------------------
+
+  // ===================================
+  // 6. WIDGET BUILD (Interfaz de Usuario)
+  // ===================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Inicio de Sesion'), centerTitle: true),
+      appBar: AppBar(title: const Text('Inicio de Sesión'), centerTitle: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 1. Campos de Correo y Contrase帽a
+            // 1. Campos de Correo y Contraseña
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(
-                labelText: 'Correo Electronico',
+                labelText: 'Correo Electrónico',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.email),
               ),
@@ -239,11 +289,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
             const SizedBox(height: 12),
 
-            // 2. Bot贸n de Recuperar Contrase帽a
+            // 2. Botón de Recuperar Contraseña
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                // Se corrigi贸 el uso de 'const' en la llamada a la funci贸n (no aplica).
                 onPressed: _isLoading ? null : _showResetPasswordDialog,
                 child: const Text('Olvidaste tu contraseña?'),
               ),
@@ -251,7 +300,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
             const SizedBox(height: 24),
 
-            // 3. Bot贸n de Iniciar Sesi贸n (Correo/Contrase帽a)
+            // 3. Botón de Iniciar Sesión
             SizedBox(
               width: double.infinity,
               child: _isLoading
@@ -264,7 +313,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         foregroundColor: Colors.white,
                       ),
                       child: const Text(
-                        'Iniciar Sesion',
+                        'Iniciar Sesión',
                         style: TextStyle(fontSize: 18),
                       ),
                     ),
@@ -279,7 +328,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 10),
                   child: Text(
-                    'O inicia sesion con',
+                    'O inicia sesión con',
                     style: TextStyle(color: Colors.grey),
                   ),
                 ),
@@ -293,14 +342,12 @@ class _LoginScreenState extends State<LoginScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                // Bot贸n de Google Sign-In
+                // Botón de Google Sign-In
                 SizedBox(
                   width: 150,
                   child: OutlinedButton.icon(
                     onPressed: _isLoading ? null : _loginWithGoogle,
-                    icon: const Icon(
-                      Icons.g_mobiledata,
-                    ), // Icono de Google simple
+                    icon: const Icon(Icons.g_mobiledata),
                     label: const Text('Google'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -308,7 +355,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
-                // Bot贸n de Facebook Sign-In
+                // Botón de Facebook Sign-In
                 SizedBox(
                   width: 150,
                   child: OutlinedButton.icon(
@@ -331,13 +378,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    // CORRECCI脫N 3: No se usa 'const' en el constructor del widget.
-                    builder: (context) => RegisterScreen(),
+                    builder: (context) => const RegisterScreen(),
                   ),
                 );
               },
               child: const Text(
-                'No tienes una cuenta? Registrate aqui',
+                'No tienes una cuenta? Regístrate aquí',
                 style: TextStyle(decoration: TextDecoration.underline),
               ),
             ),

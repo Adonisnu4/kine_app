@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'login_screen.dart'; // Asegúrate de que esta pantalla exista para la navegación
-
+import 'login_screen.dart'; // Asegúrate de que esta pantalla exista
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -13,10 +12,9 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-
-  // -------------------------
+  // ===================================
   // 1. CONTROLADORES Y ESTADO
-  // -------------------------
+  // ===================================
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -30,7 +28,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
   String? _selectedGender;
 
-  final List<String> _genders = [
+  final List<String> _genders = const [
     'Masculino',
     'Femenino',
     'Otro',
@@ -47,9 +45,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // -------------------------
-  // 2. MÉTODOS DE UTILIDAD
-  // -------------------------
+  // ===================================
+  // 2. MÉTODOS DE UTILIDAD Y SNACKBAR
+  // ===================================
 
   void _showSnackBar(String message) {
     if (mounted) {
@@ -59,23 +57,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // -------------------------
-  // 3. LÓGICA DE REGISTRO - (Crea cuenta, envía correo y guarda en Firestore)
-  // -------------------------
+  // ===================================
+  // 3. LÓGICA DE REGISTRO
+  // ===================================
   Future<void> _register() async {
-    // Validar todos los campos del formulario.
+    // 3.1. Validación del formulario
     if (!_formKey.currentState!.validate()) {
       return;
     }
-
 
     setState(() {
       _isLoading = true;
     });
 
     try {
-
-      // 1. Creación de la cuenta de autenticación en Firebase Auth
+      // 3.2. Creación de la cuenta en Firebase Auth
       UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(
             email: _emailController.text.trim(),
@@ -85,10 +81,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final User? user = userCredential.user;
 
       if (user != null) {
-        // 2. Envío del correo de verificación (REQUERIDO)
+        // 3.3. Envío del correo de verificación
         await user.sendEmailVerification();
 
-        // 3. Guardado de datos adicionales en Firestore (REQUERIDO)
+        // 3.4. Preparar referencia y guardar datos en Firestore
         final DocumentReference tipoUsuarioRef = _firestore
             .collection('tipo_usuario')
             .doc('1');
@@ -97,20 +93,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'nombre_completo': _nameController.text.trim(),
           'nombre_usuario': _usernameController.text.trim(),
           'email': _emailController.text.trim(),
-          'edad': int.tryParse(
-            _ageController.text.trim(),
-          ), // Guarda la edad como entero
-          'sexo': _selectedGender, // Guarda el sexo
+          'edad': int.tryParse(_ageController.text.trim()),
+          'sexo': _selectedGender,
           'tipo_usuario': tipoUsuarioRef,
           'fecha_registro': FieldValue.serverTimestamp(),
         });
 
-        // 4. Navegación y mensaje de éxito
+        // 3.5. CERRAR SESIÓN INMEDIATAMENTE para forzar el Login
+        await _auth.signOut();
+
+        // 3.6. Navegación y mensaje de éxito
         if (mounted) {
-          Navigator.pop(context); // Vuelve a la pantalla de Login
+          Navigator.pop(context);
           _showSnackBar(
             '✅ ¡Registro exitoso! Se ha enviado un correo de verificación. Por favor, revísalo para activar tu cuenta.',
-
           );
         }
       }
@@ -126,7 +122,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         message = '❌ Error desconocido: ${e.message}';
       }
       _showSnackBar(message);
-
     } finally {
       if (mounted) {
         setState(() {
@@ -136,15 +131,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // -------------------------
+  // ===================================
   // 4. WIDGET BUILD (Interfaz de Usuario)
-  // -------------------------
+  // ===================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-
         title: const Text('Crear Nueva Cuenta'),
         centerTitle: true,
         elevation: 0,
@@ -162,104 +156,72 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Campo de Nombre Completo (REQUERIDO)
-              TextFormField(
+              // --- CAMPOS DE ENTRADA ---
+              _buildTextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre Completo',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'El nombre es obligatorio.';
-                  }
-                  return null;
-                },
+                label: 'Nombre Completo',
+                icon: Icons.person_outline,
+                validator: (value) => value == null || value.isEmpty
+                    ? 'El nombre es obligatorio.'
+                    : null,
               ),
               const SizedBox(height: 16),
 
-              // Campo de Nombre de Usuario (REQUERIDO)
-              TextFormField(
+              _buildTextFormField(
                 controller: _usernameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre de Usuario',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person_pin_circle_outlined),
-                ),
+                label: 'Nombre de Usuario',
+                icon: Icons.person_pin_circle_outlined,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.isEmpty)
                     return 'El nombre de usuario es obligatorio.';
-                  }
-                  if (value.length < 4) {
-                    return 'El nombre de usuario debe tener al menos 4 caracteres.';
-                  }
+                  if (value.length < 4)
+                    return 'Debe tener al menos 4 caracteres.';
                   return null;
                 },
               ),
               const SizedBox(height: 16),
 
-              // Campo de Correo Electrónico (REQUERIDO)
-              TextFormField(
+              _buildTextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Correo Electrónico',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email_outlined),
-                ),
+                label: 'Correo Electrónico',
+                icon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
                   if (value == null ||
                       !value.contains('@') ||
-                      !value.contains('.')) {
-                    return 'Ingresa un correo electrónico válido.';
-                  }
+                      !value.contains('.'))
+                    return 'Ingresa un correo válido.';
                   return null;
                 },
               ),
               const SizedBox(height: 16),
 
-              // Campo de Contraseña (REQUERIDO)
-              TextFormField(
+              _buildTextFormField(
                 controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Contraseña (mín. 6 caracteres)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock_outline),
-                ),
+                label: 'Contraseña (mín. 6 caracteres)',
+                icon: Icons.lock_outline,
                 obscureText: true,
-                validator: (value) {
-                  if (value == null || value.length < 6) {
-                    return 'La contraseña debe tener al menos 6 caracteres.';
-                  }
-                  return null;
-                },
+                validator: (value) => value == null || value.length < 6
+                    ? 'Mínimo 6 caracteres.'
+                    : null,
               ),
               const SizedBox(height: 24),
 
-              // Campo de Edad (REQUERIDO)
-              TextFormField(
+              _buildTextFormField(
                 controller: _ageController,
-                decoration: const InputDecoration(
-                  labelText: 'Edad',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.numbers),
-                ),
+                label: 'Edad',
+                icon: Icons.numbers,
                 keyboardType: TextInputType.number,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'La edad es obligatoria.';
-                  }
-                  final int? age = int.tryParse(value);
-                  if (age == null || age < 1 || age > 120) {
+                  final age = int.tryParse(value ?? '');
+                  if (age == null || age < 1 || age > 120)
                     return 'Ingresa una edad válida (1-120).';
-                  }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
 
-              // Selector de Sexo (REQUERIDO)
+              // --- DROPDOWN DE SEXO ---
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
                   labelText: 'Sexo',
@@ -285,7 +247,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               const SizedBox(height: 32),
 
-              // Botón de Registro
+              // --- BOTÓN DE REGISTRO ---
               SizedBox(
                 height: 50,
                 child: _isLoading
@@ -311,7 +273,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               const SizedBox(height: 16),
 
-              // Enlace para volver al Login
+              // --- ENLACE PARA VOLVER AL LOGIN ---
               TextButton(
                 onPressed: () {
                   Navigator.pop(
@@ -326,5 +288,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
-}
 
+  // Widget auxiliar para simplificar la creación de campos de texto
+  Widget _buildTextFormField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required String? Function(String?) validator,
+    TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        prefixIcon: Icon(icon),
+      ),
+      keyboardType: keyboardType,
+      obscureText: obscureText,
+      validator: validator,
+    );
+  }
+}
