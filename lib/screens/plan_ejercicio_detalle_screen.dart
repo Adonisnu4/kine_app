@@ -1,4 +1,6 @@
+// plan_ejercicio_detalle_screen.dart
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:kine_app/services/planes_ejercicios_service.dart';
 
@@ -7,9 +9,13 @@ import 'package:kine_app/services/planes_ejercicios_service.dart';
 // ----------------------------------------------------------------------
 class PlanEjercicioDetalleScreen extends StatefulWidget {
   final String planId;
+  final String planName;
 
-  // Recibe el ID del plan
-  const PlanEjercicioDetalleScreen({super.key, required this.planId});
+  const PlanEjercicioDetalleScreen({
+    super.key,
+    required this.planId,
+    required this.planName,
+  });
 
   @override
   State<PlanEjercicioDetalleScreen> createState() =>
@@ -21,14 +27,9 @@ class _PlanEjercicioDetalleScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Fondo negro
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: const Text(
-          'Detalle del Plan',
-          style: TextStyle(color: Colors.black),
-        ),
-        iconTheme: const IconThemeData(color: Colors.black),
+        title: Text('Detalle de ${widget.planName}'),
+        backgroundColor: Colors.deepPurple,
       ),
 
       body: FutureBuilder<Map<String, dynamic>?>(
@@ -36,7 +37,10 @@ class _PlanEjercicioDetalleScreenState
         future: ObtenerPlanEjercicio(widget.planId),
 
         builder: (context, snapshot) {
-          // --- Manejo de Estados ---
+          if (snapshot.hasError) {
+            return Center(child: Text('Error al cargar el plan: ${snapshot.error}'));
+          }
+
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(color: Colors.black),
@@ -52,7 +56,8 @@ class _PlanEjercicioDetalleScreenState
             );
           }
 
-          final Map<String, dynamic>? planData = snapshot.data;
+          final Map<String, dynamic> planData = snapshot.data!.data() as Map<String, dynamic>;
+          final List<dynamic> sesiones = planData['sesiones'] ?? [];
 
           if (planData == null) {
             return Center(
@@ -62,44 +67,27 @@ class _PlanEjercicioDetalleScreenState
               ),
             );
           }
-          // --- Fin Manejo de Estados ---
 
           // --- Mostrar Datos ---
           final String nombre = planData['nombre'] ?? 'Plan sin nombre';
           final String descripcion =
               planData['descripcion'] ?? 'No hay descripción disponible.';
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  nombre,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                elevation: 3.0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                child: ExpansionTile(
+                  leading: const Icon(Icons.fitness_center, color: Colors.deepPurple),
+                  title: Text(
+                    'Sesión $numeroSesion',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
+                  subtitle: Text('${ejerciciosData.length} ejercicios'),
+                  children: _buildEjerciciosList(ejerciciosData),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  'ID: ${widget.planId}',
-                  style: const TextStyle(color: Colors.black, fontSize: 14),
-                ),
-                const SizedBox(height: 30),
-                const Text(
-                  'Descripción:',
-                  style: TextStyle(color: Colors.black, fontSize: 18),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  descripcion,
-                  style: const TextStyle(color: Colors.black, fontSize: 18),
-                ),
-                // Aquí puedes añadir más detalles del plan
-              ],
-            ),
+              );
+            },
           );
         },
       ),

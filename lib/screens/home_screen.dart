@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-
+import 'package:kine_app/screens/plan_ejercicios_screen.dart';
 import 'package:kine_app/screens/contacts_screen.dart';
-import 'package:kine_app/screens/planes_ejercicio_screen.dart';
 import 'package:kine_app/screens/index.dart';
 import 'package:kine_app/screens/profile_screen.dart';
 import 'package:kine_app/screens/services_screen.dart';
@@ -23,7 +22,7 @@ class HomeScreen extends StatelessWidget {
         body: const TabBarView(
           children: [
             Index(),
-            PlanesDeEjercicio(),
+            PlanEjercicioScreen(),
             ServicesScreen(),
             ContactsScreen(), // Pestaña de Mensajes
             ProfileScreen(),
