@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kine_app/screens/kine_directory_screen.dart';
 import 'package:kine_app/services/get_user_data.dart';
 import 'package:kine_app/screens/login_screen.dart';
+import '../models/edit_presentation_modal.dart';
+// Importaciones clave para el guardado:
+import '../models/edit_presentation_modal.dart' show PresentationData;
+import 'package:kine_app/services/user_service.dart'; // 👈 Servicio de Firestore
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,80 +17,115 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late Future<Map<String, dynamic>?> _userDataFuture;
+  Map<String, dynamic>? _currentUserData; // Estado local
 
   @override
   void initState() {
     super.initState();
-    _userDataFuture = getUserData();
+    _userDataFuture = _loadUserData();
   }
 
-  // Función para recargar los datos del perfil (llamada después de enviar una solicitud)
+  // Carga los datos y actualiza el estado local
+  Future<Map<String, dynamic>?> _loadUserData() async {
+    final data = await getUserData();
+    if (mounted) {
+      setState(() {
+        _currentUserData = data;
+      });
+    }
+    return data;
+  }
+
   void _refreshProfile() {
     setState(() {
-      _userDataFuture = getUserData();
+      _userDataFuture = _loadUserData();
     });
   }
 
-  // --- Modal para la Solicitud de Certificado (Lógica de subida va aquí) ---
+  // 🔑 FUNCIÓN DE GUARDADO CON INTEGRACIÓN DE FIRESTORE Y RECARGA
+  Future<void> _savePresentation(PresentationData data) async {
+    try {
+      // 1. LLAMADA REAL A FIRESTORE
+      await updateKinePresentation(
+        specialization: data.specialization,
+        experience: data.experience,
+        presentation: data.presentation,
+      );
+
+      // 2. ACTUALIZAR EL ESTADO LOCAL para una respuesta visual rápida
+      if (_currentUserData != null) {
+        if (mounted) {
+          setState(() {
+            _currentUserData!['specialization'] = data.specialization;
+            _currentUserData!['experience'] = data.experience;
+            _currentUserData!['carta_presentacion'] = data.presentation;
+          });
+        }
+      }
+
+      // 3. Recarga el Future para asegurar que el FutureBuilder se actualice.
+      _refreshProfile();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Datos profesionales guardados y publicados.'),
+          ),
+        );
+      }
+    } catch (e) {
+      print("Error al guardar en Firestore: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error al guardar los datos: ${e.toString()}'),
+          ),
+        );
+      }
+      // Re-lanza el error para que el modal maneje el estado de carga (_isSaving)
+      rethrow;
+    }
+  }
+
   void _showActivationModal() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Mostrando modal de activación de cuenta...'),
+      ),
+    );
+  }
+
+  void _showEditPresentationModal({
+    required String specialization,
+    required String experience,
+    required String presentation,
+  }) {
+    final initialData = (
+      specialization: specialization,
+      experience: experience,
+      presentation: presentation,
+    );
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (BuildContext context) {
-        return SingleChildScrollView(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            top: 20,
-            left: 20,
-            right: 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Solicitar Cuenta Kinesiólogo',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const Divider(),
-              const SizedBox(height: 10),
-              const Text(
-                'Para verificar tu cuenta como Kinesiólogo, sube tu **Certificado Profesional** o título. Revisaremos la documentación y actualizaremos tu estado.',
-                style: TextStyle(fontSize: 15, color: Colors.black87),
-              ),
-              const SizedBox(height: 25),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  // TODO: Implementar la subida real del archivo y actualización de Firestore aquí.
-
-                  // SIMULACIÓN DE ÉXITO:
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Solicitud enviada. Estado: Pendiente de revisión.',
-                      ),
-                    ),
-                  );
-                  Navigator.pop(context);
-                  _refreshProfile(); // Refresca la UI para mostrar el estado "Pendiente"
-                },
-                icon: const Icon(Icons.upload_file),
-                label: const Text('Subir Certificado'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                ),
-              ),
-              const SizedBox(height: 30),
-            ],
-          ),
+        return EditPresentationModal(
+          initialData: initialData,
+          onSave: _savePresentation, // 👈 Pasa la función de guardado
         );
       },
     );
+  }
+
+  void _navigateToServices() async {
+    // Usamos 'await' para esperar el regreso del KineDirectoryScreen
+    // y forzar una recarga si es necesario (patrón de recarga de la app)
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const KineDirectoryScreen()),
+    );
+    // Si la pantalla se recarga al regresar (si es un tab o la raíz), los datos estarán frescos.
   }
 
   Widget _buildStatItem(String label, String value) {
@@ -169,17 +209,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
 
           final userData = snapshot.data!;
-          final userName = userData['nombre'] ?? 'Usuario';
+          final userName = userData['nombre_completo'] ?? 'Usuario';
           final userEmail =
               FirebaseAuth.instance.currentUser?.email ?? 'No disponible';
           final userStatusName =
               userData['tipo_usuario_nombre'] ?? 'No especificado';
-          // --- VALOR CLAVE: Esta ID debe ser 3 para ocultar el menú ---
           final userStatusId = userData['tipo_usuario_id'] ?? 1;
 
           final isVerified = userStatusId == 3; // Kinesiólogo Verificado
           final isPending = userStatusId == 2; // Kine Pendiente
           final isNormal = userStatusId == 1; // Usuario Normal
+
+          // Obtenemos los campos de la carta (usados solo si es Kine)
+          final String currentSpecialization = userData['specialization'] ?? '';
+          final String currentExperience =
+              userData['experience']?.toString() ?? '';
+          final String currentPresentation =
+              userData['carta_presentacion'] ?? '';
 
           final userImageUrl =
               userData['imagen_perfil'] ??
@@ -189,6 +235,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             physics: const BouncingScrollPhysics(),
             children: [
               const SizedBox(height: 30),
+              // --- Sección de Foto y Título ---
               Center(
                 child: Stack(
                   clipBehavior: Clip.none,
@@ -209,7 +256,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            // Usamos el color azul si está verificado, si no el teal
                             color: isVerified
                                 ? Colors.blue.shade600
                                 : Colors.teal.shade400,
@@ -250,7 +296,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: Colors.black87,
                       ),
                     ),
-                    if (isVerified) // Muestra el ticket si ID == 3
+                    if (isVerified)
                       Padding(
                         padding: const EdgeInsets.only(left: 8.0),
                         child: Icon(
@@ -262,7 +308,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
-
               Center(
                 child: Text(
                   userEmail,
@@ -270,6 +315,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+              // --- Sección de Estadísticas ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0),
                 child: Row(
@@ -282,11 +328,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 30),
+
+              // --- Elementos de Menú: Comunes y Específicos ---
               _buildProfileMenuItem(
                 icon: Icons.person_outline,
                 text: 'Editar Perfil',
                 onTap: () {},
               ),
+
+              // ✅ NUEVO: Visible solo para Usuarios Normales
+              if (isNormal)
+                _buildProfileMenuItem(
+                  icon: Icons.search_outlined,
+                  text: 'Buscar Servicios de Kinesiólogos',
+                  onTap: _navigateToServices, // Navegación al Directorio
+                ),
+
+              // ✅ Kinesiólogo Verificado puede editar sus datos
+              if (isVerified)
+                _buildProfileMenuItem(
+                  icon: Icons.article_outlined,
+                  text: 'Carta de presentacion y Especialidad',
+                  onTap: () => _showEditPresentationModal(
+                    specialization: currentSpecialization,
+                    experience: currentExperience,
+                    presentation: currentPresentation,
+                  ),
+                ),
+
               _buildProfileMenuItem(
                 icon: Icons.settings_outlined,
                 text: 'Configuración',
@@ -298,16 +367,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: () {},
               ),
 
-              // --- LÓGICA DE OCULTAMIENTO ---
-              // SOLO renderiza si isVerified es false (es decir, ID es 1 o 2).
+              // --- Lógica de Activación de Cuenta (Solo si no es verificado) ---
               if (!isVerified)
-                if (isNormal) // Estado "Normal" (ID 1)
+                if (isNormal)
                   _buildProfileMenuItem(
                     icon: Icons.school_outlined,
                     text: 'Activar cuenta de profesional',
                     onTap: _showActivationModal,
                   )
-                else if (isPending) // Estado "Kine Pendiente" (ID 2)
+                else if (isPending)
                   _buildProfileMenuItem(
                     icon: Icons.access_time_filled,
                     text: 'Revisión en curso (Pendiente)',
@@ -323,13 +391,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     textColor: Colors.orange.shade800,
                   ),
 
-              // --- FIN LÓGICA DE OCULTAMIENTO ---
+              const Divider(height: 40, indent: 20, endIndent: 20),
+
+              // --- Elementos de Menú: Soporte y Logout ---
               _buildProfileMenuItem(
                 icon: Icons.help_outline,
                 text: 'Ayuda y Soporte',
                 onTap: () {},
               ),
-              const Divider(height: 40, indent: 20, endIndent: 20),
               _buildProfileMenuItem(
                 icon: Icons.logout,
                 text: 'Cerrar Sesión',
@@ -347,6 +416,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   }
                 },
               ),
+              const SizedBox(height: 20),
             ],
           );
         },
