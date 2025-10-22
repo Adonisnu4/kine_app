@@ -16,10 +16,6 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mis Planes de Ejercicio'),
-        backgroundColor: Theme.of(context).primaryColor,
-      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore.collection('plan').snapshots(),
         builder: (context, snapshot) {
