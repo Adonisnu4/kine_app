@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:kine_app/screens/kine_panel_screen.dart';
 import 'package:kine_app/services/get_user_data.dart';
-
 import 'package:kine_app/screens/contacts_screen.dart';
-import 'package:kine_app/screens/plan_ejercicios_screen.dart';
+import 'package:kine_app/screens/plan_ejercicios_screen.dart'; // Paciente ve esto
 import 'package:kine_app/screens/index.dart';
-import 'package:kine_app/screens/profile_screen.dart';
-import 'package:kine_app/screens/kine_directory_screen.dart';
+import 'package:kine_app/screens/profile_screen.dart'; // Ambos ven esto
+import 'package:kine_app/screens/kine_directory_screen.dart'; // Paciente ve esto
+import 'package:kine_app/screens/kine_panel_screen.dart'; // Kine ve esto
 
-// Clave global (sin cambios)
 final GlobalKey<_HomeScreenState> homeScreenKey = GlobalKey<_HomeScreenState>();
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  // Navegación directa por índice (sin cambios)
   static void navigateToTabIndex(BuildContext context, int index) {
     final TabController? controller = DefaultTabController.of(context);
     if (controller != null) {
@@ -32,13 +30,6 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isKineVerified = false;
   bool _isLoading = true;
 
-  // Índices fijos (sin uso directo, los dejo por si los ocupas)
-  static const int indexInicio = 0;
-  static const int indexEjercicios = 1;
-  static const int indexMensajes = 2;
-  static const int indexPerfil = 3;
-  static const int indexServiciosNormal = 2; // solo no verificado
-
   @override
   void initState() {
     super.initState();
@@ -49,179 +40,105 @@ class _HomeScreenState extends State<HomeScreen>
     final userData = await getUserData();
     final userStatusId = userData?['tipo_usuario_id'] ?? 1;
 
-    setState(() {
-      _isKineVerified = (userStatusId == 3);
-      _isLoading = false;
+    // Ya no necesitamos _isLoading aquí si el builder lo maneja
+    _isKineVerified = userStatusId == 3;
+    final tabLength = _isKineVerified ? 4 : 5; // Kine: 4 tabs, Paciente: 5 tabs
 
-      final tabLength = _isKineVerified ? 4 : 5;
-      _tabController = TabController(
-        length: tabLength,
-        vsync: this,
-        initialIndex: 0,
-      )..addListener(() {
-          // refresca el título del header al cambiar de pestaña
-          setState(() {});
-        });
-    });
+    _tabController = TabController(
+      length: tabLength,
+      vsync: this,
+      initialIndex: 0,
+    );
+    // Forzamos rebuild ahora que tenemos el controller
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    // Solo disponer si fue inicializado
+    if (!_isLoading) {
+      _tabController.dispose();
+    }
     super.dispose();
   }
 
-  // Vistas (sin cambios lógicos)
+  // 🔥 FUNCIÓN _getTabViews() MODIFICADA
   List<Widget> _getTabViews() {
-    final List<Widget> views = [const Index(), const PlanEjercicioScreen()];
-
-    if (!_isKineVerified) {
-      // Index 2 para usuario normal (Servicios/Directorio)
-      views.add(const KineDirectoryScreen());
+    if (_isKineVerified) {
+      // Vistas para KINESIÓLOGO (tipo_usuario/3)
+      // La segunda pestaña es el Panel de Citas
+      return [
+        const Index(), // Tab 0
+        const KinePanelScreen(), // Tab 1:  Panel de Citas
+        const ContactsScreen(), // Tab 2: Mensajes
+        const ProfileScreen(), // Tab 3: Perfil (el tuyo)
+      ];
+    } else {
+      // Vistas para PACIENTE (tipo_usuario/1)
+      return [
+        const Index(), // Tab 0
+        const PlanEjercicioScreen(), // Tab 1: Ejercicios
+        const KineDirectoryScreen(), // Tab 2: Servicios/Directorio
+        const ContactsScreen(), // Tab 3: Mensajes
+        const ProfileScreen(), // Tab 4: Perfil (el tuyo)
+      ];
     }
-
-    views.addAll([const ContactsScreen(), const ProfileScreen()]);
-    return views;
   }
 
-  // Helper: icono de tamaño unificado para tabs
-  Widget _navIcon(IconData data) => Icon(data, size: 22);
-
-  // Tabs del footer (solo estética + mapping de “Servicios”)
+  // 🔥 FUNCIÓN _getBottomNavBarTabs() MODIFICADA
   List<Tab> _getBottomNavBarTabs() {
-    final List<Tab> base = [
-      Tab(icon: _navIcon(Icons.home_rounded), text: 'Inicio'),
-      // Ícono representativo de ejercicios
-      Tab(icon: _navIcon(Icons.fitness_center), text: 'Ejercicios'),
-    ];
-
     if (_isKineVerified) {
-      // 4 tabs: Inicio, Ejercicios, Mensajes, Servicios (reemplaza Perfil)
+      // Pestañas para KINESIÓLOGO
       return [
-        ...base,
-        Tab(icon: _navIcon(Icons.chat_bubble_outline_rounded), text: 'Mensajes'),
-        Tab(icon: _navIcon(Icons.medical_services_rounded), text: 'Servicios'),
+        const Tab(icon: Icon(Icons.home), text: 'Inicio'),
+        const Tab(
+          icon: Icon(Icons.assignment),
+          text: 'Citas',
+        ), // 🔥 Texto cambiado
+        const Tab(icon: Icon(Icons.chat_bubble), text: 'Mensajes'),
+        const Tab(icon: Icon(Icons.person), text: 'Perfil'),
       ];
     } else {
-      // 5 tabs: Servicios (índice 2), Mensajes, Perfil (se mantiene)
+      // Pestañas para PACIENTE
       return [
-        ...base,
-        Tab(icon: _navIcon(Icons.medical_services_rounded), text: 'Servicios'),
-        Tab(icon: _navIcon(Icons.chat_bubble_outline_rounded), text: 'Mensajes'),
-        Tab(icon: _navIcon(Icons.person_rounded), text: 'Perfil'),
+        const Tab(icon: Icon(Icons.home), text: 'Inicio'),
+        const Tab(icon: Icon(Icons.search), text: 'Ejercicios'),
+        const Tab(icon: Icon(Icons.badge), text: 'Servicios'),
+        const Tab(icon: Icon(Icons.chat_bubble), text: 'Mensajes'),
+        const Tab(icon: Icon(Icons.person), text: 'Perfil'),
       ];
     }
-  }
-
-  // Títulos del header según pestaña activa (como en el mock)
-  List<String> _tabLabels() {
-    final base = ['Inicio', 'Ejercicios'];
-    if (_isKineVerified) {
-      return [...base, 'Mensajes', 'Servicios']; // 4 tabs (kine)
-    } else {
-      return [...base, 'Servicios', 'Mensajes', 'Perfil']; // 5 tabs (normal)
-    }
-  }
-
-  // Header blanco con icono + título y sombra sutil
-  PreferredSizeWidget _buildHeader() {
-    final labels = _tabLabels();
-    final title = labels[_tabController.index];
-
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(56),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x1A000000), // sombra muy sutil
-              offset: Offset(0, 1),
-              blurRadius: 6,
-            ),
-          ],
-          border: Border(
-            bottom: BorderSide(color: Color(0x14000000), width: 1), // línea finita
-          ),
-        ),
-        child: SafeArea(
-          bottom: false,
-          child: SizedBox(
-            height: 56,
-            child: Row(
-              children: [
-                const SizedBox(width: 12),
-                const Icon(Icons.person_outline, color: Colors.black87, size: 22),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                const SizedBox(width: 12),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Muestra carga hasta que sepamos el rol y tengamos el TabController
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return DefaultTabController(
       length: _tabController.length,
-      child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark, // status bar con iconos oscuros
-        child: Scaffold(
-          // Header agregado (estilo mockup)
-          appBar: _buildHeader(),
-
-          // Contenido (sin scroll lateral)
-          body: TabBarView(
-            controller: _tabController,
-            physics: const NeverScrollableScrollPhysics(),
-            children: _getTabViews(),
-          ),
-
-          // Footer con fondo negro + SOMBRA SUPERIOR para separar del contenido
-          bottomNavigationBar: Container(
-            decoration: const BoxDecoration(
-              color: Colors.black,
-              boxShadow: [
-                // Sombra hacia arriba (offset negativo en Y) para separar el footer
-                BoxShadow(
-                  color: Colors.black26,
-                  offset: Offset(0, -4),
-                  blurRadius: 12,
-                  spreadRadius: 2,
-                ),
-              ],
-              // Línea sutil por si el dispositivo no muestra bien la sombra
-              border: Border(
-                top: BorderSide(color: Color(0x1FFFFFFF), width: 1),
-              ),
-            ),
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: false,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white70,
-              indicatorColor: Colors.transparent,
-              // tipografías un poco más grandes
-              labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-              unselectedLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-              tabs: _getBottomNavBarTabs(),
-            ),
-          ),
+      child: Scaffold(
+        // Sin AppBar global aquí
+        body: TabBarView(
+          controller: _tabController,
+          physics:
+              const NeverScrollableScrollPhysics(), // Evita deslizar entre tabs
+          children: _getTabViews(), // 🔥 Usa las vistas correctas según el rol
+        ),
+        bottomNavigationBar: TabBar(
+          controller: _tabController,
+          isScrollable: false,
+          labelColor: Colors.purple, // Tu color
+          unselectedLabelColor: Colors.black54,
+          indicatorColor: Colors.transparent,
+          tabs:
+              _getBottomNavBarTabs(), // 🔥 Usa las pestañas correctas según el rol
         ),
       ),
     );

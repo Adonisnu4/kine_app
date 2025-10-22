@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'auth/auth_gate.dart';
+import 'package:intl/date_symbol_data_local.dart'; // 👈 IMPORTA ESTO
+
+// TUS IMPORTS
+import 'auth/auth_gate.dart'; // Asumo que tienes esto
 import 'firebase_options.dart';
-
-
-//SCREENS
-import 'package:kine_app/screens/login_screen.dart';
+import 'package:kine_app/screens/login_screen.dart'; // Asumo que tienes esto
 import 'package:kine_app/screens/home_screen.dart';
-import 'package:kine_app/screens/splash_screen.dart';
+import 'package:kine_app/screens/splash_screen.dart'; // Asumo que tienes esto
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // 👈 AÑADE ESTA LÍNEA
+  await initializeDateFormatting('es_ES', null);
+
   runApp(const MyApp());
 }
 
@@ -35,8 +39,8 @@ class MyApp extends StatelessWidget {
             return const HomeScreen();
           } else {
             // Usuario no logeado
+            // Asegúrate de que WelcomeScreen exista, si no, usa LoginScreen
             return const WelcomeScreen();
-            // return const LoginScreen();
           }
         },
       ),
@@ -44,5 +48,5 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Y aquí va el resto de tu código para MainScreen con el BottomNavigationBar.
-// ...
+// Clase 'WelcomeScreen' que usas en tu main.dart
+// (Si ya la tienes en otro archivo, ignora est
