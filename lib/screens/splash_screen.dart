@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:kine_app/screens/login_screen.dart';
+import 'package:kine_app/screens/register_screen.dart';
 
 void main() {
   runApp(const KineApp());
@@ -87,6 +88,9 @@ class WelcomeScreen extends StatelessWidget {
                         child: ElevatedButton(
                           onPressed: () {
                             // Acción del botón "Únete"
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (context) => const RegisterScreen())
+                            );
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,

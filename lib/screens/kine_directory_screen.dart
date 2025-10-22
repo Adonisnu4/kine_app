@@ -31,10 +31,10 @@ class _KineDirectoryScreenState extends State<KineDirectoryScreen> {
   /// Carga los kinesiólogos desde la colección 'usuarios'
   Future<List<Map<String, String>>> _fetchKinesiologistsFromFirestore() async {
     try {
-      // ⭐️ 1. CAMBIO: Apuntamos a la colección 'usuarios'
+      //CAMBIO: Apuntamos a la colección 'usuarios'
       final querySnapshot = await FirebaseFirestore.instance
           .collection('usuarios')
-          // ⭐️ 2. CAMBIO: Filtramos por un campo que solo tienen los kinesiólogos.
+          // CAMBIO: Filtramos por un campo que solo tienen los kinesiólogos.
           .where('specialization', isGreaterThan: '')
           .get();
 
