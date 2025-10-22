@@ -11,26 +11,6 @@ class Index extends StatefulWidget {
 
 class _IndexState extends State<Index> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _imageAnimation, _titleAnimation, _descriptionAnimation, _missionAnimation, _featuresAnimation, _planAnimation;
-
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  late Future<QueryDocumentSnapshot?> _takenPlanFuture;
-
-  // Función para obtener el plan activo del usuario (sin cambios)
-  Future<QueryDocumentSnapshot?> _getTakenPlan() async {
-    final User? currentUser = _auth.currentUser;
-    if (currentUser == null) return null;
-    final String uid = currentUser.uid;
-    final QuerySnapshot snapshot = await _firestore
-        .collection('plan_tomados_por_usuarios')
-        .where('usuarioId', isEqualTo: uid)
-        .where('activo', isEqualTo: true)
-        .limit(1)
-        .get();
-    return snapshot.docs.isNotEmpty ? snapshot.docs.first : null;
-  }
 
   // Animaciones para cada elemento
   late Animation<double> _imageAnimation;
@@ -267,9 +247,34 @@ class _IndexState extends State<Index> with SingleTickerProviderStateMixin {
     );
   }
 
-  // Widgets auxiliares (sin cambios)
-  static Widget _buildFeatureItem({required IconData icon, required String title, required String description}) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.center, children: <Widget>[Icon(icon, size: 40, color: const Color.fromRGBO(52, 152, 219, 1)), const SizedBox(height: 12), Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87)), const SizedBox(height: 4), Text(description, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, color: Colors.black54))]);
+  // Widget auxiliar para las características (sin cambios)
+  static Widget _buildFeatureItem({
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: <Widget>[
+        Icon(icon, size: 40, color: const Color.fromRGBO(52, 152, 219, 1)),
+        const SizedBox(height: 12),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          description,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 16, color: Colors.black54),
+        ),
+      ],
+    );
   }
 
   // Tarjetas de ejercicios (sin cambios funcionales)
@@ -282,31 +287,23 @@ class _IndexState extends State<Index> with SingleTickerProviderStateMixin {
       margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16.0),
+        leading: const Icon(
+          Icons.fitness_center,
+          color: Color.fromRGBO(52, 152, 219, 1),
+          size: 40,
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.assignment_turned_in, color: Colors.green, size: 40),
-              title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              subtitle: Text('Iniciado el: $formattedDate'),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                ElevatedButton.icon(onPressed: () {}, icon: const Icon(Icons.play_arrow), label: const Text('Continuar'), style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)))),
-                TextButton.icon(
-                  onPressed: () {
-                    _finishPlan(documentId);
-                  },
-                  icon: const Icon(Icons.check_circle_outline, color: Colors.orange),
-                  label: const Text('Terminar', style: TextStyle(color: Colors.orange)),
-                  style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-                ),
-              ],
-            )
+            const SizedBox(height: 4),
+            Text('Dificultad: $difficulty'),
+            Text('Categoría: $category'),
           ],
         ),
       ),
