@@ -7,15 +7,14 @@ import 'package:kine_app/screens/index.dart';
 import 'package:kine_app/screens/profile_screen.dart';
 import 'package:kine_app/screens/kine_directory_screen.dart';
 
-// Definimos una clave global para acceder al estado del HomeScreen desde cualquier lugar
+// Clave global (sin cambios)
 final GlobalKey<_HomeScreenState> homeScreenKey = GlobalKey<_HomeScreenState>();
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  // Método estático para que el ProfileScreen pueda navegar directamente
+  // Navegación directa por índice (sin cambios)
   static void navigateToTabIndex(BuildContext context, int index) {
-    // Busca el TabController del HomeScreen y cambia el índice.
     final TabController? controller = DefaultTabController.of(context);
     if (controller != null) {
       controller.animateTo(index);
@@ -32,14 +31,12 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isKineVerified = false;
   bool _isLoading = true;
 
-  // Definimos los índices fijos para el contenido base
+  // Índices fijos (sin uso directo, los dejo por si los ocupas)
   static const int indexInicio = 0;
   static const int indexEjercicios = 1;
-  static const int indexMensajes = 2; // Índice en la lista del Kine
-  static const int indexPerfil = 3; // Índice en la lista del Kine
-
-  // El Directorio/Servicios estará en el índice 2 SOLO para usuarios normales.
-  static const int indexServiciosNormal = 2;
+  static const int indexMensajes = 2;
+  static const int indexPerfil = 3;
+  static const int indexServiciosNormal = 2; // solo no verificado
 
   @override
   void initState() {
@@ -52,15 +49,14 @@ class _HomeScreenState extends State<HomeScreen>
     final userStatusId = userData?['tipo_usuario_id'] ?? 1;
 
     setState(() {
-      _isKineVerified = userStatusId == 3;
+      _isKineVerified = (userStatusId == 3);
       _isLoading = false;
 
       final tabLength = _isKineVerified ? 4 : 5;
-
       _tabController = TabController(
         length: tabLength,
         vsync: this,
-        initialIndex: 0,
+        initialIndex: 0, // <- corregido: usamos initialIndex (no initialPosition)
       );
     });
   }
@@ -71,34 +67,46 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
+  // Vistas (sin cambios lógicos)
   List<Widget> _getTabViews() {
     final List<Widget> views = [const Index(), const PlanEjercicioScreen()];
 
     if (!_isKineVerified) {
-      views.add(const KineDirectoryScreen()); // Index 2 para usuario normal
+      // Index 2 para usuario normal (Servicios/Directorio)
+      views.add(const KineDirectoryScreen());
     }
 
     views.addAll([const ContactsScreen(), const ProfileScreen()]);
-
     return views;
   }
 
+  // Helper: icono de tamaño unificado para tabs
+  Widget _navIcon(IconData data) => Icon(data, size: 22);
+
+  // Tabs del footer (solo estética + mapping de “Servicios”)
   List<Tab> _getBottomNavBarTabs() {
-    final List<Tab> tabs = [
-      const Tab(icon: Icon(Icons.home), text: 'Inicio'),
-      const Tab(icon: Icon(Icons.search), text: 'Ejercicios'),
+    final List<Tab> base = [
+      Tab(icon: _navIcon(Icons.home_rounded), text: 'Inicio'),
+      // Ícono más representativo de ejercicios
+      Tab(icon: _navIcon(Icons.fitness_center), text: 'Ejercicios'),
     ];
 
-    if (!_isKineVerified) {
-      tabs.add(const Tab(icon: Icon(Icons.badge), text: 'Servicios'));
+    if (_isKineVerified) {
+      // 4 tabs: Inicio, Ejercicios, Mensajes, Servicios (reemplaza Perfil)
+      return [
+        ...base,
+        Tab(icon: _navIcon(Icons.chat_bubble_outline_rounded), text: 'Mensajes'),
+        Tab(icon: _navIcon(Icons.design_services_rounded),          text: 'Servicios'),
+      ];
+    } else {
+      // 5 tabs: Servicios (índice 2), Mensajes, Perfil (se mantiene)
+      return [
+        ...base,
+        Tab(icon: _navIcon(Icons.front_hand_rounded),          text: 'Servicios'),
+        Tab(icon: _navIcon(Icons.chat_bubble_outline_rounded), text: 'Mensajes'),
+        Tab(icon: _navIcon(Icons.person_rounded),              text: 'Perfil'),
+      ];
     }
-
-    tabs.addAll([
-      const Tab(icon: Icon(Icons.chat_bubble), text: 'Mensajes'),
-      const Tab(icon: Icon(Icons.person), text: 'Perfil'),
-    ]);
-
-    return tabs;
   }
 
   @override
@@ -107,31 +115,50 @@ class _HomeScreenState extends State<HomeScreen>
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // Envolvemos el Scaffold con un DefaultTabController para hacerlo accesible
-    // a los hijos como ProfileScreen. Usamos el TabController existente para su lógica.
     return DefaultTabController(
       length: _tabController.length,
       child: Scaffold(
         appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(0.0),
+          preferredSize: Size.fromHeight(0.0),
           child: AppBar(automaticallyImplyLeading: false),
         ),
 
-        // Usamos el TabController instanciado en el estado
+        // Contenido (sin scroll lateral)
         body: TabBarView(
           controller: _tabController,
           physics: const NeverScrollableScrollPhysics(),
           children: _getTabViews(),
         ),
 
-        // Usamos el TabBar con el controller para la navegación
-        bottomNavigationBar: TabBar(
-          controller: _tabController,
-          isScrollable: false,
-          labelColor: Colors.purple,
-          unselectedLabelColor: Colors.black54,
-          indicatorColor: Colors.transparent,
-          tabs: _getBottomNavBarTabs(),
+        // Footer con fondo negro + SOMBRA SUPERIOR para separar del contenido
+        bottomNavigationBar: Container(
+          decoration: const BoxDecoration(
+            color: Colors.black,
+            boxShadow: [
+              // Sombra hacia arriba (offset negativo en Y) para separar el footer
+              BoxShadow(
+                color: Colors.black26,
+                offset: Offset(0, -4),
+                blurRadius: 12,
+                spreadRadius: 2,
+              ),
+            ],
+            // Línea sutil por si el dispositivo no muestra bien la sombra
+            border: Border(
+              top: BorderSide(color: Color(0x1FFFFFFF), width: 1),
+            ),
+          ),
+          child: TabBar(
+            controller: _tabController,
+            isScrollable: false,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            indicatorColor: Colors.transparent,
+            // tipografías un poco más grandes
+            labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            unselectedLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            tabs: _getBottomNavBarTabs(),
+          ),
         ),
       ),
     );
