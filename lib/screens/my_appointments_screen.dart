@@ -1,12 +1,12 @@
 // lib/screens/my_appointments_screen.dart
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import necesario si usas el placeholder
-import 'package:kine_app/models/appointment.dart'; // Asegúrate que la ruta sea correcta
-import 'package:kine_app/services/appointment_service.dart'; // Asegúrate que la ruta sea correcta
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
+import 'package:kine_app/models/appointment.dart'; // Importa tu modelo
+import 'package:kine_app/services/appointment_service.dart'; // Importa tu servicio
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
-// Puedes importar estas si quieres añadir navegación al perfil del Kine o al chat
+// Puedes importar estas si quieres añadir navegación
 // import 'kine_presentation_screen.dart';
 // import 'chat_screen.dart';
 
@@ -31,9 +31,9 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     );
   }
 
-  // Función para manejar la cancelación de una cita pendiente
+  // --- Función para Cancelar Cita Pendiente ---
   void _handleCancelAppointment(Appointment appointment) async {
-    // Pide confirmación al usuario
+    // Pide confirmación
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -43,11 +43,11 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false), // No cancelar
+            onPressed: () => Navigator.pop(context, false), // No
             child: const Text('No'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true), // Sí cancelar
+            onPressed: () => Navigator.pop(context, true), // Sí
             child: const Text('Sí, Cancelar'),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
           ),
@@ -55,13 +55,14 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
       ),
     );
 
-    // Si el usuario confirmó
+    // Si confirma, llama al servicio para borrar
     if (confirm == true) {
       try {
-        // Llama a la función del servicio para eliminar la cita
+        // Llama a la función del servicio
         await _appointmentService.deleteAppointment(appointment.id);
 
         if (mounted) {
+          // Muestra mensaje de éxito
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Cita cancelada.'),
@@ -70,6 +71,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
           );
         }
       } catch (e) {
+        // Muestra mensaje de error
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -81,6 +83,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
       }
     }
   }
+  // --- Fin Función Cancelar ---
 
   @override
   Widget build(BuildContext context) {
@@ -91,19 +94,19 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         foregroundColor: Colors.white,
       ),
       body: StreamBuilder<List<Appointment>>(
-        stream: _appointmentsStream, // Escucha el stream de citas
+        stream: _appointmentsStream, // Escucha las citas del paciente
         builder: (context, snapshot) {
-          // Muestra indicador mientras carga
+          // Estado de Carga
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          // Muestra error si falla la carga
+          // Estado de Error
           if (snapshot.hasError) {
             return Center(
               child: Text('Error al cargar citas: ${snapshot.error}'),
             );
           }
-          // Muestra mensaje si no hay citas
+          // Estado Sin Datos
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
               child: Padding(
@@ -117,14 +120,14 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
             );
           }
 
-          // Si hay datos, muestra la lista
+          // Estado con Datos Exitoso
           final appointments = snapshot.data!;
           return ListView.builder(
             padding: const EdgeInsets.all(10),
             itemCount: appointments.length,
             itemBuilder: (context, index) {
               final appointment = appointments[index];
-              // Construye una tarjeta por cada cita
+              // Dibuja una tarjeta por cada cita
               return _buildAppointmentCard(appointment);
             },
           );
@@ -133,13 +136,13 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     );
   }
 
-  // Widget para construir la tarjeta de una cita
+  // Widget que construye cada tarjeta de cita
   Widget _buildAppointmentCard(Appointment appointment) {
     IconData estadoIcon;
     Color estadoColor;
     String estadoTexto = appointment.estado.toUpperCase();
 
-    // Determina ícono, color y texto según el estado
+    // Define ícono y color según el estado
     switch (appointment.estado) {
       case 'confirmada':
         estadoIcon = Icons.check_circle;
@@ -175,7 +178,6 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
               children: [
                 // Nombre del Kine
                 Flexible(
-                  // Evita overflow si el nombre es largo
                   child: Text(
                     appointment.kineNombre,
                     style: const TextStyle(
@@ -186,7 +188,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                // Estado
+                // Contenedor del Estado
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -215,7 +217,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
               ],
             ),
             const Divider(height: 18),
-            // Fecha y Hora
+            // Detalles de Fecha y Hora
             Row(
               children: [
                 Icon(
@@ -249,8 +251,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
               ],
             ),
 
-            // Botones de acción condicionales
-            // Botón Cancelar (si está pendiente)
+            // --- Botón Cancelar (Condicional) ---
             if (appointment.estado == 'pendiente') ...[
               const SizedBox(height: 12),
               Align(
@@ -266,11 +267,15 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                     ),
                     textStyle: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  onPressed: () => _handleCancelAppointment(appointment),
+                  onPressed: () => _handleCancelAppointment(
+                    appointment,
+                  ), // Llama a la función
                 ),
               ),
             ],
-            // Botón Contactar (si está confirmada)
+            // --- Fin Botón Cancelar ---
+
+            // Botón Contactar (si está confirmada - Opcional)
             if (appointment.estado == 'confirmada') ...[
               const SizedBox(height: 12),
               Align(
@@ -304,4 +309,4 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
       ),
     );
   }
-}
+} // Fin de la clase _MyAppointmentsScreenState

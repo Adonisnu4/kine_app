@@ -8,8 +8,10 @@ import '../models/edit_presentation_modal.dart';
 import '../models/edit_presentation_modal.dart' show PresentationData;
 import 'package:kine_app/services/user_service.dart';
 
-// 👈 1. IMPORTAR la nueva pantalla de "Mis Citas"
-import 'my_appointments_screen.dart';
+// --- Imports para las nuevas pantallas ---
+import 'my_appointments_screen.dart'; // Para Pacientes
+import 'manage_availability_screen.dart'; // Para Kinesiólogos
+// --- FIN IMPORTS ---
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -20,17 +22,18 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late Future<Map<String, dynamic>?> _userDataFuture;
-  Map<String, dynamic>? _currentUserData; // Estado local
+  Map<String, dynamic>? _currentUserData; // Estado local para UI rápida
 
   @override
   void initState() {
     super.initState();
-    _userDataFuture = _loadUserData();
+    _userDataFuture = _loadUserData(); // Inicia la carga de datos
   }
 
-  // Carga los datos y actualiza el estado local
+  // Carga los datos del usuario desde Firestore
   Future<Map<String, dynamic>?> _loadUserData() async {
     final data = await getUserData();
+    // Actualiza el estado local solo si el widget sigue "vivo"
     if (mounted) {
       setState(() {
         _currentUserData = data;
@@ -39,13 +42,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return data;
   }
 
+  // Vuelve a lanzar la carga de datos (usado después de guardar)
   void _refreshProfile() {
     setState(() {
       _userDataFuture = _loadUserData();
     });
   }
 
-  // FUNCIÓN DE GUARDADO (NO CAMBIA)
+  // Guarda los datos de presentación editados por el Kine
   Future<void> _savePresentation(PresentationData data) async {
     try {
       await updateKinePresentation(
@@ -53,6 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         experience: data.experience,
         presentation: data.presentation,
       );
+      // Actualiza UI local inmediatamente
       if (_currentUserData != null && mounted) {
         setState(() {
           _currentUserData!['specialization'] = data.specialization;
@@ -60,36 +65,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _currentUserData!['carta_presentacion'] = data.presentation;
         });
       }
-      _refreshProfile();
+      _refreshProfile(); // Recarga desde Firestore para confirmar
+      // --- 👇 SNACKBAR RESTAURADO 👇 ---
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ Datos profesionales guardados y publicados.'),
+            backgroundColor: Colors.green,
           ),
         );
       }
+      // --- FIN RESTAURACIÓN ---
     } catch (e) {
-      print("Error al guardar en Firestore: $e");
+      print("Error al guardar presentación en Firestore: $e");
+      // --- 👇 SNACKBAR RESTAURADO 👇 ---
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('❌ Error al guardar los datos: ${e.toString()}'),
+            backgroundColor: Colors.red,
           ),
         );
       }
-      rethrow;
+      // --- FIN RESTAURACIÓN ---
+      rethrow; // Permite que el modal sepa que hubo un error
     }
   }
 
-  // FUNCIONES EXISTENTES (NO CAMBIAN)
+  // Muestra modal de activación (placeholder)
   void _showActivationModal() {
+    // --- 👇 SNACKBAR RESTAURADO 👇 ---
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Mostrando modal de activación de cuenta...'),
+        content: Text(
+          'Mostrando modal de activación de cuenta... (Función no implementada)',
+        ),
       ),
     );
+    // --- FIN RESTAURACIÓN ---
   }
 
+  // Muestra el modal para editar la presentación del Kine
   void _showEditPresentationModal({
     required String specialization,
     required String experience,
@@ -103,37 +119,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (BuildContext context) {
-        return EditPresentationModal(
-          initialData: initialData,
-          onSave: _savePresentation,
-        );
-      },
+      builder: (ctx) => EditPresentationModal(
+        initialData: initialData,
+        onSave: _savePresentation,
+      ),
     );
   }
 
+  // Navega al directorio de Kines (para Paciente)
   void _navigateToServices() async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const KineDirectoryScreen()),
+      MaterialPageRoute(builder: (ctx) => const KineDirectoryScreen()),
     );
   }
 
-  //
-  // --- 👈 2. AÑADIR NUEVA FUNCIÓN DE NAVEGACIÓN ---
-  //
+  // Navega a "Mis Citas" (para Paciente)
   void _navigateToMyAppointments() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const MyAppointmentsScreen()),
+      MaterialPageRoute(builder: (ctx) => const MyAppointmentsScreen()),
     );
   }
-  // --- FIN DE NUEVA FUNCIÓN ---
-  //
 
-  // WIDGETS HELPERS (NO CAMBIAN)
+  /// Navega a la pantalla donde el Kine gestiona su disponibilidad
+  void _navigateToManageAvailability() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (ctx) => const ManageAvailabilityScreen()),
+    );
+  }
+
+  // --- Widgets Helpers para construir la UI ---
+  // Construye un item de estadística (Citas, Seguidores, etc.)
   Widget _buildStatItem(String label, String value) {
+    // --- 👇 CÓDIGO RESTAURADO 👇 ---
     return Column(
+      mainAxisSize: MainAxisSize.min, // Ocupa el mínimo espacio vertical
       children: [
         Text(
           value,
@@ -147,31 +169,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
       ],
     );
+    // --- FIN RESTAURACIÓN ---
   }
 
+  // Construye un elemento del menú del perfil (con icono, texto y flecha)
   Widget _buildProfileMenuItem({
     required IconData icon,
     required String text,
     required VoidCallback onTap,
     Color textColor = Colors.black87,
   }) {
+    // --- 👇 CÓDIGO RESTAURADO 👇 ---
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 10,
+      ), // Padding restaurado
       child: InkWell(
         onTap: onTap,
         child: Row(
           children: [
             Icon(icon, color: Colors.teal, size: 28),
             const SizedBox(width: 20),
-            Text(
-              text,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-                color: textColor,
+            Expanded(
+              // Para que el texto no se desborde si es largo
+              child: Text(
+                text,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: textColor,
+                ),
               ),
             ),
-            const Spacer(),
+            // const Spacer(), // Ya no es necesario con Expanded
             Icon(
               Icons.arrow_forward_ios,
               color: Colors.grey.shade400,
@@ -181,7 +212,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+    // --- FIN RESTAURACIÓN ---
   }
+  // --- Fin Widgets Helpers ---
 
   @override
   Widget build(BuildContext context) {
@@ -196,34 +229,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
         centerTitle: true,
       ),
       body: FutureBuilder<Map<String, dynamic>?>(
-        future: _userDataFuture,
+        future: _userDataFuture, // Espera a que los datos del usuario carguen
         builder: (context, snapshot) {
+          // --- Estados de Carga y Error ---
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-
           if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
+            print(
+              "Error en FutureBuilder de ProfileScreen: ${snapshot.error}",
+            ); // Log de error
             return const Center(
-              child: Text(
-                'Error al cargar el perfil. Por favor, reinicia la aplicación.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.red),
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Error al cargar el perfil. Por favor, reinicia la aplicación.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.red),
+                ),
               ),
             );
           }
 
-          final userData = snapshot.data!;
+          // --- Estado Exitoso ---
+          final userData = snapshot.data!; // Tenemos los datos
+          // Extrae la información necesaria
           final userName = userData['nombre_completo'] ?? 'Usuario';
           final userEmail =
               FirebaseAuth.instance.currentUser?.email ?? 'No disponible';
           final userStatusName =
               userData['tipo_usuario_nombre'] ?? 'No especificado';
-          final userStatusId = userData['tipo_usuario_id'] ?? 1;
+          final userStatusId =
+              userData['tipo_usuario_id'] ??
+              1; // Default a 1 (Paciente) si falta
+          // Imprime para depurar
+          print('--- DEBUG ProfileScreen Build ---');
+          print('   Raw userData received: $userData');
+          print('   Extracted userStatusId: $userStatusId');
 
-          final isVerified = userStatusId == 3; // Kinesiólogo Verificado
-          final isPending = userStatusId == 2; // Kine Pendiente
-          final isNormal = userStatusId == 1; // Usuario Normal
+          final isVerified = userStatusId == 3; // ¿Es Kine Verificado?
+          final isPending = userStatusId == 2; // ¿Es Kine Pendiente?
+          final isNormal = userStatusId == 1; // ¿Es Paciente?
 
+          // Datos específicos del Kine
           final String currentSpecialization = userData['specialization'] ?? '';
           final String currentExperience =
               userData['experience']?.toString() ?? '';
@@ -231,46 +279,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
               userData['carta_presentacion'] ?? '';
           final userImageUrl =
               userData['imagen_perfil'] ??
-              'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=120&h=120&q=80';
+              'https://via.placeholder.com/120'; // Placeholder
 
+          // Construye la lista del perfil
           return ListView(
             physics: const BouncingScrollPhysics(),
             children: [
               const SizedBox(height: 30),
-              // --- Sección de Foto y Título (NO CAMBIA) ---
+              // --- Sección Superior: Foto, Nombre, Email, Rol ---
               Center(
                 child: Stack(
                   clipBehavior: Clip.none,
+                  alignment: Alignment.center,
                   children: [
                     CircleAvatar(
                       radius: 60,
-                      backgroundColor: Colors.white,
+                      backgroundColor: Colors
+                          .grey
+                          .shade300, // Color de fondo si la imagen tarda
                       backgroundImage: NetworkImage(userImageUrl),
                     ),
                     Positioned(
                       bottom: -10,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isVerified
-                                ? Colors.blue.shade600
-                                : Colors.teal.shade400,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [/*...*/],
-                          ),
-                          child: Text(
-                            userStatusName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isVerified
+                              ? Colors.blue.shade600
+                              : (isPending
+                                    ? Colors.orange.shade700
+                                    : Colors.teal.shade400),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              spreadRadius: 1,
+                              blurRadius: 3,
+                              offset: const Offset(0, 2),
                             ),
+                          ],
+                        ),
+                        child: Text(
+                          userStatusName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
@@ -278,7 +335,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 25),
+              const SizedBox(height: 25), // Más espacio después del badge
               Center(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -310,7 +367,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              // --- Sección de Estadísticas (NO CAMBIA) ---
+              // --- Sección de Estadísticas ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0),
                 child: Row(
@@ -324,39 +381,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 30),
 
-              // --- Elementos de Menú: Comunes y Específicos ---
+              // --- Elementos del Menú ---
               _buildProfileMenuItem(
                 icon: Icons.person_outline,
                 text: 'Editar Perfil',
                 onTap: () {},
               ),
 
-              //
-              // --- 👈 3. AÑADIR NUEVO ELEMENTO DE MENÚ AQUÍ ---
-              //
-              // Visible solo para Usuarios Normales (Pacientes)
+              // Opciones para Paciente (isNormal)
               if (isNormal)
                 _buildProfileMenuItem(
-                  icon: Icons.calendar_month_outlined, // Ícono de calendario
+                  icon: Icons.calendar_month_outlined,
                   text: 'Mis Citas Solicitadas',
-                  onTap: _navigateToMyAppointments, // Llama a la nueva función
+                  onTap: _navigateToMyAppointments,
                 ),
-              // --- FIN DE NUEVO ELEMENTO ---
-              //
-
-              // Visible solo para Usuarios Normales
               if (isNormal)
                 _buildProfileMenuItem(
                   icon: Icons.search_outlined,
-                  text: 'Buscar Servicios de Kinesiólogos',
+                  text: 'Buscar Kinesiólogos',
                   onTap: _navigateToServices,
                 ),
 
-              // Kinesiólogo Verificado puede editar sus datos
+              // Opciones para Kine Verificado (isVerified)
+              if (isVerified)
+                _buildProfileMenuItem(
+                  icon: Icons.schedule,
+                  text: 'Gestionar Disponibilidad',
+                  onTap: _navigateToManageAvailability,
+                ),
               if (isVerified)
                 _buildProfileMenuItem(
                   icon: Icons.article_outlined,
-                  text: 'Carta de presentacion y Especialidad',
+                  text: 'Carta de Presentación',
                   onTap: () => _showEditPresentationModal(
                     specialization: currentSpecialization,
                     experience: currentExperience,
@@ -364,6 +420,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
 
+              // Opciones Comunes
               _buildProfileMenuItem(
                 icon: Icons.settings_outlined,
                 text: 'Configuración',
@@ -375,7 +432,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: () {},
               ),
 
-              // --- Lógica de Activación de Cuenta (NO CAMBIA) ---
+              // Lógica de Activación de Cuenta (si no está verificado)
+              // --- 👇 CÓDIGO RESTAURADO 👇 ---
               if (!isVerified)
                 if (isNormal)
                   _buildProfileMenuItem(
@@ -388,14 +446,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.access_time_filled,
                     text: 'Revisión en curso (Pendiente)',
                     onTap: () {
-                      /*...*/
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Tu solicitud ya fue enviada y está siendo revisada.',
+                          ),
+                        ),
+                      );
                     },
                     textColor: Colors.orange.shade800,
                   ),
 
+              // --- FIN RESTAURACIÓN ---
               const Divider(height: 40, indent: 20, endIndent: 20),
 
-              // --- Elementos de Menú: Soporte y Logout (NO CAMBIAN) ---
+              // Opciones Comunes: Ayuda y Cerrar Sesión
               _buildProfileMenuItem(
                 icon: Icons.help_outline,
                 text: 'Ayuda y Soporte',
@@ -418,7 +483,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   }
                 },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 20), // Espacio al final
             ],
           );
         },
