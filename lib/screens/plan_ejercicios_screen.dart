@@ -11,6 +11,7 @@ class PlanEjercicioScreen extends StatefulWidget {
 }
 
 class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
+  // Instancia de Firestore para realizar las consultas
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -130,7 +131,13 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
         stream: _firestore.collection('plan').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            // Se corrigió la interpolación de texto aquí
+            return Center(
+              child: Text(
+                '¡Ups! Ocurrió un error al cargar los planes: ${snapshot.error}', // Quitamos la doble barra
+                textAlign: TextAlign.center,
+              ),
+            );
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:kine_app/screens/kine_panel_screen.dart';
 import 'package:kine_app/services/get_user_data.dart';
-
 import 'package:kine_app/screens/contacts_screen.dart';
-import 'package:kine_app/screens/plan_ejercicios_screen.dart';
+import 'package:kine_app/screens/plan_ejercicios_screen.dart'; // Paciente ve esto
 import 'package:kine_app/screens/index.dart';
-import 'package:kine_app/screens/profile_screen.dart';
-import 'package:kine_app/screens/kine_directory_screen.dart';
+import 'package:kine_app/screens/profile_screen.dart'; // Ambos ven esto
+import 'package:kine_app/screens/kine_directory_screen.dart'; // Paciente ve esto
+import 'package:kine_app/screens/kine_panel_screen.dart'; // Kine ve esto
 
-// Definimos una clave global para acceder al estado del HomeScreen desde cualquier lugar
 final GlobalKey<_HomeScreenState> homeScreenKey = GlobalKey<_HomeScreenState>();
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  // Método estático para que el ProfileScreen pueda navegar directamente
   static void navigateToTabIndex(BuildContext context, int index) {
-    // Busca el TabController del HomeScreen y cambia el índice.
     final TabController? controller = DefaultTabController.of(context);
     if (controller != null) {
       controller.animateTo(index);
@@ -32,15 +30,6 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isKineVerified = false;
   bool _isLoading = true;
 
-  // Definimos los índices fijos para el contenido base
-  static const int indexInicio = 0;
-  static const int indexEjercicios = 1;
-  static const int indexMensajes = 2; // Índice en la lista del Kine
-  static const int indexPerfil = 3; // Índice en la lista del Kine
-
-  // El Directorio/Servicios estará en el índice 2 SOLO para usuarios normales.
-  static const int indexServiciosNormal = 2;
-
   @override
   void initState() {
     super.initState();
@@ -51,87 +40,105 @@ class _HomeScreenState extends State<HomeScreen>
     final userData = await getUserData();
     final userStatusId = userData?['tipo_usuario_id'] ?? 1;
 
-    setState(() {
-      _isKineVerified = userStatusId == 3;
-      _isLoading = false;
+    // Ya no necesitamos _isLoading aquí si el builder lo maneja
+    _isKineVerified = userStatusId == 3;
+    final tabLength = _isKineVerified ? 4 : 5; // Kine: 4 tabs, Paciente: 5 tabs
 
-      final tabLength = _isKineVerified ? 4 : 5;
-
-      _tabController = TabController(
-        length: tabLength,
-        vsync: this,
-        initialIndex: 0,
-      );
-    });
+    _tabController = TabController(
+      length: tabLength,
+      vsync: this,
+      initialIndex: 0,
+    );
+    // Forzamos rebuild ahora que tenemos el controller
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    // Solo disponer si fue inicializado
+    if (!_isLoading) {
+      _tabController.dispose();
+    }
     super.dispose();
   }
 
+  // 🔥 FUNCIÓN _getTabViews() MODIFICADA
   List<Widget> _getTabViews() {
-    final List<Widget> views = [const Index(), const PlanEjercicioScreen()];
-
-    if (!_isKineVerified) {
-      views.add(const KineDirectoryScreen()); // Index 2 para usuario normal
+    if (_isKineVerified) {
+      // Vistas para KINESIÓLOGO (tipo_usuario/3)
+      // La segunda pestaña es el Panel de Citas
+      return [
+        const Index(), // Tab 0
+        const KinePanelScreen(), // Tab 1:  Panel de Citas
+        const ContactsScreen(), // Tab 2: Mensajes
+        const ProfileScreen(), // Tab 3: Perfil (el tuyo)
+      ];
+    } else {
+      // Vistas para PACIENTE (tipo_usuario/1)
+      return [
+        const Index(), // Tab 0
+        const PlanEjercicioScreen(), // Tab 1: Ejercicios
+        const KineDirectoryScreen(), // Tab 2: Servicios/Directorio
+        const ContactsScreen(), // Tab 3: Mensajes
+        const ProfileScreen(), // Tab 4: Perfil (el tuyo)
+      ];
     }
-
-    views.addAll([const ContactsScreen(), const ProfileScreen()]);
-
-    return views;
   }
 
+  // 🔥 FUNCIÓN _getBottomNavBarTabs() MODIFICADA
   List<Tab> _getBottomNavBarTabs() {
-    final List<Tab> tabs = [
-      const Tab(icon: Icon(Icons.home), text: 'Inicio'),
-      const Tab(icon: Icon(Icons.search), text: 'Ejercicios'),
-    ];
-
-    if (!_isKineVerified) {
-      tabs.add(const Tab(icon: Icon(Icons.badge), text: 'Servicios'));
+    if (_isKineVerified) {
+      // Pestañas para KINESIÓLOGO
+      return [
+        const Tab(icon: Icon(Icons.home), text: 'Inicio'),
+        const Tab(
+          icon: Icon(Icons.assignment),
+          text: 'Citas',
+        ), // 🔥 Texto cambiado
+        const Tab(icon: Icon(Icons.chat_bubble), text: 'Mensajes'),
+        const Tab(icon: Icon(Icons.person), text: 'Perfil'),
+      ];
+    } else {
+      // Pestañas para PACIENTE
+      return [
+        const Tab(icon: Icon(Icons.home), text: 'Inicio'),
+        const Tab(icon: Icon(Icons.search), text: 'Ejercicios'),
+        const Tab(icon: Icon(Icons.badge), text: 'Servicios'),
+        const Tab(icon: Icon(Icons.chat_bubble), text: 'Mensajes'),
+        const Tab(icon: Icon(Icons.person), text: 'Perfil'),
+      ];
     }
-
-    tabs.addAll([
-      const Tab(icon: Icon(Icons.chat_bubble), text: 'Mensajes'),
-      const Tab(icon: Icon(Icons.person), text: 'Perfil'),
-    ]);
-
-    return tabs;
   }
 
   @override
   Widget build(BuildContext context) {
+    // Muestra carga hasta que sepamos el rol y tengamos el TabController
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // Envolvemos el Scaffold con un DefaultTabController para hacerlo accesible
-    // a los hijos como ProfileScreen. Usamos el TabController existente para su lógica.
     return DefaultTabController(
       length: _tabController.length,
       child: Scaffold(
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(0.0),
-          child: AppBar(automaticallyImplyLeading: false),
-        ),
-
-        // Usamos el TabController instanciado en el estado
+        // Sin AppBar global aquí
         body: TabBarView(
           controller: _tabController,
-          physics: const NeverScrollableScrollPhysics(),
-          children: _getTabViews(),
+          physics:
+              const NeverScrollableScrollPhysics(), // Evita deslizar entre tabs
+          children: _getTabViews(), // 🔥 Usa las vistas correctas según el rol
         ),
-
-        // Usamos el TabBar con el controller para la navegación
         bottomNavigationBar: TabBar(
           controller: _tabController,
           isScrollable: false,
-          labelColor: Colors.purple,
+          labelColor: Colors.purple, // Tu color
           unselectedLabelColor: Colors.black54,
           indicatorColor: Colors.transparent,
-          tabs: _getBottomNavBarTabs(),
+          tabs:
+              _getBottomNavBarTabs(), // 🔥 Usa las pestañas correctas según el rol
         ),
       ),
     );
