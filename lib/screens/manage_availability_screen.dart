@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kine_app/services/availability_service.dart'; // Importa el servicio
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:table_calendar/table_calendar.dart';
+import 'package:table_calendar/table_calendar.dart'; // Necesitas este paquete
 
 class ManageAvailabilityScreen extends StatefulWidget {
   const ManageAvailabilityScreen({super.key});
@@ -17,56 +17,65 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
   final AvailabilityService _availabilityService = AvailabilityService();
   final String _currentKineId = FirebaseAuth.instance.currentUser!.uid;
 
-  DateTime _focusedDay = DateTime.now();
-  DateTime _selectedDay = DateTime.now();
-  // Horarios base que el Kine puede elegir
-  final List<TimeOfDay> _baseTimeSlots = List.generate(8, (index) {
-    int hour = index < 4 ? 9 + index : 14 + (index - 4);
-    return TimeOfDay(hour: hour, minute: 0);
-  });
+  DateTime _focusedDay = DateTime.now(); // Día/Mes visible en el calendario
+  DateTime _selectedDay = DateTime.now(); // Día seleccionado por el Kine
+  // Horarios base que el Kine puede elegir (ej: cada hora de 9 a 17, saltando almuerzo)
+  final List<TimeOfDay> _baseTimeSlots = List.generate(
+    8, // Número total de slots (9, 10, 11, 12, 14, 15, 16, 17)
+    (index) {
+      int hour = index < 4
+          ? 9 + index
+          : 14 + (index - 4); // Calcula 9-12, luego 14-17
+      return TimeOfDay(hour: hour, minute: 0); // Crea el objeto TimeOfDay
+    },
+  );
 
-  Set<String> _selectedSlots = {}; // Slots seleccionados ("HH:mm")
-  bool _isLoading = false;
-  bool _isSaving = false;
+  // Almacena los horarios seleccionados ("HH:mm") para el día _selectedDay
+  Set<String> _selectedSlots = {};
+  bool _isLoading =
+      false; // Indica si se está cargando la disponibilidad del día
+  bool _isSaving =
+      false; // Indica si se está guardando la disponibilidad del día
+  bool _isSavingWeek =
+      false; // Indica si se está guardando la disponibilidad de la semana
 
   @override
   void initState() {
     super.initState();
-    // Asegura que el día inicial no sea fin de semana
+    // Asegura que el día inicial sea Lunes a Viernes
     _selectedDay = _findNextAvailableWorkDay(DateTime.now());
-    _focusedDay = _selectedDay;
-    _loadAvailabilityForSelectedDay();
+    _focusedDay = _selectedDay; // Enfoca el calendario en el día seleccionado
+    _loadAvailabilityForSelectedDay(); // Carga los horarios para ese día
   }
 
-  // Encuentra el próximo día laboral (Lunes a Viernes)
+  // Encuentra el próximo día laboral (Lunes a Viernes) a partir de una fecha
   DateTime _findNextAvailableWorkDay(DateTime date) {
     DateTime tempDate = date;
-    // Si es sábado, suma 2 días. Si es domingo, suma 1 día.
-    if (tempDate.weekday == DateTime.saturday) {
-      tempDate = tempDate.add(const Duration(days: 2));
-    } else if (tempDate.weekday == DateTime.sunday) {
+    // Avanza día a día hasta que no sea Sábado (6) ni Domingo (7)
+    while (tempDate.weekday == DateTime.saturday ||
+        tempDate.weekday == DateTime.sunday) {
       tempDate = tempDate.add(const Duration(days: 1));
     }
     return tempDate;
   }
 
-  // Carga disponibilidad guardada para el día seleccionado
+  // Carga la disponibilidad guardada en Firestore para el _selectedDay
   Future<void> _loadAvailabilityForSelectedDay() async {
-    if (!mounted) return;
+    if (!mounted) return; // No hacer nada si el widget ya no existe
     setState(() {
       _isLoading = true;
     }); // Muestra indicador de carga
     try {
-      // Llama al servicio para obtener los slots guardados ("HH:mm")
+      // Llama al servicio para obtener la lista de strings "HH:mm" guardados
       final savedSlots = await _availabilityService.getSavedAvailability(
         _currentKineId,
         _selectedDay,
       );
+      // Actualiza el estado con los slots encontrados
       if (mounted) {
-        // Guarda los slots en el Set y oculta el indicador
         setState(() {
-          _selectedSlots = Set.from(savedSlots);
-          _isLoading = false;
+          _selectedSlots = Set.from(savedSlots); // Convierte la lista a Set
+          _isLoading = false; // Oculta indicador
         });
       }
     } catch (e) {
@@ -77,66 +86,168 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
           _isLoading = false;
         }); // Oculta indicador
         ScaffoldMessenger.of(context).showSnackBar(
-          // --- 👇 CÓDIGO RESTAURADO 👇 ---
           SnackBar(
+            // Muestra mensaje de error
             content: Text('Error al cargar disponibilidad: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
-          // --- FIN RESTAURACIÓN ---
         );
       }
     }
   }
 
-  // Guarda los slots seleccionados
-  Future<void> _saveAvailability() async {
+  // Guarda los _selectedSlots actuales para el _selectedDay en Firestore
+  Future<void> _saveAvailabilityForSelectedDay() async {
     if (!mounted) return;
     setState(() {
       _isSaving = true;
-    }); // Muestra indicador en el botón AppBar
+    }); // Activa indicador en botón AppBar
     try {
-      // Convierte el Set a List antes de guardar y ordena
+      // Convierte el Set a List y ordena antes de guardar
       final List<String> slotsToSave = _selectedSlots.toList()..sort();
-
       // Llama al servicio para guardar
       await _availabilityService.setAvailability(
         kineId: _currentKineId,
         date: _selectedDay,
         availableSlots: slotsToSave,
       );
-
       // Muestra mensaje de éxito
       if (mounted) {
         setState(() {
           _isSaving = false;
-        }); // Oculta indicador
+        }); // Desactiva indicador
         ScaffoldMessenger.of(context).showSnackBar(
-          // --- 👇 CÓDIGO RESTAURADO 👇 ---
           const SnackBar(
-            content: Text('Disponibilidad guardada con éxito.'),
+            content: Text('Disponibilidad guardada para este día.'),
             backgroundColor: Colors.green,
           ),
-          // --- FIN RESTAURACIÓN ---
         );
       }
     } catch (e) {
-      print("Error guardando disponibilidad: $e");
+      print("Error guardando disponibilidad del día: $e");
       // Muestra mensaje de error
       if (mounted) {
         setState(() {
           _isSaving = false;
-        }); // Oculta indicador
+        }); // Desactiva indicador
         ScaffoldMessenger.of(context).showSnackBar(
-          // --- 👇 CÓDIGO RESTAURADO 👇 ---
           SnackBar(
             content: Text('Error al guardar: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
-          // --- FIN RESTAURACIÓN ---
         );
       }
     }
   }
+
+  // --- 👇 NUEVA FUNCIÓN PARA GUARDAR LA SEMANA 👇 ---
+  /// Guarda los slots actualmente seleccionados para Lunes a Viernes de la semana de _selectedDay
+  Future<void> _saveAvailabilityForWeek() async {
+    if (!mounted) return;
+
+    // Verifica si hay horarios seleccionados para aplicar
+    if (_selectedSlots.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Selecciona al menos un horario antes de aplicar a la semana.',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Pide confirmación al Kine
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Aplicar a la Semana'),
+        content: Text(
+          'Esto aplicará los ${_selectedSlots.length} horarios seleccionados actualmente a todos los días de Lunes a Viernes de esta semana (empezando el ${DateFormat('dd/MM', 'es_ES').format(_getMonday(_selectedDay))}). ¿Deseas continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Aplicar a Semana'), // Texto del botón
+            style: TextButton.styleFrom(foregroundColor: Colors.teal),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return; // Si el Kine cancela
+
+    setState(() {
+      _isSavingWeek = true;
+    }); // Activa indicador en el botón "Aplicar Semana"
+
+    try {
+      // Prepara la lista ordenada de slots a guardar
+      final List<String> slotsToSave = _selectedSlots.toList()..sort();
+      // Calcula el Lunes correspondiente al _selectedDay
+      DateTime monday = _getMonday(_selectedDay);
+
+      // Crea una lista para guardar todas las operaciones de escritura a Firestore
+      List<Future> saveFutures = [];
+      // Itera de Lunes (i=0) a Viernes (i=4)
+      for (int i = 0; i < 5; i++) {
+        DateTime currentWeekday = monday.add(Duration(days: i));
+        // Añade la operación de guardado para cada día hábil a la lista de Futuros
+        saveFutures.add(
+          _availabilityService.setAvailability(
+            kineId: _currentKineId,
+            date: currentWeekday,
+            availableSlots: slotsToSave, // Usa los mismos slots seleccionados
+          ),
+        );
+      }
+      // Espera a que TODAS las operaciones de guardado terminen
+      await Future.wait(saveFutures);
+
+      // Muestra mensaje de éxito
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Disponibilidad aplicada a Lunes-Viernes de esta semana.',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print("Error guardando disponibilidad semanal: $e");
+      // Muestra mensaje de error
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al aplicar a la semana: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      // Siempre desactiva el indicador del botón "Aplicar Semana"
+      if (mounted) {
+        setState(() {
+          _isSavingWeek = false;
+        });
+      }
+    }
+  }
+
+  // Helper para obtener el Lunes de la semana de una fecha dada
+  DateTime _getMonday(DateTime date) {
+    // weekday devuelve 1 para Lunes, 7 para Domingo
+    int daysToSubtract = date.weekday - DateTime.monday;
+    return date.subtract(Duration(days: daysToSubtract));
+  }
+  // --- FIN NUEVA FUNCIÓN Y HELPER ---
 
   @override
   Widget build(BuildContext context) {
@@ -146,10 +257,14 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
         actions: [
+          // Botón para guardar SOLO EL DÍA SELECCIONADO
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: TextButton(
-              onPressed: _isSaving ? null : _saveAvailability,
+              // Deshabilitado si está guardando día o semana
+              onPressed: (_isSaving || _isSavingWeek)
+                  ? null
+                  : _saveAvailabilityForSelectedDay,
               style: TextButton.styleFrom(foregroundColor: Colors.white),
               child: _isSaving
                   ? const SizedBox(
@@ -161,98 +276,196 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
                       ),
                     )
                   : const Text(
-                      'GUARDAR',
+                      'GUARDAR DÍA',
                       style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
+                    ), // Texto clarificado
             ),
           ),
         ],
       ),
       body: Column(
         children: [
-          // --- Calendario ---
+          // --- Calendario Semanal ---
           TableCalendar(
-            locale: 'es_ES',
+            locale: 'es_ES', // Español
             firstDay: DateTime.now().subtract(
-              const Duration(days: 7),
-            ), // Rango ajustable
-            lastDay: DateTime.now().add(const Duration(days: 90)),
-            focusedDay: _focusedDay,
-            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-            calendarFormat: CalendarFormat.week, // Mostrar por semana
-            startingDayOfWeek: StartingDayOfWeek.monday,
+              const Duration(days: 30),
+            ), // Rango hacia atrás
+            lastDay: DateTime.now().add(
+              const Duration(days: 90),
+            ), // Rango hacia adelante
+            focusedDay: _focusedDay, // Día/Semana visible
+            selectedDayPredicate: (day) =>
+                isSameDay(_selectedDay, day), // Marca el día seleccionado
+            calendarFormat:
+                CalendarFormat.week, // Muestra solo una semana a la vez
+            startingDayOfWeek:
+                StartingDayOfWeek.monday, // Semana empieza en Lunes
             headerStyle: const HeaderStyle(
               formatButtonVisible: false,
               titleCentered: true,
+            ), // Estilo cabecera
+            calendarStyle: const CalendarStyle(
+              // Estilos de los días
+              todayDecoration: BoxDecoration(
+                color: Colors.tealAccent,
+                shape: BoxShape.circle,
+              ),
+              selectedDecoration: BoxDecoration(
+                color: Colors.teal,
+                shape: BoxShape.circle,
+              ),
+              // Podrías añadir weekendTextStyle para atenuar fines de semana
             ),
-            calendarStyle: const CalendarStyle(/* ... Estilos ... */),
             // Filtro para no poder seleccionar fines de semana
-            enabledDayPredicate: (day) {
-              return day.weekday != DateTime.saturday &&
-                  day.weekday != DateTime.sunday;
-            },
+            enabledDayPredicate: (day) =>
+                day.weekday != DateTime.saturday &&
+                day.weekday != DateTime.sunday,
+            // Callback cuando se selecciona un día diferente
             onDaySelected: (selectedDay, focusedDay) {
-              // Asegura no seleccionar fin de semana (doble chequeo)
+              // Ignora si se intenta seleccionar Sábado o Domingo
               if (selectedDay.weekday == DateTime.saturday ||
-                  selectedDay.weekday == DateTime.sunday) {
-                return; // No hacer nada si se intenta seleccionar fin de semana
-              }
+                  selectedDay.weekday == DateTime.sunday)
+                return;
+
+              // Si se selecciona un día válido y diferente al actual
               if (!isSameDay(_selectedDay, selectedDay)) {
                 setState(() {
+                  // Actualiza el estado
                   _selectedDay = selectedDay;
-                  _focusedDay = focusedDay;
-                  _selectedSlots = {};
+                  _focusedDay =
+                      focusedDay; // Enfoca el calendario en el nuevo día/semana
+                  _selectedSlots =
+                      {}; // Limpia la selección de horarios anterior
                 });
-                _loadAvailabilityForSelectedDay(); // Carga disponibilidad del nuevo día
+                _loadAvailabilityForSelectedDay(); // Carga la disponibilidad del nuevo día
               }
             },
+            // Callback cuando cambia la semana visible
             onPageChanged: (focusedDay) {
-              _focusedDay = focusedDay;
+              _focusedDay = focusedDay; // Actualiza el foco
+              // Opcional: podrías seleccionar automáticamente el Lunes si quieres
+              // if (!isSameDay(_focusedDay, _selectedDay)) {
+              //   setState(() { _selectedDay = _findNextAvailableWorkDay(focusedDay); });
+              //  _loadAvailabilityForSelectedDay();
+              // }
             },
           ),
-          const Divider(height: 1),
+          const Divider(height: 1), // Línea divisoria
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            // Texto indicando el día seleccionado
+            padding: const EdgeInsets.symmetric(
+              vertical: 12.0,
+              horizontal: 16.0,
+            ),
             child: Text(
-              'Selecciona los horarios disponibles para:\n${DateFormat('EEEE, dd MMMM yyyy', 'es_ES').format(_selectedDay)}',
+              'Selecciona los horarios para:\n${DateFormat('EEEE, dd MMMM yyyy', 'es_ES').format(_selectedDay)}',
               textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                height: 1.4,
+              ),
             ),
           ),
           // --- Lista de Horarios (Checkboxes) ---
           Expanded(
-            child: _isLoading
+            // Ocupa el espacio restante
+            child:
+                _isLoading // Muestra indicador si está cargando los horarios del día
                 ? const Center(child: CircularProgressIndicator())
+                : _selectedSlots.isEmpty &&
+                      !_isLoading // Mensaje si no hay horarios cargados aún
+                ? const Center(
+                    child: Text('Cargando horarios...'),
+                  ) // Podría ser mejor un indicador aquí
                 : ListView.builder(
+                    // Lista de horarios seleccionables
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _baseTimeSlots.length,
+                    itemCount:
+                        _baseTimeSlots.length, // Usa la lista base de horarios
                     itemBuilder: (context, index) {
                       final timeSlot = _baseTimeSlots[index];
+                      // Convierte TimeOfDay a formato "HH:mm" para compararlo con el Set
                       final slotString =
                           '${timeSlot.hour.toString().padLeft(2, '0')}:${timeSlot.minute.toString().padLeft(2, '0')}';
+                      // Revisa si este horario está en el Set de seleccionados
                       final bool isSelected = _selectedSlots.contains(
                         slotString,
                       );
 
-                      // Checkbox para cada horario
+                      // Crea un Checkbox para cada horario
                       return CheckboxListTile(
-                        title: Text(timeSlot.format(context)),
-                        value: isSelected,
+                        title: Text(
+                          timeSlot.format(context),
+                          style: const TextStyle(fontSize: 16),
+                        ), // Muestra la hora
+                        value:
+                            isSelected, // Estado del checkbox (marcado/desmarcado)
                         onChanged: (bool? newValue) {
+                          // Callback al cambiar el estado
                           setState(() {
+                            // Actualiza el Set _selectedSlots
                             if (newValue == true) {
                               _selectedSlots.add(slotString);
-                            } else {
+                            } // Añade si se marca
+                            else {
                               _selectedSlots.remove(slotString);
-                            }
+                            } // Quita si se desmarca
                           });
                         },
+                        activeColor:
+                            Colors.teal, // Color del check cuando está marcado
                       );
                     },
                   ),
           ),
+          // --- Botón para Aplicar a la Semana ---
+          if (!_isLoading) // No mostrar si está cargando los slots iniciales
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                16,
+                10,
+                16,
+                16,
+              ), // Padding alrededor del botón
+              child: ElevatedButton.icon(
+                icon:
+                    _isSavingWeek // Muestra indicador si está guardando la semana
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.calendar_view_week, size: 20),
+                label: Text(
+                  _isSavingWeek
+                      ? 'Aplicando...'
+                      : 'Aplicar Horarios a L-V de esta Semana',
+                ),
+                // Deshabilitado si carga, guarda día o guarda semana
+                onPressed: (_isLoading || _isSaving || _isSavingWeek)
+                    ? null
+                    : _saveAvailabilityForWeek,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange.shade700, // Color naranja
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(
+                    double.infinity,
+                    45,
+                  ), // Ancho completo
+                  textStyle: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
