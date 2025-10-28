@@ -202,186 +202,183 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+
+      // *** NUEVO: AppBar igual a RegisterScreen ***
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.black87,
+        centerTitle: true,
+        title: const Text(
+          'Iniciar Sesión',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+
       body: SafeArea(
-        child: Stack(
-          children: [
-            // ===== CONTENIDO =====
-            SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(18, 8, 18, 24), // antes 16 arriba (bajé un poco)
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // (antes había SizedBox(height: 40) por la píldora) -> lo reducimos
+              const SizedBox(height: 12),
+
+              // Logo centrado
+              Center(
+                child: Image.asset(
+                  'assets/kinesiology.png',
+                  height: logoH,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // ===== Título centrado =====
+              ConstrainedBox(
+                constraints: BoxConstraints(minHeight: height * 0.18),
+                child: const Center(
+                  child: Text(
+                    'Ingresa tus datos\npara iniciar\nsesión.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 28,
+                      height: 1.15,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // ===== CAMPOS PÍLDORA =====
+              TextField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: _pillDecoration(hint: 'Correo electrónico*'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _passwordController,
+                obscureText: !_showPassword,
+                decoration: _pillDecoration(
+                  hint: 'Contraseña*',
+                  suffix: IconButton(
+                    onPressed: () => setState(() => _showPassword = !_showPassword),
+                    icon: Icon(
+                      _showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      color: Colors.black54,
+                      size: 22,
+                    ),
+                    splashRadius: 20,
+                    tooltip: _showPassword ? 'Ocultar' : 'Ver contraseña',
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _isLoading ? null : _showResetPasswordDialog,
+                  child: const Text(
+                    '¿Olvidaste la contraseña?',
+                    style: TextStyle(
+                      color: Color(0xFF6D6D6D),
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 4),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                    elevation: 0,
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 22, height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Ingresar', style: TextStyle(fontSize: 16)),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+              Row(
+                children: const [
+                  Expanded(child: Divider(color: Color(0xFFE6E6E6), thickness: 1)),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Text('O inicia sesión con', style: TextStyle(color: Color(0xFF6D6D6D))),
+                  ),
+                  Expanded(child: Divider(color: Color(0xFFE6E6E6), thickness: 1)),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 40), // espacio bajo la píldora
-
-                  // Logo centrado
-                  Center(
-                    child: Image.asset(
-                      'assets/kinesiology.png',
-                      height: logoH,
-                      fit: BoxFit.contain,
-                    ),
+                  _SocialCircle(
+                    onTap: _isLoading ? null : _loginWithGoogle,
+                    borderColor: const Color(0xFFDB4437),
+                    child: const Text('G', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                   ),
-                  const SizedBox(height: 16),
-
-                  // ===== Título centrado =====
-                  ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: height * 0.18),
-                    child: const Center(
-                      child: Text(
-                        'Ingresa tus datos\npara iniciar\nsesión.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 28,
-                          height: 1.15,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ),
+                  const SizedBox(width: 18),
+                  _SocialCircle(
+                    onTap: _isLoading ? null : _loginWithFacebook,
+                    borderColor: const Color(0xFF1877F2),
+                    child: const Icon(Icons.facebook, size: 24, color: Color(0xFF1877F2)),
                   ),
-                  const SizedBox(height: 12),
+                ],
+              ),
 
-                  // ===== CAMPOS PÍLDORA =====
-                  TextField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: _pillDecoration(hint: 'Correo electrónico*'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: !_showPassword,
-                    decoration: _pillDecoration(
-                      hint: 'Contraseña*',
-                      suffix: IconButton(
-                        onPressed: () => setState(() => _showPassword = !_showPassword),
-                        icon: Icon(
-                          _showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: Colors.black54,
-                          size: 22,
-                        ),
-                        splashRadius: 20,
-                        tooltip: _showPassword ? 'Ocultar' : 'Ver contraseña',
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: _isLoading ? null : _showResetPasswordDialog,
-                      child: const Text(
-                        '¿Olvidaste la contraseña?',
-                        style: TextStyle(
-                          color: Color(0xFF6D6D6D),
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-                        elevation: 0,
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 22, height: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Text('Ingresar', style: TextStyle(fontSize: 16)),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-                  Row(
-                    children: const [
-                      Expanded(child: Divider(color: Color(0xFFE6E6E6), thickness: 1)),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10),
-                        child: Text('O inicia sesión con', style: TextStyle(color: Color(0xFF6D6D6D))),
-                      ),
-                      Expanded(child: Divider(color: Color(0xFFE6E6E6), thickness: 1)),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _SocialCircle(
-                        onTap: _isLoading ? null : _loginWithGoogle,
-                        borderColor: const Color(0xFFDB4437),
-                        child: const Text('G', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-                      ),
-                      const SizedBox(width: 18),
-                      _SocialCircle(
-                        onTap: _isLoading ? null : _loginWithFacebook,
-                        borderColor: const Color(0xFF1877F2),
-                        child: const Icon(Icons.facebook, size: 24, color: Color(0xFF1877F2)),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 18),
-                  Center(
-                    child: Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        const Text('No tienes una cuenta? ', style: TextStyle(color: Color(0xFF6D6D6D))),
-                        GestureDetector(
-                          onTap: _isLoading
-                              ? null
-                              : () {
-                                  Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen()));
-                                },
-                          child: const Text(
-                            'Regístrate aquí',
-                            style: TextStyle(
-                              color: Colors.black,
-                              decoration: TextDecoration.underline,
-                              fontWeight: FontWeight.w600,
-                            ),
+              const SizedBox(height: 18),
+              Center(
+                child: TextButton(
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                          );
+                        },
+                  child: Text.rich(
+                    TextSpan(
+                      text: '¿No tienes una cuenta? ',
+                      style: const TextStyle(color: Color(0xFF6D6D6D)),
+                      children: const [
+                        TextSpan(
+                          text: 'Regístrate aquí',
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ===== Píldora "atrás" solo flecha =====
-            Positioned(
-              top: 16,
-              left: 18,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _isLoading ? null : () => Navigator.of(context).pop(),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    child: const Icon(Icons.arrow_back_ios_new, size: 16, color: Colors.white),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
