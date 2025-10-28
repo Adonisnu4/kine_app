@@ -26,3 +26,21 @@ Future<void> updateKinePresentation({
     'carta_presentacion': presentation,
   });
 }
+
+Future<String?> getUserEmailById(String userId) async {
+  try {
+    // Lee el documento del usuario desde la colección 'usuarios'
+    final doc = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(userId)
+        .get();
+    if (doc.exists && doc.data() != null) {
+      // Devuelve el valor del campo 'email'
+      return doc.data()!['email'] as String?;
+    }
+    return null; // Retorna null si el usuario o el email no existen
+  } catch (e) {
+    print("Error obteniendo email para $userId: $e");
+    return null; // Retorna null en caso de error
+  }
+}
