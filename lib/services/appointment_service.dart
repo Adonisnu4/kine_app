@@ -228,4 +228,35 @@ class AppointmentService {
   Future<void> deleteAppointment(String appointmentId) {
     return _citasCollection.doc(appointmentId).delete();
   }
+
+  /// Obtiene el historial de citas entre un Kine y un Paciente específico, ordenado por fecha.
+  Stream<List<Appointment>> getAppointmentHistory(
+    String kineId,
+    String pacienteId,
+  ) {
+    print(
+      "getAppointmentHistory: Buscando citas para Kine: $kineId, Paciente: $pacienteId",
+    );
+    return _citasCollection
+        .where('kineId', isEqualTo: kineId) // Filtra por el Kine logueado
+        .where(
+          'pacienteId',
+          isEqualTo: pacienteId,
+        ) // Filtra por el paciente específico
+        .orderBy(
+          'fechaCita',
+          descending: true,
+        ) // Ordena por fecha de la cita (más recientes primero)
+        .snapshots() // Escucha cambios en tiempo real
+        .map((snapshot) {
+          print(
+            "getAppointmentHistory: Snapshot recibido con ${snapshot.docs.length} citas.",
+          );
+          // ⚠️ Firestore requerirá un índice compuesto: kineId (Asc), pacienteId (Asc), fechaCita (Desc)
+          // Convierte los documentos a objetos Appointment
+          return snapshot.docs
+              .map((doc) => Appointment.fromFirestore(doc))
+              .toList();
+        });
+  }
 } // Fin clase

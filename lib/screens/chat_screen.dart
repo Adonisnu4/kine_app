@@ -3,8 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../services/chat_service.dart';
 import '../models/message.dart';
-// Asume que tienes esta pantalla para navegar
-// import 'user_profile_screen.dart'; // ¡Asegúrate de importar tu pantalla de perfil!
 
 class ChatScreen extends StatefulWidget {
   final String receiverId;
@@ -30,22 +28,6 @@ class _ChatScreenState extends State<ChatScreen> {
   // LÓGICA DE NAVEGACIÓN
   // ----------------------
   void _navigateToUserProfile() {
-    // Reemplaza 'UserProfileScreen' con el nombre real de tu widget de perfil
-    // y asegúrate de pasar los datos necesarios (al menos el ID).
-    // Nota: Descomentar y completar esta sección cuando la pantalla de perfil exista.
-    /*
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => UserProfileScreen(
-          userId: widget.receiverId,
-          userName: widget.receiverName,
-        ),
-      ),
-    );
-    */
-
-    // Muestra un mensaje temporal mientras implementas UserProfileScreen
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Navegando al perfil del usuario...')),
     );

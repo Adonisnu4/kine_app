@@ -21,10 +21,10 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
   DateTime _selectedDay = DateTime.now(); // Día seleccionado por el Kine
   // Horarios base que el Kine puede elegir (ej: cada hora de 9 a 17, saltando almuerzo)
   final List<TimeOfDay> _baseTimeSlots = List.generate(
-    8, // Número total de slots (9, 10, 11, 12, 14, 15, 16, 17)
+    9, // Número total de slots (9, 10, 11, 12, 14, 15, 16, 17)
     (index) {
       int hour = index < 4
-          ? 9 + index
+          ? 8 + index
           : 14 + (index - 4); // Calcula 9-12, luego 14-17
       return TimeOfDay(hour: hour, minute: 0); // Crea el objeto TimeOfDay
     },
