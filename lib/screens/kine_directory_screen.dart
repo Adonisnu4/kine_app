@@ -36,6 +36,12 @@ class _KineDirectoryScreenState extends State<KineDirectoryScreen> {
           .collection('usuarios')
           // CAMBIO: Filtramos por un campo que solo tienen los kinesiólogos.
           .where('specialization', isGreaterThan: '')
+          // --- INICIO DE LA IMPLEMENTACIÓN DEL ORDEN ---
+          // 1. Ordena por 'perfilDestacado' (true irá antes que false)
+          .orderBy('perfilDestacado', descending: true)
+          // 2. (Opcional) Luego ordena alfabéticamente
+          .orderBy('nombre_completo', descending: false)
+          // --- FIN DE LA IMPLEMENTACIÓN ---
           .get();
 
       if (querySnapshot.docs.isEmpty) {
