@@ -7,11 +7,11 @@ import 'package:kine_app/screens/login_screen.dart';
 import '../models/edit_presentation_modal.dart';
 import '../models/edit_presentation_modal.dart' show PresentationData;
 import 'package:kine_app/services/user_service.dart';
-
-// --- Imports para las nuevas pantallas ---
 import 'my_appointments_screen.dart'; // Para Pacientes
 import 'manage_availability_screen.dart'; // Para Kinesiólogos
-// --- FIN IMPORTS ---
+// --- Importaciones de Pago ---
+import 'package:kine_app/services/stripe_service.dart';
+import 'package:kine_app/screens/subscription_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -22,18 +22,23 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late Future<Map<String, dynamic>?> _userDataFuture;
-  Map<String, dynamic>? _currentUserData; // Estado local para UI rápida
+  Map<String, dynamic>? _currentUserData;
+
+  // --- Estado "Pro" ---
+  final StripeService _stripeService = StripeService();
+  bool _isPro = false;
+  bool _isLoadingProStatus = true;
 
   @override
   void initState() {
     super.initState();
-    _userDataFuture = _loadUserData(); // Inicia la carga de datos
+    _userDataFuture = _loadUserData();
+    _checkSubscriptionStatus();
   }
 
   // Carga los datos del usuario desde Firestore
   Future<Map<String, dynamic>?> _loadUserData() async {
     final data = await getUserData();
-    // Actualiza el estado local solo si el widget sigue "vivo"
     if (mounted) {
       setState(() {
         _currentUserData = data;
@@ -42,14 +47,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return data;
   }
 
-  // Vuelve a lanzar la carga de datos (usado después de guardar)
+  // Recarga el perfil
   void _refreshProfile() {
     setState(() {
       _userDataFuture = _loadUserData();
     });
+    _checkSubscriptionStatus(); // Refresca también el estado "Pro"
   }
 
-  // Guarda los datos de presentación editados por el Kine
+  /// Comprueba el estado de la suscripción Pro
+  Future<void> _checkSubscriptionStatus() async {
+    if (mounted)
+      setState(() {
+        _isLoadingProStatus = true;
+      });
+    try {
+      final isPro = await _stripeService.checkProSubscriptionStatus();
+      if (mounted) {
+        setState(() {
+          _isPro = isPro;
+          _isLoadingProStatus = false;
+        });
+      }
+    } catch (e) {
+      if (mounted)
+        setState(() {
+          _isLoadingProStatus = false;
+        });
+      print("Error al comprobar estado Pro: $e");
+    }
+  }
+
+  /// Navega a la pantalla de suscripción
+  void _navigateToSubscriptions(String userType) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => SubscriptionScreen(userType: userType),
+      ),
+    );
+    // Al volver, revisa el estado de nuevo
+    _checkSubscriptionStatus();
+  }
+
+  // --- Funciones de Navegación y Modales ---
+
   Future<void> _savePresentation(PresentationData data) async {
     try {
       await updateKinePresentation(
@@ -57,7 +99,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         experience: data.experience,
         presentation: data.presentation,
       );
-      // Actualiza UI local inmediatamente
       if (_currentUserData != null && mounted) {
         setState(() {
           _currentUserData!['specialization'] = data.specialization;
@@ -65,8 +106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _currentUserData!['carta_presentacion'] = data.presentation;
         });
       }
-      _refreshProfile(); // Recarga desde Firestore para confirmar
-      // --- 👇 SNACKBAR RESTAURADO 👇 ---
+      _refreshProfile();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -75,10 +115,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       }
-      // --- FIN RESTAURACIÓN ---
     } catch (e) {
       print("Error al guardar presentación en Firestore: $e");
-      // --- 👇 SNACKBAR RESTAURADO 👇 ---
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -87,14 +125,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       }
-      // --- FIN RESTAURACIÓN ---
-      rethrow; // Permite que el modal sepa que hubo un error
+      rethrow;
     }
   }
 
-  // Muestra modal de activación (placeholder)
   void _showActivationModal() {
-    // --- 👇 SNACKBAR RESTAURADO 👇 ---
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text(
@@ -102,10 +137,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
-    // --- FIN RESTAURACIÓN ---
   }
 
-  // Muestra el modal para editar la presentación del Kine
   void _showEditPresentationModal({
     required String specialization,
     required String experience,
@@ -126,7 +159,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Navega al directorio de Kines (para Paciente)
   void _navigateToServices() async {
     await Navigator.push(
       context,
@@ -134,7 +166,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Navega a "Mis Citas" (para Paciente)
   void _navigateToMyAppointments() {
     Navigator.push(
       context,
@@ -142,7 +173,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// Navega a la pantalla donde el Kine gestiona su disponibilidad
   void _navigateToManageAvailability() {
     Navigator.push(
       context,
@@ -150,12 +180,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // --- Widgets Helpers para construir la UI ---
-  // Construye un item de estadística (Citas, Seguidores, etc.)
+  // --- Widgets Helpers ---
   Widget _buildStatItem(String label, String value) {
-    // --- 👇 CÓDIGO RESTAURADO 👇 ---
     return Column(
-      mainAxisSize: MainAxisSize.min, // Ocupa el mínimo espacio vertical
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           value,
@@ -169,22 +197,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
       ],
     );
-    // --- FIN RESTAURACIÓN ---
   }
 
-  // Construye un elemento del menú del perfil (con icono, texto y flecha)
   Widget _buildProfileMenuItem({
     required IconData icon,
     required String text,
     required VoidCallback onTap,
     Color textColor = Colors.black87,
   }) {
-    // --- 👇 CÓDIGO RESTAURADO 👇 ---
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 10,
-      ), // Padding restaurado
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: InkWell(
         onTap: onTap,
         child: Row(
@@ -192,7 +214,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Icon(icon, color: Colors.teal, size: 28),
             const SizedBox(width: 20),
             Expanded(
-              // Para que el texto no se desborde si es largo
               child: Text(
                 text,
                 style: TextStyle(
@@ -202,7 +223,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
-            // const Spacer(), // Ya no es necesario con Expanded
             Icon(
               Icons.arrow_forward_ios,
               color: Colors.grey.shade400,
@@ -212,7 +232,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
-    // --- FIN RESTAURACIÓN ---
   }
   // --- Fin Widgets Helpers ---
 
@@ -229,16 +248,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         centerTitle: true,
       ),
       body: FutureBuilder<Map<String, dynamic>?>(
-        future: _userDataFuture, // Espera a que los datos del usuario carguen
+        future: _userDataFuture,
         builder: (context, snapshot) {
-          // --- Estados de Carga y Error ---
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting ||
+              _isLoadingProStatus) {
             return const Center(child: CircularProgressIndicator());
           }
+
           if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
-            print(
-              "Error en FutureBuilder de ProfileScreen: ${snapshot.error}",
-            ); // Log de error
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(16.0),
@@ -251,42 +268,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
 
-          // --- Estado Exitoso ---
-          final userData = snapshot.data!; // Tenemos los datos
-          // Extrae la información necesaria
+          // --- Datos del Usuario ---
+          final userData = snapshot.data!;
           final userName = userData['nombre_completo'] ?? 'Usuario';
           final userEmail =
               FirebaseAuth.instance.currentUser?.email ?? 'No disponible';
           final userStatusName =
               userData['tipo_usuario_nombre'] ?? 'No especificado';
-          final userStatusId =
-              userData['tipo_usuario_id'] ??
-              1; // Default a 1 (Paciente) si falta
-          // Imprime para depurar
-          print('--- DEBUG ProfileScreen Build ---');
-          print('   Raw userData received: $userData');
-          print('   Extracted userStatusId: $userStatusId');
+          final userStatusId = userData['tipo_usuario_id'] ?? 1;
 
-          final isVerified = userStatusId == 3; // ¿Es Kine Verificado?
-          final isPending = userStatusId == 2; // ¿Es Kine Pendiente?
-          final isNormal = userStatusId == 1; // ¿Es Paciente?
+          final isVerified = userStatusId == 3; // Kine Verificado
+          final isPending = userStatusId == 2; // Kine Pendiente
+          final isNormal = userStatusId == 1; // Paciente
+          final userTypeString = isVerified ? "kine" : "patient";
 
-          // Datos específicos del Kine
           final String currentSpecialization = userData['specialization'] ?? '';
           final String currentExperience =
               userData['experience']?.toString() ?? '';
           final String currentPresentation =
               userData['carta_presentacion'] ?? '';
           final userImageUrl =
-              userData['imagen_perfil'] ??
-              'https://via.placeholder.com/120'; // Placeholder
+              userData['imagen_perfil'] ?? 'https://via.placeholder.com/120';
 
-          // Construye la lista del perfil
+          // --- Construcción del ListView ---
           return ListView(
             physics: const BouncingScrollPhysics(),
             children: [
               const SizedBox(height: 30),
-              // --- Sección Superior: Foto, Nombre, Email, Rol ---
+              // --- Cabecera de Perfil ---
               Center(
                 child: Stack(
                   clipBehavior: Clip.none,
@@ -294,9 +303,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     CircleAvatar(
                       radius: 60,
-                      backgroundColor: Colors
-                          .grey
-                          .shade300, // Color de fondo si la imagen tarda
+                      backgroundColor: Colors.grey.shade300,
                       backgroundImage: NetworkImage(userImageUrl),
                     ),
                     Positioned(
@@ -335,7 +342,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 25), // Más espacio después del badge
+              const SizedBox(height: 25),
               Center(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -367,7 +374,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              // --- Sección de Estadísticas ---
+              // --- Stats ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0),
                 child: Row(
@@ -381,7 +388,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 30),
 
-              // --- Elementos del Menú ---
+              // --- Botón "Pro" (Sigue igual) ---
+              if (!_isPro)
+                _buildProfileMenuItem(
+                  icon: Icons.star_purple500_outlined,
+                  text: 'Actualizar a Plan Pro',
+                  onTap: () => _navigateToSubscriptions(userTypeString),
+                  textColor: Colors.blue.shade700,
+                ),
+              if (_isPro)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.star, color: Colors.amber.shade700, size: 28),
+                      const SizedBox(width: 20),
+                      Text(
+                        'Plan Pro Activo',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // --- Menú General ---
               _buildProfileMenuItem(
                 icon: Icons.person_outline,
                 text: 'Editar Perfil',
@@ -402,17 +439,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: _navigateToServices,
                 ),
 
-              // Opciones para Kine Verificado (isVerified)
+              // --- 👇 6. CAMBIO REALIZADO AQUÍ 👇 ---
+              // Esta función ahora es gratis para todos los Kines Verificados
               if (isVerified)
                 _buildProfileMenuItem(
                   icon: Icons.schedule,
                   text: 'Gestionar Disponibilidad',
+                  // Ya no comprueba _isPro, va directo a la función
                   onTap: _navigateToManageAvailability,
+                  // Color de texto normal
+                  textColor: Colors.black87,
                 ),
+
+              // --- FIN DEL CAMBIO ---
               if (isVerified)
                 _buildProfileMenuItem(
                   icon: Icons.article_outlined,
                   text: 'Carta de Presentación',
+                  // Esta función sigue siendo gratis
                   onTap: () => _showEditPresentationModal(
                     specialization: currentSpecialization,
                     experience: currentExperience,
@@ -432,8 +476,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: () {},
               ),
 
-              // Lógica de Activación de Cuenta (si no está verificado)
-              // --- 👇 CÓDIGO RESTAURADO 👇 ---
+              // Lógica de Activación de Cuenta
               if (!isVerified)
                 if (isNormal)
                   _buildProfileMenuItem(
@@ -449,7 +492,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
-                            'Tu solicitud ya fue enviada y está siendo revisada.',
+                            'Tu solicitud ya fue sentada y está siendo revisada.',
                           ),
                         ),
                       );
@@ -457,10 +500,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     textColor: Colors.orange.shade800,
                   ),
 
-              // --- FIN RESTAURACIÓN ---
               const Divider(height: 40, indent: 20, endIndent: 20),
 
-              // Opciones Comunes: Ayuda y Cerrar Sesión
+              // Ayuda y Cerrar Sesión
               _buildProfileMenuItem(
                 icon: Icons.help_outline,
                 text: 'Ayuda y Soporte',
