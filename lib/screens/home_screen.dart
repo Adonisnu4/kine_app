@@ -55,11 +55,9 @@ class _HomeScreenState extends State<HomeScreen>
     _isKineVerified = (userStatusId == 3);
 
     // Set the number of tabs based on the user role
-    // Kine now has 5 tabs (Inicio, Citas, Pacientes, Mensajes, Perfil accessed via Header)
+    // Kine now has 4 tabs (Inicio, Citas, Mensajes, Pacientes)
     // Patient has 4 tabs (Inicio, Ejercicios, Servicios, Mensajes)
-    final tabLength = _isKineVerified
-        ? 4
-        : 4; // Adjusted to 4 visible tabs for Kine footer
+    const tabLength = 4; // Ambos tienen 4 pestañas
 
     _tabController =
         TabController(length: tabLength, vsync: this, initialIndex: 0)
@@ -101,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen>
         Index(), // 0: Inicio
         KinePanelScreen(), // 1: Citas
         ContactsScreen(), // 2: Mensajes
-        // Perfil se abre por header (push)
+        MyPatientsScreen(), // 3: Mis Pacientes
       ];
     } else {
       // Screens for PATIENT (4 tabs shown in footer)
@@ -122,6 +120,7 @@ class _HomeScreenState extends State<HomeScreen>
   List<Tab> _getBottomNavBarTabs() {
     if (_isKineVerified) {
       // Tabs for KINESIOLOGIST (4 tabs)
+      // --- 👇 CORREGIDO: AHORA SON 4 TABS 👇 ---
       return [
         Tab(icon: _navIcon(Icons.home_rounded), text: 'Inicio'),
         Tab(icon: _navIcon(Icons.assignment_rounded), text: 'Citas'),
@@ -129,7 +128,12 @@ class _HomeScreenState extends State<HomeScreen>
           icon: _navIcon(Icons.chat_bubble_outline_rounded),
           text: 'Mensajes',
         ),
+        Tab(
+          icon: _navIcon(Icons.people_alt_rounded), // (Icono de pacientes)
+          text: 'Pacientes',
+        ),
       ];
+      // --- FIN CORRECCIÓN ---
     } else {
       // Tabs for PATIENT (4 tabs)
       return [
@@ -148,12 +152,14 @@ class _HomeScreenState extends State<HomeScreen>
   List<String> _tabLabels() {
     if (_isKineVerified) {
       // Titles for KINESIOLOGIST
+      // --- 👇 CORREGIDO: ORDEN SINCRONIZADO CON _getTabViews 👇 ---
       return [
-        'Inicio',
-        'Citas',
-        'Mis Pacientes',
-        'Mensajes',
-      ]; // Added "Mis Pacientes"
+        'Inicio', // 0: Index
+        'Citas', // 1: KinePanelScreen
+        'Mensajes', // 2: ContactsScreen
+        'Mis Pacientes', // 3: MyPatientsScreen
+      ];
+      // --- FIN CORRECCIÓN ---
     } else {
       // Titles for PATIENT
       return ['Inicio', 'Ejercicios', 'Servicios', 'Mensajes'];
