@@ -1,12 +1,12 @@
 // lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Needed for SystemUiOverlayStyle
-import 'package:kine_app/screens/kine_panel_screen.dart'; // Kine (Calendario Citas)
-import 'package:kine_app/services/get_user_data.dart'; // Service to get user role
-import 'package:kine_app/screens/contacts_screen.dart'; // Chat general
-import 'package:kine_app/screens/plan_ejercicios_screen.dart'; // Paciente
-import 'package:kine_app/screens/index.dart'; // Inicio (ambos)
-import 'package:kine_app/screens/profile_screen.dart'; // Perfil (ambos)
+import 'package:flutter/services.dart';
+import 'package:kine_app/screens/kine_panel_screen.dart';
+import 'package:kine_app/services/get_user_data.dart';
+import 'package:kine_app/screens/contacts_screen.dart';
+import 'package:kine_app/screens/ejercicios/plan_ejercicios_screen.dart'; // Paciente ve esto
+import 'package:kine_app/screens/index.dart';
+import 'package:kine_app/screens/profile_screen.dart'; // Ambos
 import 'package:kine_app/screens/kine_directory_screen.dart'; // Paciente
 import 'package:kine_app/screens/my_patients_screen.dart'; // Kine (Lista Pacientes)
 
@@ -61,16 +61,12 @@ class _HomeScreenState extends State<HomeScreen>
         ? 4
         : 4; // Adjusted to 4 visible tabs for Kine footer
 
-    // Initialize the TabController
     _tabController =
-        TabController(
-          length: tabLength, // Set the number of tabs
-          vsync: this, // Required for animation
-          initialIndex: 0, // Start on the first tab (Inicio)
-        )..addListener(() {
-          // Add a listener to rebuild the AppBar title when the tab changes
-          if (mounted) setState(() {});
-        });
+        TabController(length: tabLength, vsync: this, initialIndex: 0)
+          ..addListener(() {
+            if (mounted)
+              setState(() {}); // refrescar título del header al cambiar de tab
+          });
 
     // Update the state to indicate loading is complete
     if (mounted) {
@@ -92,12 +88,9 @@ class _HomeScreenState extends State<HomeScreen>
   /// Navigates to the ProfileScreen when the profile icon in the header is tapped.
   Future<void> _onProfileTap() async {
     if (!mounted) return;
-    // Use push navigation to show the ProfileScreen on top
     await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
-    // Optional: Refresh data if needed after returning from profile
-    // _loadUserStateAndSetupTabs();
   }
 
   /// Returns the list of screen Widgets for the TabBarView based on user role.
@@ -106,10 +99,9 @@ class _HomeScreenState extends State<HomeScreen>
       // Screens for KINESIOLOGIST (4 tabs shown in footer)
       return const [
         Index(), // 0: Inicio
-        KinePanelScreen(), // 1: Citas (Calendar)
-        MyPatientsScreen(), // 2: Mis Pacientes (New)
-        ContactsScreen(), // 3: Mensajes
-        // ProfileScreen is accessed via the header button
+        KinePanelScreen(), // 1: Citas
+        ContactsScreen(), // 2: Mensajes
+        // Perfil se abre por header (push)
       ];
     } else {
       // Screens for PATIENT (4 tabs shown in footer)
@@ -118,7 +110,6 @@ class _HomeScreenState extends State<HomeScreen>
         PlanEjercicioScreen(), // 1: Ejercicios
         KineDirectoryScreen(), // 2: Servicios/Directorio
         ContactsScreen(), // 3: Mensajes
-        // ProfileScreen might be accessed from other parts of the app for patients
       ];
     }
   }
@@ -132,24 +123,23 @@ class _HomeScreenState extends State<HomeScreen>
     if (_isKineVerified) {
       // Tabs for KINESIOLOGIST (4 tabs)
       return [
-        Tab(icon: _navIcon(Icons.home_outlined), text: 'Inicio'),
-        Tab(icon: _navIcon(Icons.calendar_month_outlined), text: 'Citas'),
+        Tab(icon: _navIcon(Icons.home_rounded), text: 'Inicio'),
+        Tab(icon: _navIcon(Icons.assignment_rounded), text: 'Citas'),
         Tab(
-          icon: _navIcon(Icons.people_alt_outlined),
-          text: 'Pacientes',
-        ), // New Tab
-        Tab(icon: _navIcon(Icons.chat_bubble_outline), text: 'Mensajes'),
+          icon: _navIcon(Icons.chat_bubble_outline_rounded),
+          text: 'Mensajes',
+        ),
       ];
     } else {
       // Tabs for PATIENT (4 tabs)
       return [
-        Tab(icon: _navIcon(Icons.home_outlined), text: 'Inicio'),
-        Tab(icon: _navIcon(Icons.fitness_center_outlined), text: 'Ejercicios'),
+        Tab(icon: _navIcon(Icons.home_rounded), text: 'Inicio'),
+        Tab(icon: _navIcon(Icons.fitness_center), text: 'Ejercicios'),
+        Tab(icon: _navIcon(Icons.medical_services_rounded), text: 'Servicios'),
         Tab(
-          icon: _navIcon(Icons.search_outlined),
-          text: 'Buscar Kine',
-        ), // Updated text
-        Tab(icon: _navIcon(Icons.chat_bubble_outline), text: 'Mensajes'),
+          icon: _navIcon(Icons.chat_bubble_outline_rounded),
+          text: 'Mensajes',
+        ),
       ];
     }
   }
@@ -191,7 +181,10 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ],
           border: Border(
-            bottom: BorderSide(color: Color(0x14000000), width: 1),
+            bottom: BorderSide(
+              color: Color(0x14000000),
+              width: 1,
+            ), // línea finita
           ),
         ),
         child: SafeArea(
@@ -205,16 +198,18 @@ class _HomeScreenState extends State<HomeScreen>
                 const SizedBox(width: 12),
                 // Left Icon Button -> Navigates to Profile
                 IconButton(
-                  onPressed: _onProfileTap, // Action to open profile
+                  onPressed: _onProfileTap,
                   icon: const Icon(
                     Icons.person_outline,
                     color: Colors.black87,
-                    size: 24,
-                  ), // Profile Icon
-                  tooltip: 'Mi perfil', // Accessibility text
+                    size: 22,
+                  ),
+                  tooltip: 'Mi perfil',
                 ),
-                const SizedBox(width: 14), // Spacing
-                // Title Text (changes based on selected tab)
+                // Mover un poco más a la derecha el texto:
+                const SizedBox(
+                  width: 14,
+                ), // antes 8 → ahora un poco más separado
                 Text(
                   title,
                   style: const TextStyle(
@@ -283,21 +278,20 @@ class _HomeScreenState extends State<HomeScreen>
               ), // Subtle top border
             ),
             child: TabBar(
-              controller: _tabController, // Connect to the state's controller
-              isScrollable: false, // Tabs fit without scrolling
-              labelColor: Colors.white, // Color for active tab text/icon
-              unselectedLabelColor: Colors.white70, // Color for inactive tabs
-              indicatorColor:
-                  Colors.transparent, // No line under the active tab
+              controller: _tabController,
+              isScrollable: false,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              indicatorColor: Colors.transparent,
               labelStyle: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ), // Style for active label
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
               unselectedLabelStyle: const TextStyle(
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
-              ), // Style for inactive labels
-              tabs: tabs, // Use the correct list of Tab widgets
+              ),
+              tabs: tabs,
             ),
           ),
         ),
