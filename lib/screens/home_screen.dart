@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:kine_app/screens/kine_panel_screen.dart';
 import 'package:kine_app/services/get_user_data.dart';
 import 'package:kine_app/screens/contacts_screen.dart';
-import 'package:kine_app/screens/plan_ejercicios_screen.dart'; // Paciente
+import 'package:kine_app/screens/ejercicios/plan_ejercicios_screen.dart'; // Paciente ve esto
 import 'package:kine_app/screens/index.dart';
 import 'package:kine_app/screens/profile_screen.dart'; // Ambos
 import 'package:kine_app/screens/kine_directory_screen.dart'; // Paciente
@@ -46,13 +46,12 @@ class _HomeScreenState extends State<HomeScreen>
     // Paciente: 4 tabs visibles (sin Perfil en footer)
     final tabLength = _isKineVerified ? 3 : 4;
 
-    _tabController = TabController(
-      length: tabLength,
-      vsync: this,
-      initialIndex: 0,
-    )..addListener(() {
-        if (mounted) setState(() {}); // refrescar título del header al cambiar de tab
-      });
+    _tabController =
+        TabController(length: tabLength, vsync: this, initialIndex: 0)
+          ..addListener(() {
+            if (mounted)
+              setState(() {}); // refrescar título del header al cambiar de tab
+          });
 
     if (mounted) {
       setState(() {
@@ -72,9 +71,9 @@ class _HomeScreenState extends State<HomeScreen>
   /* ---------- Acción del botón de perfil (ícono IZQUIERDA del header) ---------- */
   Future<void> _onProfileTap() async {
     if (!mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ProfileScreen()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
   }
 
   // ---------- VISTAS ----------
@@ -82,18 +81,18 @@ class _HomeScreenState extends State<HomeScreen>
     if (_isKineVerified) {
       // KINESIÓLOGO (3 tabs visibles)
       return const [
-        Index(),             // 0: Inicio
-        KinePanelScreen(),   // 1: Citas
-        ContactsScreen(),    // 2: Mensajes
+        Index(), // 0: Inicio
+        KinePanelScreen(), // 1: Citas
+        ContactsScreen(), // 2: Mensajes
         // Perfil se abre por header (push)
       ];
     } else {
       // PACIENTE (4 tabs visibles; Perfil se abre por otras rutas cuando corresponda)
       return const [
-        Index(),                // 0: Inicio
-        PlanEjercicioScreen(),  // 1: Ejercicios
-        KineDirectoryScreen(),  // 2: Servicios/Directorio
-        ContactsScreen(),       // 3: Mensajes
+        Index(), // 0: Inicio
+        PlanEjercicioScreen(), // 1: Ejercicios
+        KineDirectoryScreen(), // 2: Servicios/Directorio
+        ContactsScreen(), // 3: Mensajes
       ];
     }
   }
@@ -108,7 +107,10 @@ class _HomeScreenState extends State<HomeScreen>
       return [
         Tab(icon: _navIcon(Icons.home_rounded), text: 'Inicio'),
         Tab(icon: _navIcon(Icons.assignment_rounded), text: 'Citas'),
-        Tab(icon: _navIcon(Icons.chat_bubble_outline_rounded), text: 'Mensajes'),
+        Tab(
+          icon: _navIcon(Icons.chat_bubble_outline_rounded),
+          text: 'Mensajes',
+        ),
       ];
     } else {
       // Paciente (sin Perfil en footer)
@@ -116,7 +118,10 @@ class _HomeScreenState extends State<HomeScreen>
         Tab(icon: _navIcon(Icons.home_rounded), text: 'Inicio'),
         Tab(icon: _navIcon(Icons.fitness_center), text: 'Ejercicios'),
         Tab(icon: _navIcon(Icons.medical_services_rounded), text: 'Servicios'),
-        Tab(icon: _navIcon(Icons.chat_bubble_outline_rounded), text: 'Mensajes'),
+        Tab(
+          icon: _navIcon(Icons.chat_bubble_outline_rounded),
+          text: 'Mensajes',
+        ),
       ];
     }
   }
@@ -148,7 +153,10 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ],
           border: Border(
-            bottom: BorderSide(color: Color(0x14000000), width: 1), // línea finita
+            bottom: BorderSide(
+              color: Color(0x14000000),
+              width: 1,
+            ), // línea finita
           ),
         ),
         child: SafeArea(
@@ -161,11 +169,17 @@ class _HomeScreenState extends State<HomeScreen>
                 // Ícono IZQUIERDA -> botón de PERFIL
                 IconButton(
                   onPressed: _onProfileTap,
-                  icon: const Icon(Icons.person_outline, color: Colors.black87, size: 22),
+                  icon: const Icon(
+                    Icons.person_outline,
+                    color: Colors.black87,
+                    size: 22,
+                  ),
                   tooltip: 'Mi perfil',
                 ),
                 // Mover un poco más a la derecha el texto:
-                const SizedBox(width: 14), // antes 8 → ahora un poco más separado
+                const SizedBox(
+                  width: 14,
+                ), // antes 8 → ahora un poco más separado
                 Text(
                   title,
                   style: const TextStyle(
@@ -230,8 +244,14 @@ class _HomeScreenState extends State<HomeScreen>
               labelColor: Colors.white,
               unselectedLabelColor: Colors.white70,
               indicatorColor: Colors.transparent,
-              labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-              unselectedLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              labelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
               tabs: tabs,
             ),
           ),
