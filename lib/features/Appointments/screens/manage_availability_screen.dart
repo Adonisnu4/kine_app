@@ -15,20 +15,20 @@ class ManageAvailabilityScreen extends StatefulWidget {
 
 class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
   final AvailabilityService _availabilityService = AvailabilityService();
+  // Se usa el operador null-aware '!' ya que esta pantalla solo debe ser accesible por un usuario autenticado
   final String _currentKineId = FirebaseAuth.instance.currentUser!.uid;
 
   DateTime _focusedDay = DateTime.now(); // Día/Mes visible en el calendario
   DateTime _selectedDay = DateTime.now(); // Día seleccionado por el Kine
-  // Horarios base que el Kine puede elegir (ej: cada hora de 9 a 17, saltando almuerzo)
-  final List<TimeOfDay> _baseTimeSlots = List.generate(
-    9, // Número total de slots (9, 10, 11, 12, 14, 15, 16, 17)
-    (index) {
-      int hour = index < 4
-          ? 8 + index
-          : 14 + (index - 4); // Calcula 9-12, luego 14-17
-      return TimeOfDay(hour: hour, minute: 0); // Crea el objeto TimeOfDay
-    },
-  );
+
+  // Horarios base (9-12 y 14-17)
+  final List<TimeOfDay> _baseTimeSlots = List.generate(9, (index) {
+    int hour = index < 4
+        ? 9 +
+              index // 9, 10, 11, 12
+        : 14 + (index - 4); // 14, 15, 16, 17
+    return TimeOfDay(hour: hour, minute: 0);
+  });
 
   // Almacena los horarios seleccionados ("HH:mm") para el día _selectedDay
   Set<String> _selectedSlots = {};
@@ -61,37 +61,42 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
 
   // Carga la disponibilidad guardada en Firestore para el _selectedDay
   Future<void> _loadAvailabilityForSelectedDay() async {
-    if (!mounted) return; // No hacer nada si el widget ya no existe
+    if (!mounted) return; // Si el widget se desmontó, salir inmediatamente
+
     setState(() {
       _isLoading = true;
+      _selectedSlots = {}; // Limpiar slots antes de cargar
     }); // Muestra indicador de carga
+
     try {
       // Llama al servicio para obtener la lista de strings "HH:mm" guardados
       final savedSlots = await _availabilityService.getSavedAvailability(
         _currentKineId,
         _selectedDay,
       );
+
+      if (!mounted) return; // Doble verificación antes de setState
+
       // Actualiza el estado con los slots encontrados
-      if (mounted) {
-        setState(() {
-          _selectedSlots = Set.from(savedSlots); // Convierte la lista a Set
-          _isLoading = false; // Oculta indicador
-        });
-      }
+      setState(() {
+        _selectedSlots = Set.from(savedSlots); // Convierte la lista a Set
+      });
     } catch (e) {
       print("Error cargando disponibilidad: $e");
+      if (!mounted) return; // Doble verificación
       // Muestra error si falla la carga
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          // Muestra mensaje de error
+          content: Text('Error al cargar disponibilidad: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;
-        }); // Oculta indicador
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            // Muestra mensaje de error
-            content: Text('Error al cargar disponibilidad: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+          _isLoading = false; // Oculta indicador
+        });
       }
     }
   }
@@ -99,53 +104,55 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
   // Guarda los _selectedSlots actuales para el _selectedDay en Firestore
   Future<void> _saveAvailabilityForSelectedDay() async {
     if (!mounted) return;
+
     setState(() {
       _isSaving = true;
     }); // Activa indicador en botón AppBar
+
     try {
       // Convierte el Set a List y ordena antes de guardar
       final List<String> slotsToSave = _selectedSlots.toList()..sort();
+
       // Llama al servicio para guardar
       await _availabilityService.setAvailability(
         kineId: _currentKineId,
         date: _selectedDay,
         availableSlots: slotsToSave,
       );
+
+      if (!mounted) return; // Doble verificación antes de interactuar con UI
+
       // Muestra mensaje de éxito
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        }); // Desactiva indicador
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Disponibilidad guardada para este día.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Disponibilidad guardada para este día.'),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
       print("Error guardando disponibilidad del día: $e");
+      if (!mounted) return; // Verificar antes de manipular el UI
       // Muestra mensaje de error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al guardar: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
       if (mounted) {
         setState(() {
-          _isSaving = false;
-        }); // Desactiva indicador
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al guardar: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+          _isSaving = false; // Desactiva indicador
+        });
       }
     }
   }
 
-  // --- 👇 NUEVA FUNCIÓN PARA GUARDAR LA SEMANA 👇 ---
   /// Guarda los slots actualmente seleccionados para Lunes a Viernes de la semana de _selectedDay
   Future<void> _saveAvailabilityForWeek() async {
-    if (!mounted) return;
+    if (!mounted) return; // Verificar antes de manipular el UI
 
-    // Verifica si hay horarios seleccionados para aplicar
+    // 1. Verifica si hay horarios seleccionados para aplicar
     if (_selectedSlots.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -158,7 +165,7 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
       return;
     }
 
-    // Pide confirmación al Kine
+    // 2. Pide confirmación al Kine
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -181,6 +188,7 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
     );
 
     if (confirm != true) return; // Si el Kine cancela
+    if (!mounted) return; // Verificar si el dialog tardó en responder
 
     setState(() {
       _isSavingWeek = true;
@@ -209,28 +217,27 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
       // Espera a que TODAS las operaciones de guardado terminen
       await Future.wait(saveFutures);
 
+      if (!mounted) return; // Verificar después de la operación await
+
       // Muestra mensaje de éxito
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Disponibilidad aplicada a Lunes-Viernes de esta semana.',
-            ),
-            backgroundColor: Colors.green,
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Disponibilidad aplicada a Lunes-Viernes de esta semana.',
           ),
-        );
-      }
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
       print("Error guardando disponibilidad semanal: $e");
+      if (!mounted) return; // Verificar antes de manipular el UI
       // Muestra mensaje de error
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al aplicar a la semana: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al aplicar a la semana: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       // Siempre desactiva el indicador del botón "Aplicar Semana"
       if (mounted) {
@@ -247,7 +254,6 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
     int daysToSubtract = date.weekday - DateTime.monday;
     return date.subtract(Duration(days: daysToSubtract));
   }
-  // --- FIN NUEVA FUNCIÓN Y HELPER ---
 
   @override
   Widget build(BuildContext context) {
@@ -261,8 +267,8 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: TextButton(
-              // Deshabilitado si está guardando día o semana
-              onPressed: (_isSaving || _isSavingWeek)
+              // Deshabilitado si está cargando, guardando día o semana
+              onPressed: (_isLoading || _isSaving || _isSavingWeek)
                   ? null
                   : _saveAvailabilityForSelectedDay,
               style: TextButton.styleFrom(foregroundColor: Colors.white),
@@ -315,7 +321,6 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
                 color: Colors.teal,
                 shape: BoxShape.circle,
               ),
-              // Podrías añadir weekendTextStyle para atenuar fines de semana
             ),
             // Filtro para no poder seleccionar fines de semana
             enabledDayPredicate: (day) =>
@@ -335,8 +340,7 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
                   _selectedDay = selectedDay;
                   _focusedDay =
                       focusedDay; // Enfoca el calendario en el nuevo día/semana
-                  _selectedSlots =
-                      {}; // Limpia la selección de horarios anterior
+                  // No limpiamos _selectedSlots aquí, se limpiará en _loadAvailabilityForSelectedDay
                 });
                 _loadAvailabilityForSelectedDay(); // Carga la disponibilidad del nuevo día
               }
@@ -344,11 +348,6 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
             // Callback cuando cambia la semana visible
             onPageChanged: (focusedDay) {
               _focusedDay = focusedDay; // Actualiza el foco
-              // Opcional: podrías seleccionar automáticamente el Lunes si quieres
-              // if (!isSameDay(_focusedDay, _selectedDay)) {
-              //   setState(() { _selectedDay = _findNextAvailableWorkDay(focusedDay); });
-              //  _loadAvailabilityForSelectedDay();
-              // }
             },
           ),
           const Divider(height: 1), // Línea divisoria
@@ -372,12 +371,9 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
             // Ocupa el espacio restante
             child:
                 _isLoading // Muestra indicador si está cargando los horarios del día
-                ? const Center(child: CircularProgressIndicator())
-                : _selectedSlots.isEmpty &&
-                      !_isLoading // Mensaje si no hay horarios cargados aún
                 ? const Center(
-                    child: Text('Cargando horarios...'),
-                  ) // Podría ser mejor un indicador aquí
+                    child: CircularProgressIndicator(color: Colors.teal),
+                  )
                 : ListView.builder(
                     // Lista de horarios seleccionables
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -396,9 +392,10 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
                       // Crea un Checkbox para cada horario
                       return CheckboxListTile(
                         title: Text(
+                          // Muestra la hora
                           timeSlot.format(context),
                           style: const TextStyle(fontSize: 16),
-                        ), // Muestra la hora
+                        ),
                         value:
                             isSelected, // Estado del checkbox (marcado/desmarcado)
                         onChanged: (bool? newValue) {
