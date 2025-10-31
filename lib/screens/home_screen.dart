@@ -55,11 +55,9 @@ class _HomeScreenState extends State<HomeScreen>
     _isKineVerified = (userStatusId == 3);
 
     // Set the number of tabs based on the user role
-    // Kine now has 5 tabs (Inicio, Citas, Pacientes, Mensajes, Perfil accessed via Header)
+    // Kine now has 4 tabs (Inicio, Citas, Mensajes, Pacientes)
     // Patient has 4 tabs (Inicio, Ejercicios, Servicios, Mensajes)
-    final tabLength = _isKineVerified
-        ? 4
-        : 4; // Adjusted to 4 visible tabs for Kine footer
+    const tabLength = 4; // Ambos tienen 4 pestañas
 
     _tabController =
         TabController(length: tabLength, vsync: this, initialIndex: 0)
@@ -99,8 +97,9 @@ class _HomeScreenState extends State<HomeScreen>
       return const [
         Index(), // 0: Inicio
         PlanEjercicioScreen(), // 1: Ejercicios
-        KinePanelScreen(), // 2: Citas
-        ContactsScreen(), // 3: Mensajes
+        KinePanelScreen(), // 1: Citas
+        ContactsScreen(), // 2: Mensajes
+        MyPatientsScreen(), // 3: Mis Pacientes
       ];
     } else {
       //Pestañas para el usuario
@@ -121,6 +120,8 @@ class _HomeScreenState extends State<HomeScreen>
   List<Tab> _getBottomNavBarTabs() {
     if (_isKineVerified) {
       // Tabs para el kinesiologo
+      // Tabs for KINESIOLOGIST (4 tabs)
+      // --- 👇 CORREGIDO: AHORA SON 4 TABS 👇 ---
       return [
         Tab(icon: _navIcon(Icons.home_rounded), text: 'Inicio'),
         Tab(icon: _navIcon(Icons.fitness_center), text: 'Ejercicios'),
@@ -129,7 +130,12 @@ class _HomeScreenState extends State<HomeScreen>
           icon: _navIcon(Icons.chat_bubble_outline_rounded),
           text: 'Mensajes',
         ),
+        Tab(
+          icon: _navIcon(Icons.people_alt_rounded), // (Icono de pacientes)
+          text: 'Pacientes',
+        ),
       ];
+      // --- FIN CORRECCIÓN ---
     } else {
       // Tabs para el paciente
       return [
@@ -148,6 +154,15 @@ class _HomeScreenState extends State<HomeScreen>
     //Para kine
     if (_isKineVerified) {
       return ['Inicio', 'Ejercicios', 'Citas', 'Mis Pacientes', 'Mensajes'];
+      // Titles for KINESIOLOGIST
+      // --- 👇 CORREGIDO: ORDEN SINCRONIZADO CON _getTabViews 👇 ---
+      return [
+        'Inicio', // 0: Index
+        'Citas', // 1: KinePanelScreen
+        'Mensajes', // 2: ContactsScreen
+        'Mis Pacientes', // 3: MyPatientsScreen
+      ];
+      // --- FIN CORRECCIÓN ---
     } else {
       //Para paciente
       return ['Inicio', 'Ejercicios', 'Servicios', 'Mensajes'];
