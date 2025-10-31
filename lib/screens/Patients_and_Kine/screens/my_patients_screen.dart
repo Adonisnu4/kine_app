@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:kine_app/services/user_service.dart';
-import 'package:kine_app/screens/chat_screen.dart';
-import 'package:kine_app/screens/patient_appointment_history_screen.dart';
-import 'package:kine_app/services/stripe_service.dart';
-import 'package:kine_app/screens/subscription_screen.dart';
+import 'package:kine_app/screens/Patients_and_Kine/services/kine_service.dart';
+import 'package:kine_app/screens/Chat/screens/chat_screen.dart';
+import 'package:kine_app/screens/Patients_and_Kine/screens/patient_appointment_history_screen.dart';
+import 'package:kine_app/screens/Stripe/services/stripe_service.dart';
+import 'package:kine_app/screens/Stripe/screens/subscription_screen.dart';
+import 'package:kine_app/screens/auth/services/user_service.dart';
 
 class MyPatientsScreen extends StatefulWidget {
   const MyPatientsScreen({super.key});

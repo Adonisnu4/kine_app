@@ -1,13 +1,14 @@
 // lib/screens/kine_panel_screen.dart
+
 import 'package:flutter/material.dart';
-import 'package:kine_app/models/appointment.dart';
-import 'package:kine_app/services/appointment_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 
-// Importa tu pantalla de chat si ya la tienes
-// import 'package:kine_app/screens/chat_screen.dart';
+// ⚠️ Ajusta estas rutas si es necesario:
+import 'package:kine_app/screens/Appointments/models/appointment.dart';
+import 'package:kine_app/screens/Appointments/services/appointment_service.dart';
+import 'package:kine_app/screens/Chat/screens/chat_screen.dart'; // Importación necesaria para la navegación al chat
 
 class KinePanelScreen extends StatefulWidget {
   const KinePanelScreen({super.key});
@@ -47,28 +48,66 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
     }).toList();
   }
 
-  // Maneja la acción de Aceptar o Denegar una cita
+  /// Maneja la acción de Aceptar, Denegar o CANCELAR una cita.
   void _handleUpdateStatus(Appointment appointment, String newStatus) async {
+    // 1. CONFIRMACIÓN (Solo para cancelación)
+    if (newStatus == 'cancelada') {
+      final bool? confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Confirmar Cancelación'),
+          content: Text(
+            '¿Estás seguro de cancelar esta cita confirmada con ${appointment.pacienteNombre}? Se notificará al paciente por correo.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('No, Mantener'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text(
+                'Sí, Cancelar Cita',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+    }
+
+    // 2. ACTUALIZACIÓN DEL ESTADO (El servicio valida que no sea una cita pasada)
     try {
       await _appointmentService.updateAppointmentStatus(appointment, newStatus);
       if (mounted) {
+        String message;
+        Color color;
+
+        if (newStatus == 'confirmada') {
+          message = 'Cita confirmada.';
+          color = Colors.green;
+        } else if (newStatus == 'denegada') {
+          message = 'Cita rechazada.';
+          color = Colors.orange;
+        } else if (newStatus == 'cancelada') {
+          message = 'Cita cancelada con éxito. Se envió un correo al paciente.';
+          color = Colors.red.shade700;
+        } else {
+          message = 'Estado actualizado.';
+          color = Colors.blue;
+        }
+
         // Muestra mensaje de éxito
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            // <-- CÓDIGO RESTAURADO
-            content: Text(
-              'Cita ${newStatus == 'confirmada' ? 'confirmada' : 'rechazada'}.',
-            ),
-            backgroundColor: Colors.green,
-          ),
+          SnackBar(content: Text(message), backgroundColor: color),
         );
       }
     } catch (e) {
       if (mounted) {
-        // Muestra mensaje de error
+        // Muestra mensaje de error (incluye la excepción si la cita ya pasó)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            // <-- CÓDIGO RESTAURADO
             content: Text('Error al actualizar: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
@@ -77,14 +116,12 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
     }
   }
 
-  // Muestra el modal con los detalles del paciente y botón de chat
+  /// Muestra el modal con los detalles del paciente y el botón de chat funcional.
   void _showPatientDetailsModal(BuildContext context, Appointment appointment) {
     showModalBottomSheet(
-      // <-- CÓDIGO RESTAURADO
-      context: context, // <-- Parámetro 'context' restaurado
+      context: context,
       isScrollControlled: true,
       builder: (ctx) {
-        // Contenido del Modal (igual que antes)
         return Container(
           padding: EdgeInsets.only(
             top: 20,
@@ -103,6 +140,7 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
                 ),
               ),
               const SizedBox(height: 10),
+              // Detalles de email, fecha, estado
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(Icons.email_outlined, color: Colors.grey[600]),
@@ -124,6 +162,8 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
                 title: Text('Estado: ${appointment.estado.toUpperCase()}'),
               ),
               const SizedBox(height: 20),
+
+              // 🚀 BOTÓN DE CHAT CORREGIDO: Navegación real
               ElevatedButton.icon(
                 icon: const Icon(Icons.chat_bubble_outline),
                 label: const Text('Enviar Mensaje'),
@@ -132,22 +172,15 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
                 ),
                 onPressed: () {
                   Navigator.pop(ctx); // Cierra el modal
-                  // Navega al chat (debes implementar ChatScreen)
-                  /*
-                 Navigator.push(
-                   context,
-                   MaterialPageRoute(
-                     builder: (context) => ChatScreen(
-                       receiverId: appointment.pacienteId,
-                       receiverName: appointment.pacienteNombre,
-                     ),
-                   ),
-                 );
-                 */
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Navegando al chat con ${appointment.pacienteNombre}...',
+
+                  // Inicia navegación real al chat
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ChatScreen(
+                        receiverId: appointment.pacienteId,
+                        receiverName: appointment
+                            .pacienteNombre, // Usando la ruta nombrada estática
                       ),
                     ),
                   );
@@ -177,10 +210,7 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
-          // Guarda la lista completa (o una lista vacía si no hay datos)
           _allAppointments = snapshot.data ?? [];
-
-          // Construye siempre la UI, el filtrado se hace después
           return _buildCalendarAndList();
         },
       ),
@@ -189,14 +219,14 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
 
   // Construye el Calendario y la Lista de Citas debajo
   Widget _buildCalendarAndList() {
-    // Filtra las citas para el día seleccionado AHORA, dentro del build
     final selectedDayAppointments = _allAppointments.where((appointment) {
       final citaDate = appointment.fechaCitaDT;
-      return isSameDay(citaDate, _selectedDay!); // Usa el _selectedDay actual
+      return isSameDay(citaDate, _selectedDay!);
     }).toList()..sort((a, b) => a.fechaCita.compareTo(b.fechaCita));
 
     return Column(
       children: [
+        // ... (TableCalendar - Lógica original) ...
         TableCalendar<Appointment>(
           locale: 'es_ES',
           firstDay: DateTime.utc(2020, 1, 1),
@@ -204,7 +234,7 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
           focusedDay: _focusedDay,
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
           calendarFormat: _calendarFormat,
-          eventLoader: _getEventsForDay, // Carga los marcadores
+          eventLoader: _getEventsForDay,
           startingDayOfWeek: StartingDayOfWeek.monday,
           calendarStyle: const CalendarStyle(
             markerDecoration: BoxDecoration(
@@ -224,18 +254,14 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
             formatButtonShowsNext: false,
             titleCentered: true,
           ),
-          // Cuando el usuario selecciona un día diferente
           onDaySelected: (selectedDay, focusedDay) {
             if (!isSameDay(_selectedDay, selectedDay)) {
-              // Actualiza el estado (_selectedDay) y redibuja
               setState(() {
                 _selectedDay = selectedDay;
                 _focusedDay = focusedDay;
-                // No filtramos aquí, el rebuild lo hará
               });
             }
           },
-          // Cuando cambia el formato (mes/semana)
           onFormatChanged: (format) {
             if (_calendarFormat != format) {
               setState(() {
@@ -243,44 +269,36 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
               });
             }
           },
-          // Cuando cambia la página del calendario
           onPageChanged: (focusedDay) {
-            _focusedDay = focusedDay; // Solo actualiza el día enfocado
+            _focusedDay = focusedDay;
           },
         ),
         const Divider(height: 1),
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Text(
-            // Muestra la fecha seleccionada
             'Citas para: ${DateFormat('EEE, dd MMMM', 'es_ES').format(_selectedDay!)}',
             style: Theme.of(
               context,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
         ),
-        Expanded(
-          // Pasa la lista YA FILTRADA al widget que dibuja la lista
-          child: _buildAppointmentList(selectedDayAppointments),
-        ),
+        Expanded(child: _buildAppointmentList(selectedDayAppointments)),
       ],
     );
   }
 
   // Construye la lista de citas para el día seleccionado
   Widget _buildAppointmentList(List<Appointment> appointmentsForDay) {
-    // Mensaje si el Kine no tiene NINGUNA cita en total
     if (_allAppointments.isEmpty) {
       return const Center(child: Text('Aún no tienes ninguna cita.'));
     }
-    // Mensaje si no hay citas PARA ESE DÍA específico
     if (appointmentsForDay.isEmpty) {
       return const Center(
         child: Text('No hay citas programadas para este día.'),
       );
     }
 
-    // Separa las citas pendientes de las otras
     final pendientes = appointmentsForDay
         .where((a) => a.estado == 'pendiente')
         .toList();
@@ -288,11 +306,9 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
         .where((a) => a.estado != 'pendiente')
         .toList();
 
-    // Dibuja la lista
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       children: [
-        // Sección de Citas Pendientes
         if (pendientes.isNotEmpty) ...[
           Text(
             ' Pendientes de Confirmación',
@@ -303,13 +319,11 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          ...pendientes.map(
-            (app) => _buildAppointmentCard(app),
-          ), // Dibuja una tarjeta por cada cita pendiente
+          ...pendientes.map((app) => _buildAppointmentCard(app)),
           if (otras.isNotEmpty)
             const Divider(height: 30, indent: 20, endIndent: 20),
         ],
-        // Sección de Citas Confirmadas/Denegadas
+        // Sección de Citas Confirmadas/Denegadas (y Canceladas)
         if (otras.isNotEmpty) ...[
           Text(
             ' Citas Programadas',
@@ -320,9 +334,7 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          ...otras.map(
-            (app) => _buildAppointmentCard(app),
-          ), // Dibuja una tarjeta por cada otra cita
+          ...otras.map((app) => _buildAppointmentCard(app)),
         ],
       ],
     );
@@ -334,7 +346,11 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
     IconData estadoIcon;
     Color estadoColor;
 
-    // Elige ícono y color según el estado
+    // CONDICIÓN DE TIEMPO: Comprueba si la cita ya ha pasado
+    final bool isPastAppointment = appointment.fechaCitaDT.isBefore(
+      DateTime.now(),
+    );
+
     switch (appointment.estado) {
       case 'confirmada':
         estadoIcon = Icons.check_circle;
@@ -344,9 +360,13 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
         estadoIcon = Icons.cancel;
         estadoColor = Colors.red;
         break;
-      case 'completada': // Podrías añadir este estado si lo necesitas
+      case 'completada':
         estadoIcon = Icons.check_box;
         estadoColor = Colors.blueGrey;
+        break;
+      case 'cancelada': // Nuevo estado
+        estadoIcon = Icons.close;
+        estadoColor = Colors.red.shade700;
         break;
       case 'pendiente':
       default:
@@ -355,7 +375,6 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
         break;
     }
 
-    // Dibuja la tarjeta
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
       elevation: 2,
@@ -395,28 +414,25 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
                 ),
               ],
             ),
-            trailing: Icon(
-              Icons.info_outline,
-              color: Colors.blue.shade700,
-            ), // Ícono para indicar que se puede tocar
+            trailing: Icon(Icons.info_outline, color: Colors.blue.shade700),
           ),
-          // Muestra los botones solo si la cita está pendiente
-          if (appointment.estado == 'pendiente')
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0, left: 8, right: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
+
+          // --- Sección de Botones ---
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0, left: 8, right: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // 1. Botones para citas PENDIENTES
+                if (appointment.estado == 'pendiente') ...[
                   TextButton.icon(
                     icon: const Icon(Icons.close, color: Colors.red),
                     label: const Text(
                       'Denegar',
                       style: TextStyle(color: Colors.red),
                     ),
-                    onPressed: () => _handleUpdateStatus(
-                      appointment,
-                      'denegada',
-                    ), // Llama a la función al presionar
+                    onPressed: () =>
+                        _handleUpdateStatus(appointment, 'denegada'),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
@@ -426,14 +442,38 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
                     ),
-                    onPressed: () => _handleUpdateStatus(
-                      appointment,
-                      'confirmada',
-                    ), // Llama a la función al presionar
+                    onPressed: () =>
+                        _handleUpdateStatus(appointment, 'confirmada'),
                   ),
                 ],
-              ),
+
+                // 2. Botón para citas CONFIRMADAS (Aparece solo si NO ha pasado la hora)
+                if (appointment.estado == 'confirmada' && !isPastAppointment)
+                  TextButton.icon(
+                    icon: const Icon(Icons.cancel, color: Colors.red),
+                    label: const Text(
+                      'Cancelar Cita',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    onPressed: () => _handleUpdateStatus(
+                      appointment,
+                      'cancelada', // NUEVO ESTADO DE CANCELACIÓN
+                    ),
+                  ),
+
+                // 3. INDICADOR para citas CONFIRMADAS PASADAS (No se pueden cancelar)
+                if (appointment.estado == 'confirmada' && isPastAppointment)
+                  Text(
+                    'Cita Finalizada',
+                    style: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+              ],
             ),
+          ),
+          // --- Fin de Sección de Botones ---
         ],
       ),
     );

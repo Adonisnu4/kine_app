@@ -1,6 +1,5 @@
-// lib/services/availability_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart'; // Para TimeOfDay
+import 'package:flutter/material.dart'; // Necesario para TimeOfDay
 import 'package:intl/intl.dart'; // Para formatear fechas
 
 class AvailabilityService {
@@ -8,9 +7,9 @@ class AvailabilityService {
   final CollectionReference _availabilityCollection = FirebaseFirestore.instance
       .collection('kine_availability');
 
-  // --- Para el Kinesiólogo ---
+  // --- Para el Kinesiólogo: Almacenamiento y Carga de Disponibilidad ---
 
-  /// Guarda/actualiza disponibilidad para un día.
+  /// Guarda/actualiza disponibilidad para un día específico.
   Future<void> setAvailability({
     required String kineId,
     required DateTime date,
@@ -28,7 +27,7 @@ class AvailabilityService {
     }, SetOptions(merge: true));
   }
 
-  /// Obtiene los slots guardados para un día (para el Kine).
+  /// Obtiene los slots guardados para un día (usado por el Kine para ver su configuración).
   Future<List<String>> getSavedAvailability(
     String kineId,
     DateTime date,
@@ -45,9 +44,10 @@ class AvailabilityService {
     return [];
   }
 
-  // --- Para el Paciente ---
+  // --- Para el Paciente: Obtener Disponibilidad y Filtrar Horarios Pasados ---
 
-  /// Obtiene los slots disponibles para un Kine en una fecha (para Paciente).
+  /// Obtiene los slots disponibles para un Kine en una fecha y filtra para mostrar solo horarios futuros.
+  /// Los horarios pasados del día actual son descartados.
   Future<List<TimeOfDay>> getAvailableSlotsForDay(
     String kineId,
     DateTime date,
@@ -55,18 +55,19 @@ class AvailabilityService {
     final dateAtMidnight = DateTime(date.year, date.month, date.day);
     final dateTimestamp = Timestamp.fromDate(dateAtMidnight);
 
+    // 1. Consulta la disponibilidad publicada por el Kine para esa fecha
     final querySnapshot = await _availabilityCollection
         .where('kineId', isEqualTo: kineId)
         .where('fecha', isEqualTo: dateTimestamp)
         .limit(1)
         .get();
-    // ⚠️ Firestore requerirá un índice: kineId (Asc), fecha (Asc)
 
     if (querySnapshot.docs.isNotEmpty) {
       final data = querySnapshot.docs.first.data() as Map<String, dynamic>;
       final List<String> slotStrings = List<String>.from(data['slots'] ?? []);
       List<TimeOfDay> timeSlots = [];
-      // Convierte "HH:mm" a TimeOfDay
+
+      // Conversión de String ("HH:mm") a TimeOfDay
       for (String slotStr in slotStrings) {
         try {
           final parts = slotStr.split(':');
@@ -79,12 +80,48 @@ class AvailabilityService {
           print("Error parseando slot '$slotStr': $e");
         }
       }
+
       // Ordena los slots
       timeSlots.sort(
         (a, b) => (a.hour * 60 + a.minute).compareTo(b.hour * 60 + b.minute),
       );
-      return timeSlots;
+
+      // 2. LÓGICA DE FILTRADO PARA MOSTRAR SOLO HORARIOS FUTUROS
+      final List<TimeOfDay> futureSlots = [];
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final selectedDateAtMidnight = DateTime(date.year, date.month, date.day);
+
+      // Regla A: Si la fecha seleccionada es en el pasado (ayer o antes), devolver lista vacía.
+      if (selectedDateAtMidnight.isBefore(today)) {
+        return [];
+      }
+
+      for (var slot in timeSlots) {
+        // Combina la fecha seleccionada con la hora del slot para crear un DateTime completo.
+        final slotDateTime = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          slot.hour,
+          slot.minute,
+        );
+
+        // Regla B: Si la fecha es HOY, el slot debe ser al menos 5 minutos en el futuro.
+        if (selectedDateAtMidnight.isAtSameMomentAs(today)) {
+          // Se añaden 5 minutos de buffer para evitar errores de exactitud temporal
+          if (slotDateTime.isAfter(now.add(const Duration(minutes: 5)))) {
+            futureSlots.add(slot);
+          }
+        } else {
+          // Regla C: Si es un día futuro, todos los slots publicados son válidos.
+          futureSlots.add(slot);
+        }
+      }
+
+      return futureSlots;
     }
-    return []; // No hay disponibilidad definida
+
+    return []; // No hay disponibilidad definida para ese día.
   }
 }

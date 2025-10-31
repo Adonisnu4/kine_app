@@ -1,9 +1,8 @@
 // lib/auth/auth_gate.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../screens/contacts_screen.dart';
-// Asegúrate de tener una pantalla de login para el caso de no estar autenticado
-import '../screens/login_screen.dart'; // <--- CAMBIA ESTO A TU RUTA REAL DE LOGIN
+import 'package:kine_app/screens/chat/screens/contacts_screen.dart'; // Asegúrate de tener una pantalla de login para el caso de no estar autenticado
+import '../screens/auth/screens/login_screen.dart'; // <--- CAMBIA ESTO A TU RUTA REAL DE LOGIN
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});

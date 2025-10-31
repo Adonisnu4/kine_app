@@ -1,17 +1,18 @@
 // lib/screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kine_app/screens/kine_directory_screen.dart';
-import 'package:kine_app/services/get_user_data.dart';
-import 'package:kine_app/screens/login_screen.dart';
-import '../models/edit_presentation_modal.dart';
-import '../models/edit_presentation_modal.dart' show PresentationData;
-import 'package:kine_app/services/user_service.dart';
-import 'my_appointments_screen.dart'; // Para Pacientes
-import 'manage_availability_screen.dart'; // Para Kinesiólogos
+import 'package:kine_app/screens/Patients_and_Kine/screens/kine_directory_screen.dart';
+import 'package:kine_app/screens/auth/services/get_user_data.dart';
+import 'package:kine_app/screens/auth/screens/login_screen.dart';
+import '../../Patients_and_Kine/models/edit_presentation_modal.dart';
+import '../../Patients_and_Kine/models/edit_presentation_modal.dart'
+    show PresentationData;
+import 'package:kine_app/screens/auth/services/user_service.dart';
+import '../../Appointments/screens/my_appointments_screen.dart'; // Para Pacientes
+import '../../Appointments/screens/manage_availability_screen.dart'; // Para Kinesiólogos
 // --- Importaciones de Pago ---
-import 'package:kine_app/services/stripe_service.dart';
-import 'package:kine_app/screens/subscription_screen.dart';
+import 'package:kine_app/screens/Stripe/services/stripe_service.dart';
+import 'package:kine_app/screens/Stripe/screens/subscription_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});

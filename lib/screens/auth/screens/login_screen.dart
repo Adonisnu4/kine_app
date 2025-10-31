@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'register_screen.dart';
-import 'home_screen.dart';
+import '../../home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -38,7 +38,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _showSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   // ===== Login email/pass (con verificación) =====
@@ -66,8 +68,8 @@ class _LoginScreenState extends State<LoginScreen> {
       final msg = switch (e.code) {
         'user-not-found' => '❌ Correo o contraseña incorrectos.',
         'wrong-password' => '❌ Correo o contraseña incorrectos.',
-        'invalid-email'  => '❌ Formato de correo inválido.',
-        _                 => '❌ Error de inicio de sesión: ${e.message}',
+        'invalid-email' => '❌ Formato de correo inválido.',
+        _ => '❌ Error de inicio de sesión: ${e.message}',
       };
       _showSnackBar(msg);
     } finally {
@@ -111,8 +113,8 @@ class _LoginScreenState extends State<LoginScreen> {
     } on FirebaseAuthException catch (e) {
       final msg = switch (e.code) {
         'user-not-found' => 'No existe una cuenta con ese correo.',
-        'invalid-email'  => 'Formato de correo inválido.',
-        _                 => 'Error al enviar recuperación: ${e.message}',
+        'invalid-email' => 'Formato de correo inválido.',
+        _ => 'Error al enviar recuperación: ${e.message}',
       };
       _showSnackBar(msg);
     } finally {
@@ -138,13 +140,17 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             validator: (v) {
               if (v == null || v.isEmpty) return 'El correo es obligatorio.';
-              if (!v.contains('@') || !v.contains('.')) return 'Ingresa un correo válido.';
+              if (!v.contains('@') || !v.contains('.'))
+                return 'Ingresa un correo válido.';
               return null;
             },
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(d).pop(), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.of(d).pop(),
+            child: const Text('Cancelar'),
+          ),
           ElevatedButton(
             onPressed: _isLoading
                 ? null
@@ -155,7 +161,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     }
                   },
             child: _isLoading
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
                 : const Text('Enviar Enlace'),
           ),
         ],
@@ -164,10 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // ===== Decoración tipo "píldora" =====
-  InputDecoration _pillDecoration({
-    required String hint,
-    Widget? suffix,
-  }) {
+  InputDecoration _pillDecoration({required String hint, Widget? suffix}) {
     const borderColor = Color(0xFFD9D9D9);
     final base = OutlineInputBorder(
       borderRadius: BorderRadius.circular(20),
@@ -221,7 +231,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(18, 8, 18, 24), // antes 16 arriba (bajé un poco)
+          padding: const EdgeInsets.fromLTRB(
+            18,
+            8,
+            18,
+            24,
+          ), // antes 16 arriba (bajé un poco)
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -270,9 +285,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: _pillDecoration(
                   hint: 'Contraseña*',
                   suffix: IconButton(
-                    onPressed: () => setState(() => _showPassword = !_showPassword),
+                    onPressed: () =>
+                        setState(() => _showPassword = !_showPassword),
                     icon: Icon(
-                      _showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      _showPassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
                       color: Colors.black54,
                       size: 22,
                     ),
@@ -306,13 +324,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(26),
+                    ),
                     elevation: 0,
                   ),
                   child: _isLoading
                       ? const SizedBox(
-                          width: 22, height: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Text('Ingresar', style: TextStyle(fontSize: 16)),
                 ),
@@ -321,12 +345,19 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 16),
               Row(
                 children: const [
-                  Expanded(child: Divider(color: Color(0xFFE6E6E6), thickness: 1)),
+                  Expanded(
+                    child: Divider(color: Color(0xFFE6E6E6), thickness: 1),
+                  ),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 10),
-                    child: Text('O inicia sesión con', style: TextStyle(color: Color(0xFF6D6D6D))),
+                    child: Text(
+                      'O inicia sesión con',
+                      style: TextStyle(color: Color(0xFF6D6D6D)),
+                    ),
                   ),
-                  Expanded(child: Divider(color: Color(0xFFE6E6E6), thickness: 1)),
+                  Expanded(
+                    child: Divider(color: Color(0xFFE6E6E6), thickness: 1),
+                  ),
                 ],
               ),
               const SizedBox(height: 14),
@@ -337,13 +368,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   _SocialCircle(
                     onTap: _isLoading ? null : _loginWithGoogle,
                     borderColor: const Color(0xFFDB4437),
-                    child: const Text('G', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                    child: const Text(
+                      'G',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 18),
                   _SocialCircle(
                     onTap: _isLoading ? null : _loginWithFacebook,
                     borderColor: const Color(0xFF1877F2),
-                    child: const Icon(Icons.facebook, size: 24, color: Color(0xFF1877F2)),
+                    child: const Icon(
+                      Icons.facebook,
+                      size: 24,
+                      color: Color(0xFF1877F2),
+                    ),
                   ),
                 ],
               ),
@@ -356,7 +397,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       : () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const RegisterScreen(),
+                            ),
                           );
                         },
                   child: Text.rich(

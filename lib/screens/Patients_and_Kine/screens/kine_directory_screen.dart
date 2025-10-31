@@ -1,10 +1,12 @@
-// Archivo: lib/screens/kine_directory_screen.dart
+// lib/features/patients/screens/kine_directory_screen.dart (CÓDIGO NUEVO)
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+// Importa el nuevo servicio
+import 'package:kine_app/screens/Patients_and_Kine/services/kine_service.dart';
+// Las pantallas importadas deben usar las nuevas rutas
 import 'kine_presentation_screen.dart';
-import 'profile_screen.dart';
+import '../../auth/screens/profile_screen.dart';
 
 class KineDirectoryScreen extends StatefulWidget {
   const KineDirectoryScreen({super.key});
@@ -14,72 +16,26 @@ class KineDirectoryScreen extends StatefulWidget {
 }
 
 class _KineDirectoryScreenState extends State<KineDirectoryScreen> {
-  late Future<List<Map<String, String>>> _kineListFuture;
+  // Inicializa el nuevo servicio
+  final KineService _kineService = KineService();
+  late Future<List<Map<String, dynamic>>>
+  _kineListFuture; // El tipo de retorno ahora es dynamic
 
   @override
   void initState() {
     super.initState();
-    _kineListFuture = _fetchKinesiologistsFromFirestore();
+    // Usa el servicio
+    _kineListFuture = _kineService.getKineDirectory();
   }
 
   void _reloadKineList() {
     setState(() {
-      _kineListFuture = _fetchKinesiologistsFromFirestore();
+      // Recarga usando el servicio
+      _kineListFuture = _kineService.getKineDirectory();
     });
   }
 
-  /// Carga los kinesiólogos desde la colección 'usuarios'
-  Future<List<Map<String, String>>> _fetchKinesiologistsFromFirestore() async {
-    try {
-      //CAMBIO: Apuntamos a la colección 'usuarios'
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('usuarios')
-          // CAMBIO: Filtramos por un campo que solo tienen los kinesiólogos.
-          .where('specialization', isGreaterThan: '')
-          // --- INICIO DE LA IMPLEMENTACIÓN DEL ORDEN ---
-          // 1. Ordena por 'perfilDestacado' (true irá antes que false)
-          .orderBy('perfilDestacado', descending: true)
-          // 2. (Opcional) Luego ordena alfabéticamente
-          .orderBy('nombre_completo', descending: false)
-          // --- FIN DE LA IMPLEMENTACIÓN ---
-          .get();
-
-      if (querySnapshot.docs.isEmpty) {
-        return [];
-      }
-
-      final kineList = querySnapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>; // Aseguramos el tipo
-        return {
-          'id': doc.id,
-          'name': (data['nombre_completo'] as String?) ?? 'Kinesiólogo(a)',
-          'specialization':
-              (data['specialization'] as String?) ?? 'Sin especialización',
-          'photoUrl':
-              (data['imagen_perfil'] as String?) ??
-              'https://via.placeholder.com/150',
-          'experience':
-              (data['experience']?.toString()) ??
-              '0', // Usamos .toString() para asegurar String
-          'presentation':
-              (data['carta_presentacion'] as String?) ??
-              'No ha publicado su carta.',
-        };
-      }).toList();
-
-      return kineList;
-    } catch (e) {
-      debugPrint('Error al cargar kinesiólogos: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar datos: ${e.toString()}')),
-        );
-      }
-      return [];
-    }
-  }
-
-  void _navigateToKineScreen(Map<String, String> kine) async {
+  void _navigateToKineScreen(Map<String, dynamic> kine) async {
     final String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
     final Widget destinationScreen;
 
@@ -88,7 +44,11 @@ class _KineDirectoryScreenState extends State<KineDirectoryScreen> {
     } else {
       destinationScreen = KinePresentationScreen(
         kineId: kine['id']!,
-        kineData: kine,
+        kineData: kine
+            .cast<
+              String,
+              String
+            >(), // Aseguramos el tipo si la presentación lo necesita
       );
     }
 
@@ -102,6 +62,7 @@ class _KineDirectoryScreenState extends State<KineDirectoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ... (El build del widget sigue igual, solo usa el nuevo tipo Future)
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -111,7 +72,8 @@ class _KineDirectoryScreenState extends State<KineDirectoryScreen> {
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
       ),
-      body: FutureBuilder<List<Map<String, String>>>(
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        // Cambia a dynamic
         future: _kineListFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {

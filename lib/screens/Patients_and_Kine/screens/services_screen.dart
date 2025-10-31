@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kine_app/services/get_user_data.dart'; // Asegúrate de tener este servicio
+import 'package:kine_app/screens/auth/services/get_user_data.dart'; // Asegúrate de tener este servicio
 
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({super.key});
@@ -36,9 +36,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
     final userStatus = _userData?['tipo_usuario_nombre'] ?? 'No especificado';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Servicios'),
-      ),
+      appBar: AppBar(title: const Text('Servicios')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

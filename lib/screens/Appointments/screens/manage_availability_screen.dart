@@ -1,6 +1,6 @@
 // lib/screens/manage_availability_screen.dart
 import 'package:flutter/material.dart';
-import 'package:kine_app/services/availability_service.dart'; // Importa el servicio
+import 'package:kine_app/screens/Appointments/services/availability_service.dart'; // Importa el servicio
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart'; // Necesitas este paquete
