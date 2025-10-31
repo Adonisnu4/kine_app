@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:kine_app/screens/auth/screens/login_screen.dart';
-import 'package:kine_app/screens/auth/screens/register_screen.dart';
+import 'package:kine_app/features/auth/screens/login_screen.dart';
+import 'package:kine_app/features/auth/screens/register_screen.dart';
 
 void main() {
   runApp(const KineApp());

@@ -51,7 +51,7 @@ Future<List<PlanTomado>> obtenerPlanesPorUsuario() async {
         .get();
 
     if (querySnapshot.docs.isEmpty) {
-      print('⚠️ CONSULTA EXITOSA: Se encontraron 0 planes para el usuario.');
+      print('CONSULTA EXITOSA: Se encontraron 0 planes para el usuario.');
       return [];
     }
 

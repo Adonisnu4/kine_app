@@ -1,8 +1,8 @@
 // lib/screens/kine_presentation_screen.dart
 import 'package:flutter/material.dart';
-import 'package:kine_app/screens/Appointments/screens/booking_screen.dart'; // Importa pantalla de agendar
+import 'package:kine_app/features/Appointments/screens/booking_screen.dart'; // Importa pantalla de agendar
 // --- 👇 1. ASEGÚRATE QUE ESTE IMPORT ESTÉ DESCOMENTADO Y LA RUTA SEA CORRECTA 👇 ---
-import 'package:kine_app/screens/Chat/screens/chat_screen.dart'; // Importa tu pantalla de chat
+import 'package:kine_app/features/Chat/screens/chat_screen.dart'; // Importa tu pantalla de chat
 
 class KinePresentationScreen extends StatelessWidget {
   final String kineId;

@@ -1,7 +1,7 @@
 // lib/screens/subscription_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kine_app/screens/Stripe/services/stripe_service.dart';
+import 'package:kine_app/features/Stripe/services/stripe_service.dart';
 
 // Enum para claridad en el selector
 enum BillingCycle { monthly, annual }

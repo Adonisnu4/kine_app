@@ -2,13 +2,13 @@
 
 import 'package:flutter/material.dart';
 // ⚠️ Rutas corregidas para tu estructura:
-import 'package:kine_app/screens/Appointments/services/appointment_service.dart';
-import 'package:kine_app/screens/Appointments/services/availability_service.dart';
+import 'package:kine_app/features/Appointments/services/appointment_service.dart';
+import 'package:kine_app/features/Appointments/services/availability_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
 // 🚀 AÑADIR ESTE IMPORT: Para navegar directamente a la pantalla de chat
-import 'package:kine_app/screens/Chat/screens/chat_screen.dart';
+import 'package:kine_app/features/Chat/screens/chat_screen.dart';
 // (Asegúrate que esta ruta a ChatScreen.dart sea correcta)
 
 /// Pantalla para agendar una nueva cita con un kinesiólogo específico.

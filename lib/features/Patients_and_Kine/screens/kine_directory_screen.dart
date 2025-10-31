@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 // Importa el nuevo servicio
-import 'package:kine_app/screens/Patients_and_Kine/services/kine_service.dart';
+import 'package:kine_app/features/Patients_and_Kine/services/kine_service.dart';
 // Las pantallas importadas deben usar las nuevas rutas
 import 'kine_presentation_screen.dart';
 import '../../auth/screens/profile_screen.dart';

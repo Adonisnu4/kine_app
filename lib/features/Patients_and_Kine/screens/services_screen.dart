@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kine_app/screens/auth/services/get_user_data.dart'; // Asegúrate de tener este servicio
+import 'package:kine_app/features/auth/services/get_user_data.dart'; // Asegúrate de tener este servicio
 
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({super.key});

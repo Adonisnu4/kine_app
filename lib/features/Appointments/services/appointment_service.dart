@@ -5,9 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
 // ⚠️ Ajusta estas rutas a tu estructura actual:
-import 'package:kine_app/screens/Appointments/models/appointment.dart';
-import 'package:kine_app/screens/auth/services/get_user_data.dart';
-import 'package:kine_app/screens/auth/services/user_service.dart'; // Contiene getUserEmailById
+import 'package:kine_app/features/Appointments/models/appointment.dart';
+import 'package:kine_app/features/auth/services/get_user_data.dart';
+import 'package:kine_app/features/auth/services/user_service.dart'; // Contiene getUserEmailById
 
 class AppointmentService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

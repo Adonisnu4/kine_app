@@ -6,9 +6,9 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 
 // ⚠️ Ajusta estas rutas si es necesario:
-import 'package:kine_app/screens/Appointments/models/appointment.dart';
-import 'package:kine_app/screens/Appointments/services/appointment_service.dart';
-import 'package:kine_app/screens/Chat/screens/chat_screen.dart'; // Importación necesaria para la navegación al chat
+import 'package:kine_app/features/Appointments/models/appointment.dart';
+import 'package:kine_app/features/Appointments/services/appointment_service.dart';
+import 'package:kine_app/features/Chat/screens/chat_screen.dart'; // Importación necesaria para la navegación al chat
 
 class KinePanelScreen extends StatefulWidget {
   const KinePanelScreen({super.key});
