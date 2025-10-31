@@ -16,7 +16,10 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // --- LÓGICA DE FIRESTORE (SIN CAMBIOS) ---
-  Future<void> _tomarPlan({required String planId, required String planNombre}) async {
+  Future<void> _tomarPlan({
+    required String planId,
+    required String planNombre,
+  }) async {
     // 1. VERIFICA SI HAY UN USUARIO LOGUEADO
     final User? usuarioActual = _auth.currentUser;
 
@@ -79,7 +82,6 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
     }
     // --- FIN DE LA VERIFICACIÓN ---
 
-
     // 4. SI TODO ESTÁ BIEN, PREPARA LOS DATOS
     final Map<String, dynamic> planTomadoData = {
       'usuarioId': usuarioId,
@@ -92,7 +94,9 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
 
     // 5. GUARDA LOS DATOS EN FIRESTORE
     try {
-      await _firestore.collection('plan_tomados_por_usuarios').add(planTomadoData);
+      await _firestore
+          .collection('plan_tomados_por_usuarios')
+          .add(planTomadoData);
 
       if (!mounted) return;
       // Muestra un mensaje de éxito al usuario
@@ -113,7 +117,6 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
       );
     }
   }
-
 
   // --- BUILD WIDGET (CON CAMBIOS DE UI) ---
   @override
@@ -142,7 +145,7 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          
+
           // --- CAMBIO UI: Estado vacío mejorado ---
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return Center(
@@ -151,7 +154,11 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.list_alt_rounded, size: 80, color: Colors.grey.shade400),
+                    Icon(
+                      Icons.list_alt_rounded,
+                      size: 80,
+                      color: Colors.grey.shade400,
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       'No hay planes disponibles',
@@ -162,7 +169,9 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                     Text(
                       'Pronto se añadirán nuevos planes de ejercicio.',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                   ],
                 ),
@@ -177,50 +186,47 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               DocumentSnapshot document = snapshot.data!.docs[index];
-              final String planName = (document.data() as Map<String, dynamic>)['nombre'] ?? 'Plan sin título';
+              final String planName =
+                  (document.data() as Map<String, dynamic>)['nombre'] ??
+                  'Plan sin título';
               final String planId = document.id;
 
               return Card(
                 // --- CAMBIO UI: Márgenes y elevación sutiles ---
-                margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+                margin: const EdgeInsets.symmetric(
+                  horizontal: 8.0,
+                  vertical: 6.0,
+                ),
                 elevation: 1.0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
                 clipBehavior: Clip.antiAlias,
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
+
                   // --- CAMBIO UI: Leading pulido con CircleAvatar ---
                   leading: CircleAvatar(
                     radius: 24,
                     backgroundColor: Colors.deepPurple.shade50,
                     child: Icon(
-                      Icons.fitness_center, 
-                      color: Colors.deepPurple.shade700, 
-                      size: 28
+                      Icons.fitness_center,
+                      color: Colors.deepPurple.shade700,
+                      size: 28,
                     ),
                   ),
 
                   title: Text(
                     planName,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
-                  ),
-                  
-                  // --- CAMBIO UI: Botón de "Empezar" más moderno ---
-                  trailing: TextButton(
-                    onPressed: () {
-                      _tomarPlan(planId: planId, planNombre: planName);
-                    },
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.green.shade50,
-                      foregroundColor: Colors.green.shade800,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20.0),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17,
                     ),
-                    child: const Text('Empezar', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
-                  
+
                   // Navegación al tocar (se mantiene la lógica)
                   onTap: () {
                     Navigator.push(

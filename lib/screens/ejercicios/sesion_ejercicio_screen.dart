@@ -163,7 +163,7 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
     return ejercicios.values.every((e) => e['completado'] == true);
   }
 
-  /// 🚀 Marca el ejercicio actual como completado y avanza al siguiente O finaliza la sesión.
+  /// 🚀 Marca el ejercicio actual como completado y avanza al siguiente o finaliza la sesión.
   Future<void> _completeExerciseAndAdvance() async {
     // Cancelar el temporizador
     if (_durationTimer.isActive) _durationTimer.cancel();
@@ -183,18 +183,20 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
           .doc(widget.ejecucionId);
 
       final doc = await docRef.get();
-      if (!doc.exists)
+      if (!doc.exists) {
         throw Exception('Documento no encontrado para actualizar.');
+      }
 
       final data = doc.data()!;
       final sesiones = List<Map<String, dynamic>>.from(data['sesiones'] ?? []);
       final sesionActual = data['sesion_actual'] ?? 0;
 
       if (sesionActual != _currentSessionIndex) {
+        // Protección: Si el índice actual no coincide con la base de datos, recargar
         return _loadExercise();
       }
 
-      // 1. Marcar el ejercicio actual como completado
+      // 1. Marcar el ejercicio actual como completado (Localmente)
       final sesion = sesiones[sesionActual];
       final ejercicios = Map<String, dynamic>.from(sesion['ejercicios'] ?? {});
 
@@ -202,15 +204,33 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
         ejercicios[_currentExerciseKey]!['completado'] = true;
       }
 
-      // 2. Escribir los cambios en Firestore (marcando el ejercicio como completado)
-      await docRef.update({'sesiones': sesiones});
-
-      // 3. Verificar si la sesión actual ha finalizado
+      // 2. Verificar si la sesión actual ha finalizado
       final bool currentSessionCompleted = _isSessionCompleted(sesion);
 
-      // 4. Decidir el siguiente paso
+      // 3. Preparar actualizaciones para Firestore
+      final Map<String, dynamic> updates = {'sesiones': sesiones};
+
+      // 4. Decidir el siguiente paso y aplicar la lógica de avance de sesión
       if (currentSessionCompleted) {
-        // 🛑 ¡FIN DE SESIÓN! No se actualiza 'sesion_actual' en Firestore
+        sesiones[sesionActual]['completada'] = true;
+        final nextSessionIndex = sesionActual + 1;
+        final isPlanCompleted = nextSessionIndex >= sesiones.length;
+
+        if (isPlanCompleted) {
+          // ⭐ LÓGICA AGREGADA: El plan está 100% terminado
+          updates['estado'] = 'terminado';
+          updates['fecha_finalizacion'] = FieldValue.serverTimestamp();
+        } else {
+          // 🔑 ¡ACTUALIZACIÓN CLAVE! Avanzar al siguiente índice de sesión
+          updates['sesion_actual'] = nextSessionIndex;
+        }
+      }
+
+      // 5. Escribir TODOS los cambios en Firestore
+      await docRef.update(updates);
+
+      // 6. Realizar acciones posteriores a la actualización
+      if (currentSessionCompleted) {
         _endSessionSuccess(sesion['nombre'] ?? 'Sesión ${sesionActual + 1}');
       } else {
         // Cargar el siguiente ejercicio dentro de la misma sesión
@@ -221,7 +241,7 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
     }
   }
 
-  /// ⏱️ Controla el tiempo total reproducido
+  //Controla el tiempo total reproducido
   void _startDurationTimer() {
     _durationTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
       if (_videoController != null && _videoController!.value.isPlaying) {
@@ -230,11 +250,9 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
         });
 
         if (_totalPlayed >= _targetDuration && _targetDuration.inSeconds > 0) {
-          // 🎯 ¡Límite alcanzado!
           _videoController!.pause();
           timer.cancel(); // Detener el temporizador de conteo
 
-          // 🚀 Llamar a la función de avance
           _completeExerciseAndAdvance();
         }
       }
