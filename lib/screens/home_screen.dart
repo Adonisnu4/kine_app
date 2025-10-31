@@ -55,9 +55,10 @@ class _HomeScreenState extends State<HomeScreen>
     _isKineVerified = (userStatusId == 3);
 
     // Set the number of tabs based on the user role
-    // Kine now has 4 tabs (Inicio, Citas, Mensajes, Pacientes)
-    // Patient has 4 tabs (Inicio, Ejercicios, Servicios, Mensajes)
-    const tabLength = 4; // Ambos tienen 4 pestañas
+    // Kine tiene 5 tabs (Inicio,Ejercicios, Citas, Mensajes, Pacientes)
+    // PAciente tiene 4 tabs (Inicio, Ejercicios, Servicios, Mensajes)
+    //5 para Kine, 4 para Paciente
+    final tabLength = _isKineVerified ? 5 : 4;
 
     _tabController =
         TabController(length: tabLength, vsync: this, initialIndex: 0)
@@ -91,18 +92,18 @@ class _HomeScreenState extends State<HomeScreen>
     ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
   }
 
-  /// Returns the list of screen Widgets for the TabBarView based on user role.
   List<Widget> _getTabViews() {
     if (_isKineVerified) {
-      // Screens for KINESIOLOGIST (4 tabs shown in footer)
+      //Pestañas para el kinesiologo
       return const [
         Index(), // 0: Inicio
-        KinePanelScreen(), // 1: Citas
-        ContactsScreen(), // 2: Mensajes
-        MyPatientsScreen(), // 3: Mis Pacientes,
+        PlanEjercicioScreen(), // 1: Ejercicios
+        KinePanelScreen(), // 2: Citas
+        ContactsScreen(), // 3: Mensajes
+        MyPatientsScreen(), // 4: Mis Pacientes
       ];
     } else {
-      // Screens for PATIENT (4 tabs shown in footer)
+      //Pestañas para el usuario
       return const [
         Index(), // 0: Inicio
         PlanEjercicioScreen(), // 1: Ejercicios
@@ -119,10 +120,10 @@ class _HomeScreenState extends State<HomeScreen>
   /// Returns the list of Tab widgets for the BottomNavigationBar based on user role.
   List<Tab> _getBottomNavBarTabs() {
     if (_isKineVerified) {
-      // Tabs for KINESIOLOGIST (4 tabs)
-      // --- 👇 CORREGIDO: AHORA SON 4 TABS 👇 ---
+      // Tabs para el kinesiologo
       return [
         Tab(icon: _navIcon(Icons.home_rounded), text: 'Inicio'),
+        Tab(icon: _navIcon(Icons.fitness_center), text: 'Ejercicios'),
         Tab(icon: _navIcon(Icons.assignment_rounded), text: 'Citas'),
         Tab(
           icon: _navIcon(Icons.chat_bubble_outline_rounded),
@@ -135,7 +136,7 @@ class _HomeScreenState extends State<HomeScreen>
       ];
       // --- FIN CORRECCIÓN ---
     } else {
-      // Tabs for PATIENT (4 tabs)
+      // Tabs para el paciente
       return [
         Tab(icon: _navIcon(Icons.home_rounded), text: 'Inicio'),
         Tab(icon: _navIcon(Icons.fitness_center), text: 'Ejercicios'),
@@ -148,20 +149,22 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  /// Returns the list of titles corresponding to each tab for the AppBar.
   List<String> _tabLabels() {
+    //Para kine
     if (_isKineVerified) {
+      // return ['Inicio', 'Ejercicios', 'Citas', 'Mis Pacientes', 'Mensajes'];
       // Titles for KINESIOLOGIST
       // --- 👇 CORREGIDO: ORDEN SINCRONIZADO CON _getTabViews 👇 ---
       return [
         'Inicio', // 0: Index
-        'Citas', // 1: KinePanelScreen
-        'Mensajes', // 2: ContactsScreen
-        'Mis Pacientes', // 3: MyPatientsScreen
+        'Ejercicios', // 1: KinePanelScreen
+        'Citas', // 2: KinePanelScreen
+        'Mensajes', // 3: ContactsScreen
+        'Mis Pacientes', // 4: MyPatientsScreen
       ];
       // --- FIN CORRECCIÓN ---
     } else {
-      // Titles for PATIENT
+      //Para paciente
       return ['Inicio', 'Ejercicios', 'Servicios', 'Mensajes'];
     }
   }
@@ -243,31 +246,23 @@ class _HomeScreenState extends State<HomeScreen>
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // Get the list of screens and tabs based on the determined role
     final views = _getTabViews();
     final tabs = _getBottomNavBarTabs();
 
-    // Use DefaultTabController if navigating tabs programmatically elsewhere,
-    // otherwise TabController managed by the state (_tabController) is sufficient.
-    // Using DefaultTabController here for consistency with the static method.
     return DefaultTabController(
-      length: _tabController.length, // Ensure length matches the controller
+      length: _tabController.length,
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle
-            .dark, // Dark icons for the status bar (time, battery)
+        value: SystemUiOverlayStyle.dark,
         child: Scaffold(
-          appBar: _buildHeader(), // Use the custom header
-          // Main content area displaying the selected tab's screen
+          appBar: _buildHeader(),
+
           body: TabBarView(
-            controller: _tabController, // Connect to the state's controller
-            physics:
-                const NeverScrollableScrollPhysics(), // Disable swiping between tabs
-            children: views, // Use the correct list of screen widgets
+            // controller: _tabController,
+            physics: const NeverScrollableScrollPhysics(),
+            children: views,
           ),
 
-          // Bottom navigation bar
           bottomNavigationBar: Container(
-            // Styling for the bottom bar (black background, top shadow/border)
             decoration: const BoxDecoration(
               color: Colors.black, // Background color
               boxShadow: [
@@ -284,7 +279,6 @@ class _HomeScreenState extends State<HomeScreen>
               ), // Subtle top border
             ),
             child: TabBar(
-              controller: _tabController,
               isScrollable: false,
               labelColor: Colors.white,
               unselectedLabelColor: Colors.white70,
