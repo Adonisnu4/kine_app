@@ -1,14 +1,14 @@
 // lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kine_app/screens/kine_panel_screen.dart';
-import 'package:kine_app/services/get_user_data.dart';
-import 'package:kine_app/screens/contacts_screen.dart';
+import 'package:kine_app/screens/Patients_and_Kine/screens/kine_panel_screen.dart';
+import 'package:kine_app/screens/auth/services/get_user_data.dart';
+import 'package:kine_app/screens/chat/screens/contacts_screen.dart'; // Asegúrate de tener una pantalla de login para el caso de no estar autenticado
 import 'package:kine_app/screens/ejercicios/plan_ejercicios_screen.dart'; // Paciente ve esto
 import 'package:kine_app/screens/index.dart';
-import 'package:kine_app/screens/profile_screen.dart'; // Ambos
-import 'package:kine_app/screens/kine_directory_screen.dart'; // Paciente
-import 'package:kine_app/screens/my_patients_screen.dart'; // Kine (Lista Pacientes)
+import 'package:kine_app/screens/auth/screens/profile_screen.dart'; // Ambos
+import 'package:kine_app/screens/Patients_and_Kine/screens/kine_directory_screen.dart'; // Paciente
+import 'package:kine_app/screens/Patients_and_Kine/screens/my_patients_screen.dart'; // Kine (Lista Pacientes)
 
 // GlobalKey can remain if used elsewhere
 final GlobalKey<_HomeScreenState> homeScreenKey = GlobalKey<_HomeScreenState>();

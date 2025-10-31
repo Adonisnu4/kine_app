@@ -1,11 +1,10 @@
-// lib/screens/my_patients_screen.dart
 import 'package:flutter/material.dart';
-import 'package:kine_app/services/user_service.dart'; // Asegúrate que aquí esté getKinePatients
-import 'package:kine_app/screens/chat_screen.dart'; // Importa tu pantalla de chat
-import 'package:kine_app/screens/patient_appointment_history_screen.dart'; // Importa pantalla historial
-// --- Importa el servicio y la pantalla de pago ---
-import 'package:kine_app/services/stripe_service.dart';
-import 'package:kine_app/screens/subscription_screen.dart';
+import 'package:kine_app/screens/Patients_and_Kine/services/kine_service.dart';
+import 'package:kine_app/screens/Chat/screens/chat_screen.dart';
+import 'package:kine_app/screens/Patients_and_Kine/screens/patient_appointment_history_screen.dart';
+import 'package:kine_app/screens/Stripe/services/stripe_service.dart';
+import 'package:kine_app/screens/Stripe/screens/subscription_screen.dart';
+import 'package:kine_app/screens/auth/services/user_service.dart';
 
 class MyPatientsScreen extends StatefulWidget {
   const MyPatientsScreen({super.key});
@@ -15,61 +14,50 @@ class MyPatientsScreen extends StatefulWidget {
 }
 
 class _MyPatientsScreenState extends State<MyPatientsScreen> {
-  // --- Servicio y estados "Pro" ---
   final StripeService _stripeService = StripeService();
   late Future<List<Map<String, dynamic>>> _patientsFuture;
-  bool _isPro = false; // Estado de suscripción
-  bool _isLoadingProStatus = true; // Cargando estado
-  // --- FIN ESTADOS ---
 
-  // Límite de pacientes para el plan Básico/Gratuito
-  final int _basicPatientLimit = 5;
+  bool _isPro = false;
+  int _patientLimit = 50;
+  bool _isLoadingProStatus = true;
 
   @override
   void initState() {
     super.initState();
-    // Primero comprueba el estado de la suscripción
-    _checkSubscriptionStatus();
+    _checkPlanAndLoadPatients();
   }
 
-  // --- Función para comprobar la suscripción ---
-  /// Comprueba el estado de la suscripción Pro.
-  /// Una vez que tiene el estado, carga los pacientes.
-  Future<void> _checkSubscriptionStatus() async {
-    if (mounted)
-      setState(() {
-        _isLoadingProStatus = true;
-      });
-    bool isProStatus = false;
+  Future<void> _checkPlanAndLoadPatients() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingProStatus = true;
+    });
+
+    Map<String, dynamic> planStatus;
     try {
-      isProStatus = await _stripeService.checkProSubscriptionStatus();
+      planStatus = await _stripeService.getUserPlanStatus();
     } catch (e) {
-      print("Error al comprobar estado Pro en Pacientes: $e");
-      // Si falla, asume que no es Pro
-      isProStatus = false;
+      print("Error al comprobar estado Pro: $e");
+      planStatus = {'isPro': false, 'limit': 50};
     }
 
     if (mounted) {
       setState(() {
-        _isPro = isProStatus;
-        _isLoadingProStatus = false; // Termina la carga del status
-        // Lanza la carga de pacientes AHORA que sabe el estado
+        _isPro = planStatus['isPro'] as bool;
+        _patientLimit = planStatus['limit'] as int;
+        _isLoadingProStatus = false;
         _patientsFuture = getKinePatients();
       });
     }
   }
-  // --- FIN NUEVA FUNCIÓN ---
 
-  // Refresca tanto el estado pro como la lista de pacientes
   void _refreshData() {
     setState(() {
-      _isLoadingProStatus = true; // Muestra carga
+      _isLoadingProStatus = true;
     });
-    // Vuelve a ejecutar la comprobación de estado, que a su vez recargará los pacientes
-    _checkSubscriptionStatus();
+    _checkPlanAndLoadPatients();
   }
 
-  // Navega al historial de citas
   void _navigateToHistory(String patientId, String patientName) {
     Navigator.push(
       context,
@@ -82,7 +70,6 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     );
   }
 
-  // Navega al chat
   void _navigateToChat(String patientId, String patientName) {
     Navigator.push(
       context,
@@ -93,17 +80,14 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     );
   }
 
-  // Navega a la pantalla de suscripción
   void _navigateToSubscriptions() async {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (ctx) =>
-            const SubscriptionScreen(userType: "kine"), // Asume que es Kine
+        builder: (ctx) => const SubscriptionScreen(userType: "kine"),
       ),
     );
-    // Al volver, revisa el estado de nuevo
-    _checkSubscriptionStatus();
+    _checkPlanAndLoadPatients();
   }
 
   @override
@@ -114,21 +98,17 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
         actions: [
-          // Botón para recargar
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Recargar lista',
-            onPressed: _refreshData, // Llama a la nueva función de recarga
+            onPressed: _refreshData,
           ),
         ],
       ),
-      // --- Maneja el estado de carga "Pro" ---
       body: _isLoadingProStatus
-          ? const Center(
-              child: CircularProgressIndicator(),
-            ) // Muestra carga mientras comprueba el plan
+          ? const Center(child: CircularProgressIndicator())
           : FutureBuilder<List<Map<String, dynamic>>>(
-              future: _patientsFuture, // Ahora espera a los pacientes
+              future: _patientsFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -152,30 +132,19 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                 }
 
                 final allPatients = snapshot.data!;
-
-                // --- LÓGICA DE BLOQUEO (GATING) ---
                 List<Map<String, dynamic>> patientsToShow;
                 bool limitReached = false;
 
-                if (!_isPro && allPatients.length > _basicPatientLimit) {
-                  // Si NO es Pro y superó el límite
-                  patientsToShow = allPatients
-                      .take(_basicPatientLimit)
-                      .toList(); // Muestra solo los primeros 5
+                if (!_isPro && allPatients.length > _patientLimit) {
+                  patientsToShow = allPatients.take(_patientLimit).toList();
                   limitReached = true;
                 } else {
-                  // Si ES Pro, o si no ha superado el límite
-                  patientsToShow = allPatients; // Muestra todos
+                  patientsToShow = allPatients;
                 }
-                // --- FIN LÓGICA DE BLOQUEO ---
 
-                // Construye la UI con la lista (completa o limitada)
                 return Column(
                   children: [
-                    // Muestra un banner de "Actualizar" si se alcanzó el límite
-                    if (limitReached)
-                      _buildPaywallBanner(), // Widget del banner
-                    // Muestra la lista de pacientes
+                    if (limitReached) _buildPaywallBanner(),
                     Expanded(
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -183,16 +152,14 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                         itemBuilder: (context, index) {
                           final patientData = patientsToShow[index];
                           final patientId =
-                              patientData['id'] as String? ?? 'ID_Desconocido';
+                              patientData['id'] ?? 'ID_Desconocido';
                           final name =
-                              patientData['nombre_completo'] as String? ??
+                              patientData['nombre_completo'] ??
                               'Nombre Desconocido';
                           final age = patientData['edad']?.toString() ?? '?';
-                          final sex = patientData['sexo'] as String? ?? 'N/E';
-                          final photoUrl =
-                              patientData['imagen_perfil'] as String?;
+                          final sex = patientData['sexo'] ?? 'N/E';
+                          final photoUrl = patientData['imagen_perfil'];
 
-                          // Tarjeta de Paciente (sin cambios)
                           return Card(
                             margin: const EdgeInsets.symmetric(
                               horizontal: 12,
@@ -212,7 +179,10 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                                         Uri.tryParse(
                                               photoUrl,
                                             )?.hasAbsolutePath ==
-                                            true)
+                                            true &&
+                                        !photoUrl.contains(
+                                          'via.placeholder.com',
+                                        ))
                                     ? NetworkImage(photoUrl)
                                     : null,
                                 child:
@@ -221,7 +191,10 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                                         Uri.tryParse(
                                               photoUrl,
                                             )?.hasAbsolutePath !=
-                                            true)
+                                            true ||
+                                        photoUrl.contains(
+                                          'via.placeholder.com',
+                                        ))
                                     ? Text(
                                         name.isNotEmpty
                                             ? name[0].toUpperCase()
@@ -268,15 +241,13 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     );
   }
 
-  // --- WIDGET HELPER DEL BANNER ---
-  /// Construye un banner que invita a actualizar al plan Pro
   Widget _buildPaywallBanner() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12.0),
-      margin: const EdgeInsets.fromLTRB(10, 10, 10, 0), // Margen
+      margin: const EdgeInsets.fromLTRB(10, 10, 10, 0),
       decoration: BoxDecoration(
-        color: Colors.orange.shade50, // Fondo naranja claro
+        color: Colors.orange.shade50,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.orange.shade300),
       ),
@@ -292,14 +263,13 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
           ),
           const SizedBox(height: 5),
           Text(
-            'Estás viendo los primeros $_basicPatientLimit pacientes. Actualiza a Kine Pro para ver pacientes ilimitados.',
+            'Estás viendo los primeros $_patientLimit pacientes. Actualiza a Kine Pro para ver pacientes ilimitados.',
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 10),
           ElevatedButton(
             child: const Text('Actualizar a Kine Pro'),
-            onPressed: () =>
-                _navigateToSubscriptions(), // Llama a la pantalla de pago
+            onPressed: _navigateToSubscriptions,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange.shade700,
               foregroundColor: Colors.white,
@@ -309,6 +279,4 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
       ),
     );
   }
-
-  // --- FIN HELPER ---
 }

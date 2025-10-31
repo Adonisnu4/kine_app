@@ -1,7 +1,7 @@
 // lib/screens/patient_appointment_history_screen.dart
 import 'package:flutter/material.dart';
-import 'package:kine_app/models/appointment.dart'; // Importa el modelo de cita
-import 'package:kine_app/services/appointment_service.dart'; // Importa el servicio de citas
+import 'package:kine_app/screens/Appointments/models/appointment.dart'; // Importa el modelo de cita
+import 'package:kine_app/screens/Appointments/services/appointment_service.dart'; // Importa el servicio de citas
 import 'package:firebase_auth/firebase_auth.dart'; // Para obtener el ID del Kine
 import 'package:intl/intl.dart'; // Para formatear fechas
 
