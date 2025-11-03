@@ -3,11 +3,17 @@ import 'package:flutter/material.dart'; // Necesario para TimeOfDay
 import 'package:intl/intl.dart'; // Para formatear fechas
 
 class AvailabilityService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore
+      .instance; // Se mantiene, aunque _availabilityCollection usa la instancia
   final CollectionReference _availabilityCollection = FirebaseFirestore.instance
       .collection('kine_availability');
 
   // --- Para el Kinesiólogo: Almacenamiento y Carga de Disponibilidad ---
+
+  /// Genera el ID del documento basado en KineId y Fecha (yyyy-MM-dd).
+  String _generateDocId(String kineId, DateTime dateAtMidnight) {
+    return '${kineId}_${DateFormat('yyyy-MM-dd').format(dateAtMidnight)}';
+  }
 
   /// Guarda/actualiza disponibilidad para un día específico.
   Future<void> setAvailability({
@@ -17,8 +23,7 @@ class AvailabilityService {
   }) async {
     final dateAtMidnight = DateTime(date.year, date.month, date.day);
     final dateTimestamp = Timestamp.fromDate(dateAtMidnight);
-    final String docId =
-        '${kineId}_${DateFormat('yyyy-MM-dd').format(dateAtMidnight)}';
+    final String docId = _generateDocId(kineId, dateAtMidnight);
 
     await _availabilityCollection.doc(docId).set({
       'kineId': kineId,
@@ -33,12 +38,12 @@ class AvailabilityService {
     DateTime date,
   ) async {
     final dateAtMidnight = DateTime(date.year, date.month, date.day);
-    final String docId =
-        '${kineId}_${DateFormat('yyyy-MM-dd').format(dateAtMidnight)}';
+    final String docId = _generateDocId(kineId, dateAtMidnight);
     final doc = await _availabilityCollection.doc(docId).get();
 
     if (doc.exists && doc.data() != null) {
       final data = doc.data() as Map<String, dynamic>;
+      // Se utiliza una copia segura para la lista por si el valor es null
       return List<String>.from(data['slots'] ?? []);
     }
     return [];
@@ -53,18 +58,15 @@ class AvailabilityService {
     DateTime date,
   ) async {
     final dateAtMidnight = DateTime(date.year, date.month, date.day);
-    final dateTimestamp = Timestamp.fromDate(dateAtMidnight);
+    // 🚩 CORRECCIÓN CRÍTICA: Acceso directo por docId en lugar de consulta 'where'
+    final String docId = _generateDocId(kineId, dateAtMidnight);
+    final doc = await _availabilityCollection.doc(docId).get();
 
-    // 1. Consulta la disponibilidad publicada por el Kine para esa fecha
-    final querySnapshot = await _availabilityCollection
-        .where('kineId', isEqualTo: kineId)
-        .where('fecha', isEqualTo: dateTimestamp)
-        .limit(1)
-        .get();
-
-    if (querySnapshot.docs.isNotEmpty) {
-      final data = querySnapshot.docs.first.data() as Map<String, dynamic>;
+    if (doc.exists && doc.data() != null) {
+      final data = doc.data() as Map<String, dynamic>;
+      // Se utiliza una copia segura para la lista por si el valor es null
       final List<String> slotStrings = List<String>.from(data['slots'] ?? []);
+
       List<TimeOfDay> timeSlots = [];
 
       // Conversión de String ("HH:mm") a TimeOfDay

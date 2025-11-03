@@ -1,5 +1,4 @@
 // lib/screens/booking_screen.dart
-
 import 'package:flutter/material.dart';
 // ⚠️ Rutas corregidas para tu estructura:
 import 'package:kine_app/features/Appointments/services/appointment_service.dart';
@@ -9,7 +8,6 @@ import 'package:intl/intl.dart';
 
 // 🚀 AÑADIR ESTE IMPORT: Para navegar directamente a la pantalla de chat
 import 'package:kine_app/features/Chat/screens/chat_screen.dart';
-// (Asegúrate que esta ruta a ChatScreen.dart sea correcta)
 
 /// Pantalla para agendar una nueva cita con un kinesiólogo específico.
 class BookingScreen extends StatefulWidget {
@@ -64,7 +62,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
   /// Carga los horarios disponibles desde Firestore para la fecha actual.
   Future<void> _loadSlotsForSelectedDay() async {
-    if (!mounted) return;
+    if (!mounted) return; // 🛡️ Protección de estado
     setState(() {
       _isLoadingSlots = true; // Activa el indicador de carga
       _selectedTimeSlot = null; // Reinicia el slot seleccionado
@@ -75,23 +73,23 @@ class _BookingScreenState extends State<BookingScreen> {
         widget.kineId,
         _selectedDate,
       );
-      if (mounted) {
-        setState(() {
-          _availableSlotsForDay = slots;
-          _isLoadingSlots = false;
-        });
-      }
+      if (!mounted) return; // 🛡️ Doble verificación
+      setState(() {
+        _availableSlotsForDay = slots;
+      });
     } catch (e) {
+      if (!mounted) return; // 🛡️ Protección de estado
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cargar horarios: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
       if (mounted) {
         setState(() {
           _isLoadingSlots = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar horarios: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
       }
     }
   }
@@ -115,6 +113,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
   /// Verifica si el paciente ya tiene citas pendientes O confirmadas con este Kine.
   Future<void> _checkExistingAppointments() async {
+    if (!mounted) return; // 🛡️ Protección de estado
     setState(() {
       _isCheckingPending = true;
     });
@@ -132,27 +131,25 @@ class _BookingScreenState extends State<BookingScreen> {
           widget.kineId,
         ),
       ]);
-      if (mounted) {
-        setState(() {
-          _hasPending = results[0]; // Actualiza el estado de pendiente
-          _hasConfirmed = results[1]; // Actualiza el estado de confirmada
-        });
-      }
+      if (!mounted) return; // 🛡️ Doble verificación
+      setState(() {
+        _hasPending = results[0]; // Actualiza el estado de pendiente
+        _hasConfirmed = results[1]; // Actualiza el estado de confirmada
+      });
     } catch (e) {
       // Manejo de error, usualmente por falta de un índice compuesto en Firestore
       print('Error al verificar citas existentes: $e');
-      if (mounted) {
-        setState(() {
-          _hasPending = false; // Asume que no hay cita si hay error
-          _hasConfirmed = false; // Asume que no hay cita si hay error
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al verificar historial: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (!mounted) return; // 🛡️ Protección de estado
+      setState(() {
+        _hasPending = false; // Asume que no hay cita si hay error
+        _hasConfirmed = false; // Asume que no hay cita si hay error
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al verificar historial: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -176,6 +173,7 @@ class _BookingScreenState extends State<BookingScreen> {
           day.weekday != DateTime.saturday && day.weekday != DateTime.sunday,
     );
     if (picked != null && picked != _selectedDate) {
+      if (!mounted) return; // 🛡️ Protección después del await del DatePicker
       setState(() {
         _selectedDate = picked;
       });
@@ -186,6 +184,8 @@ class _BookingScreenState extends State<BookingScreen> {
   /// Procesa la solicitud de cita al profesional.
   void _handleBooking() async {
     if (_selectedTimeSlot == null) return; // No hay hora seleccionada
+    if (!mounted) return; // 🛡️ Protección de estado
+
     setState(() {
       _isBooking = true; // Inicia el proceso de reserva
     });
@@ -213,13 +213,13 @@ class _BookingScreenState extends State<BookingScreen> {
       final hasPendingNow = results[0];
       final hasConfirmedNow = results[1];
 
+      if (!mounted) return; // 🛡️ Doble verificación después del await
+
       // Actualiza estados y lanza error si aplica
-      if (mounted) {
-        setState(() {
-          _hasPending = hasPendingNow;
-          _hasConfirmed = hasConfirmedNow;
-        });
-      }
+      setState(() {
+        _hasPending = hasPendingNow;
+        _hasConfirmed = hasConfirmedNow;
+      });
 
       if (hasPendingNow) {
         throw Exception('Ya tienes una cita pendiente con este kinesiólogo.');
@@ -249,25 +249,23 @@ class _BookingScreenState extends State<BookingScreen> {
       );
 
       // Muestra éxito y cierra la pantalla
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Solicitud enviada. Espera la confirmación.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
-      }
+      if (!mounted) return; // 🛡️ Doble verificación
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Solicitud enviada. Espera la confirmación.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context);
     } catch (e) {
       // Muestra error
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Error al solicitar cita: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (!mounted) return; // 🛡️ Protección de estado
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Error al solicitar cita: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       // Siempre desactiva la carga
       if (mounted) {
@@ -297,7 +295,9 @@ class _BookingScreenState extends State<BookingScreen> {
   Widget build(BuildContext context) {
     // 1. Pantalla de Carga Inicial
     if (_isCheckingPending) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: Colors.teal)),
+      );
     }
 
     // --- 2. Bloques de Restricción ---
@@ -379,7 +379,7 @@ class _BookingScreenState extends State<BookingScreen> {
                 ? const Center(
                     child: Padding(
                       padding: EdgeInsets.symmetric(vertical: 30.0),
-                      child: CircularProgressIndicator(),
+                      child: CircularProgressIndicator(color: Colors.teal),
                     ),
                   )
                 : _buildTimeSlotGrid(),
@@ -518,6 +518,7 @@ class _BookingScreenState extends State<BookingScreen> {
           slot.minute,
         );
 
+        // Bloquea slots pasados
         if (fullDateTime.isBefore(DateTime.now())) {
           return ChoiceChip(
             label: Text(slot.format(context)),
