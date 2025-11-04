@@ -49,7 +49,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // =======================
   void _showSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   // =======================
@@ -69,10 +71,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (user != null) {
         await user.sendEmailVerification();
 
-        final tipoUsuarioRef =
-            _firestore.collection('tipo_usuario').doc('1'); // Paciente por defecto
+        final tipoUsuarioRef = _firestore
+            .collection('tipo_usuario')
+            .doc('1'); // Paciente por defecto
 
-        await _firestore.collection('usuarios').doc(user.uid).set({
+        // Creación del Map de datos del usuario
+        final userData = {
           'nombre_completo': _nameController.text.trim(),
           'nombre_usuario': _usernameController.text.trim(),
           'email': _emailController.text.trim(),
@@ -80,13 +84,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'sexo': _selectedGender,
           'tipo_usuario': tipoUsuarioRef,
           'fecha_registro': FieldValue.serverTimestamp(),
-        });
+
+          // --- 👇 CAMPOS DEL PLAN AÑADIDOS ---
+          'plan': 'estandar',
+          'perfilDestacado': false,
+          'limitePacientes': 50,
+          // ----------------------------------
+        };
+
+        // Guardar los datos en Firestore
+        await _firestore.collection('usuarios').doc(user.uid).set(userData);
 
         await _auth.signOut();
 
         if (!mounted) return;
         Navigator.pop(context);
-        _showSnackBar('✅ ¡Registro exitoso! Te enviamos un correo de verificación.');
+        _showSnackBar(
+          '✅ ¡Registro exitoso! Te enviamos un correo de verificación.',
+        );
       }
     } on FirebaseAuthException catch (e) {
       String message;
@@ -114,7 +129,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     const inputRadius = 28.0;
     const fieldHeight = 56.0;
 
-    InputBorder _border([Color c = const Color(0xFFDDDDDD)]) => OutlineInputBorder(
+    InputBorder _border([Color c = const Color(0xFFDDDDDD)]) =>
+        OutlineInputBorder(
           borderRadius: BorderRadius.circular(inputRadius),
           borderSide: BorderSide(color: c, width: 1.4),
         );
@@ -140,7 +156,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520), // columna estrecha
+              constraints: const BoxConstraints(
+                maxWidth: 520,
+              ), // columna estrecha
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -163,8 +181,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       controller: _nameController,
                       hintText: 'Nombre Completo*',
                       prefix: const Icon(Icons.person_outline),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'El nombre es obligatorio.' : null,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'El nombre es obligatorio.'
+                          : null,
                       borderBuilder: _border,
                     ),
                     const SizedBox(height: 14),
@@ -211,11 +230,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       prefix: const Icon(Icons.lock_outline),
                       obscureText: !_showPassword,
                       suffix: IconButton(
-                        onPressed: () => setState(() => _showPassword = !_showPassword),
-                        icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility),
+                        onPressed: () =>
+                            setState(() => _showPassword = !_showPassword),
+                        icon: Icon(
+                          _showPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
                       ),
-                      validator: (v) =>
-                          (v == null || v.length < 6) ? 'Mínimo 6 caracteres.' : null,
+                      validator: (v) => (v == null || v.length < 6)
+                          ? 'Mínimo 6 caracteres.'
+                          : null,
                       borderBuilder: _border,
                     ),
                     const SizedBox(height: 14),
@@ -242,7 +267,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       isExpanded: true,
                       value: _selectedGender,
                       onChanged: (v) => setState(() => _selectedGender = v),
-                      validator: (v) => v == null ? 'El sexo es obligatorio.' : null,
+                      validator: (v) =>
+                          v == null ? 'El sexo es obligatorio.' : null,
                       items: _genders.map((g) {
                         return DropdownMenuItem<String>(
                           value: g,
@@ -260,8 +286,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       }).toList(),
                       icon: const Icon(Icons.keyboard_arrow_down_rounded),
                       menuMaxHeight: 360,
-                      dropdownColor: Colors.white,                // fondo del menú
-                      borderRadius: BorderRadius.circular(20),    // esquinas del menú
+                      dropdownColor: Colors.white, // fondo del menú
+                      borderRadius: BorderRadius.circular(
+                        20,
+                      ), // esquinas del menú
                       style: const TextStyle(fontSize: 16),
                       decoration: InputDecoration(
                         hintText: 'Selecciona tu sexo*',
@@ -269,7 +297,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         filled: true,
                         fillColor: Colors.white,
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 18, vertical: 18),
+                          horizontal: 18,
+                          vertical: 18,
+                        ),
                         enabledBorder: _border(),
                         focusedBorder: _border(Colors.black),
                         errorBorder: _border(Colors.redAccent),
@@ -313,7 +343,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           children: const [
                             TextSpan(
                               text: 'Inicia sesión',
-                              style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700, decoration: TextDecoration.underline), // negrita
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.w700,
+                                decoration: TextDecoration.underline,
+                              ), // negrita
                             ),
                           ],
                         ),
@@ -374,7 +408,10 @@ class _LabeledField extends StatelessWidget {
           suffixIcon: suffix,
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 18,
+            vertical: 18,
+          ),
           enabledBorder: borderBuilder(),
           focusedBorder: borderBuilder(Colors.black),
           errorBorder: borderBuilder(Colors.redAccent),

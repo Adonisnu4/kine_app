@@ -50,10 +50,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       if (userType == 'kine') {
         _selectedPlanTitle = 'Kine Pro';
         _selectedFeatures = [
-          'Gestión de Disponibilidad Avanzada',
           'Perfil Destacado en Búsquedas',
           'Pacientes Ilimitados',
-          'Estadísticas de Perfil',
         ];
 
         if (cycle == BillingCycle.monthly) {
