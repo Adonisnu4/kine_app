@@ -56,25 +56,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _checkSubscriptionStatus(); // Refresca también el estado "Pro"
   }
 
-  /// Comprueba el estado de la suscripción Pro
+  /// ✅ Comprueba el estado de la suscripción Pro
   Future<void> _checkSubscriptionStatus() async {
-    if (mounted)
+    if (mounted) {
       setState(() {
         _isLoadingProStatus = true;
       });
+    }
     try {
       final isPro = await _stripeService.checkProSubscriptionStatus();
       if (mounted) {
         setState(() {
           _isPro = isPro;
           _isLoadingProStatus = false;
+          _userDataFuture =
+              _loadUserData(); // 🔄 NUEVO: recarga los datos del usuario
         });
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _isLoadingProStatus = false;
         });
+      }
       print("Error al comprobar estado Pro: $e");
     }
   }
@@ -92,7 +96,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // --- Funciones de Navegación y Modales ---
-
   Future<void> _savePresentation(PresentationData data) async {
     try {
       await updateKinePresentation(
@@ -234,6 +237,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+
   // --- Fin Widgets Helpers ---
 
   @override
@@ -269,7 +273,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
 
-          // --- Datos del Usuario ---
           final userData = snapshot.data!;
           final userName = userData['nombre_completo'] ?? 'Usuario';
           final userEmail =
@@ -278,9 +281,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               userData['tipo_usuario_nombre'] ?? 'No especificado';
           final userStatusId = userData['tipo_usuario_id'] ?? 1;
 
-          final isVerified = userStatusId == 3; // Kine Verificado
-          final isPending = userStatusId == 2; // Kine Pendiente
-          final isNormal = userStatusId == 1; // Paciente
+          final isVerified = userStatusId == 3;
+          final isPending = userStatusId == 2;
+          final isNormal = userStatusId == 1;
           final userTypeString = isVerified ? "kine" : "patient";
 
           final String currentSpecialization = userData['specialization'] ?? '';
@@ -292,242 +295,239 @@ class _ProfileScreenState extends State<ProfileScreen> {
               userData['imagen_perfil'] ?? 'https://via.placeholder.com/120';
 
           // --- Construcción del ListView ---
-          return ListView(
-            physics: const BouncingScrollPhysics(),
-            children: [
-              const SizedBox(height: 30),
-              // --- Cabecera de Perfil ---
-              Center(
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.center,
-                  children: [
-                    CircleAvatar(
-                      radius: 60,
-                      backgroundColor: Colors.grey.shade300,
-                      backgroundImage: NetworkImage(userImageUrl),
-                    ),
-                    Positioned(
-                      bottom: -10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isVerified
-                              ? Colors.blue.shade600
-                              : (isPending
-                                    ? Colors.orange.shade700
-                                    : Colors.teal.shade400),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
-                              spreadRadius: 1,
-                              blurRadius: 3,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          userStatusName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 25),
-              Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      userName,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    if (isVerified)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: Icon(
-                          Icons.verified,
-                          color: Colors.blue.shade400,
-                          size: 24,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Center(
-                child: Text(
-                  userEmail,
-                  style: const TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              ),
-              const SizedBox(height: 20),
-              // --- Stats ---
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildStatItem('Citas', '23'), // Datos de ejemplo
-                    _buildStatItem('Seguidores', '1.2k'),
-                    _buildStatItem('Siguiendo', '345'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 30),
-
-              // --- Botón "Pro" (Sigue igual) ---
-              if (!_isPro)
-                _buildProfileMenuItem(
-                  icon: Icons.star_purple500_outlined,
-                  text: 'Actualizar a Plan Pro',
-                  onTap: () => _navigateToSubscriptions(userTypeString),
-                  textColor: Colors.blue.shade700,
-                ),
-              if (_isPro)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
-                  ),
-                  child: Row(
+          return RefreshIndicator(
+            onRefresh: () async => _refreshProfile(),
+            child: ListView(
+              physics: const BouncingScrollPhysics(),
+              children: [
+                const SizedBox(height: 30),
+                // --- Cabecera de Perfil ---
+                Center(
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.center,
                     children: [
-                      Icon(Icons.star, color: Colors.amber.shade700, size: 28),
-                      const SizedBox(width: 20),
-                      Text(
-                        'Plan Pro Activo',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.amber.shade800,
+                      CircleAvatar(
+                        radius: 60,
+                        backgroundColor: Colors.grey.shade300,
+                        backgroundImage: NetworkImage(userImageUrl),
+                      ),
+                      Positioned(
+                        bottom: -10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isVerified
+                                ? Colors.blue.shade600
+                                : (isPending
+                                      ? Colors.orange.shade700
+                                      : Colors.teal.shade400),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                spreadRadius: 1,
+                                blurRadius: 3,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            userStatusName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-
-              // --- Menú General ---
-              _buildProfileMenuItem(
-                icon: Icons.person_outline,
-                text: 'Editar Perfil',
-                onTap: () {},
-              ),
-
-              // Opciones para Paciente (isNormal)
-              if (isNormal)
-                _buildProfileMenuItem(
-                  icon: Icons.calendar_month_outlined,
-                  text: 'Mis Citas Solicitadas',
-                  onTap: _navigateToMyAppointments,
-                ),
-              if (isNormal)
-                _buildProfileMenuItem(
-                  icon: Icons.search_outlined,
-                  text: 'Buscar Kinesiólogos',
-                  onTap: _navigateToServices,
-                ),
-
-              // --- 👇 6. CAMBIO REALIZADO AQUÍ 👇 ---
-              // Esta función ahora es gratis para todos los Kines Verificados
-              if (isVerified)
-                _buildProfileMenuItem(
-                  icon: Icons.schedule,
-                  text: 'Gestionar Disponibilidad',
-                  // Ya no comprueba _isPro, va directo a la función
-                  onTap: _navigateToManageAvailability,
-                  // Color de texto normal
-                  textColor: Colors.black87,
-                ),
-
-              // --- FIN DEL CAMBIO ---
-              if (isVerified)
-                _buildProfileMenuItem(
-                  icon: Icons.article_outlined,
-                  text: 'Carta de Presentación',
-                  // Esta función sigue siendo gratis
-                  onTap: () => _showEditPresentationModal(
-                    specialization: currentSpecialization,
-                    experience: currentExperience,
-                    presentation: currentPresentation,
-                  ),
-                ),
-
-              // Opciones Comunes
-              _buildProfileMenuItem(
-                icon: Icons.settings_outlined,
-                text: 'Configuración',
-                onTap: () {},
-              ),
-              _buildProfileMenuItem(
-                icon: Icons.notifications_outlined,
-                text: 'Notificaciones',
-                onTap: () {},
-              ),
-
-              // Lógica de Activación de Cuenta
-              if (!isVerified)
-                if (isNormal)
-                  _buildProfileMenuItem(
-                    icon: Icons.school_outlined,
-                    text: 'Activar cuenta de profesional',
-                    onTap: _showActivationModal,
-                  )
-                else if (isPending)
-                  _buildProfileMenuItem(
-                    icon: Icons.access_time_filled,
-                    text: 'Revisión en curso (Pendiente)',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Tu solicitud ya fue sentada y está siendo revisada.',
+                const SizedBox(height: 25),
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        userName,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      if (isVerified)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: Icon(
+                            Icons.verified,
+                            color: Colors.blue.shade400,
+                            size: 24,
                           ),
                         ),
-                      );
-                    },
-                    textColor: Colors.orange.shade800,
+                    ],
+                  ),
+                ),
+                Center(
+                  child: Text(
+                    userEmail,
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // --- Stats ---
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildStatItem('Citas', '23'),
+                      _buildStatItem('Seguidores', '1.2k'),
+                      _buildStatItem('Siguiendo', '345'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 30),
+
+                // --- Botón "Pro" ---
+                if (!_isPro)
+                  _buildProfileMenuItem(
+                    icon: Icons.star_purple500_outlined,
+                    text: 'Actualizar a Plan Pro',
+                    onTap: () => _navigateToSubscriptions(userTypeString),
+                    textColor: Colors.blue.shade700,
+                  ),
+                if (_isPro)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.star,
+                          color: Colors.amber.shade700,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 20),
+                        Text(
+                          'Plan Pro Activo',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
-              const Divider(height: 40, indent: 20, endIndent: 20),
+                // --- Menú General ---
+                _buildProfileMenuItem(
+                  icon: Icons.person_outline,
+                  text: 'Editar Perfil',
+                  onTap: () {},
+                ),
 
-              // Ayuda y Cerrar Sesión
-              _buildProfileMenuItem(
-                icon: Icons.help_outline,
-                text: 'Ayuda y Soporte',
-                onTap: () {},
-              ),
-              _buildProfileMenuItem(
-                icon: Icons.logout,
-                text: 'Cerrar Sesión',
-                textColor: Colors.red,
-                onTap: () async {
-                  await FirebaseAuth.instance.signOut();
-                  if (mounted) {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LoginScreen(),
-                      ),
-                      (Route<dynamic> route) => false,
-                    );
-                  }
-                },
-              ),
-              const SizedBox(height: 20), // Espacio al final
-            ],
+                // Opciones según tipo de usuario
+                if (isNormal)
+                  _buildProfileMenuItem(
+                    icon: Icons.calendar_month_outlined,
+                    text: 'Mis Citas Solicitadas',
+                    onTap: _navigateToMyAppointments,
+                  ),
+                if (isNormal)
+                  _buildProfileMenuItem(
+                    icon: Icons.search_outlined,
+                    text: 'Buscar Kinesiólogos',
+                    onTap: _navigateToServices,
+                  ),
+
+                if (isVerified)
+                  _buildProfileMenuItem(
+                    icon: Icons.schedule,
+                    text: 'Gestionar Disponibilidad',
+                    onTap: _navigateToManageAvailability,
+                  ),
+                if (isVerified)
+                  _buildProfileMenuItem(
+                    icon: Icons.article_outlined,
+                    text: 'Carta de Presentación',
+                    onTap: () => _showEditPresentationModal(
+                      specialization: currentSpecialization,
+                      experience: currentExperience,
+                      presentation: currentPresentation,
+                    ),
+                  ),
+
+                _buildProfileMenuItem(
+                  icon: Icons.settings_outlined,
+                  text: 'Configuración',
+                  onTap: () {},
+                ),
+                _buildProfileMenuItem(
+                  icon: Icons.notifications_outlined,
+                  text: 'Notificaciones',
+                  onTap: () {},
+                ),
+
+                if (!isVerified)
+                  if (isNormal)
+                    _buildProfileMenuItem(
+                      icon: Icons.school_outlined,
+                      text: 'Activar cuenta de profesional',
+                      onTap: _showActivationModal,
+                    )
+                  else if (isPending)
+                    _buildProfileMenuItem(
+                      icon: Icons.access_time_filled,
+                      text: 'Revisión en curso (Pendiente)',
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Tu solicitud ya fue enviada y está siendo revisada.',
+                            ),
+                          ),
+                        );
+                      },
+                      textColor: Colors.orange.shade800,
+                    ),
+
+                const Divider(height: 40, indent: 20, endIndent: 20),
+
+                _buildProfileMenuItem(
+                  icon: Icons.help_outline,
+                  text: 'Ayuda y Soporte',
+                  onTap: () {},
+                ),
+                _buildProfileMenuItem(
+                  icon: Icons.logout,
+                  text: 'Cerrar Sesión',
+                  textColor: Colors.red,
+                  onTap: () async {
+                    await FirebaseAuth.instance.signOut();
+                    if (mounted) {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                        (Route<dynamic> route) => false,
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
           );
         },
       ),
