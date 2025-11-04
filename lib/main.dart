@@ -5,9 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'auth/auth_gate.dart';
 import 'firebase_options.dart';
-import 'package:kine_app/screens/login_screen.dart';
-import 'package:kine_app/screens/home_screen.dart';
-import 'package:kine_app/screens/splash_screen.dart';
+import 'package:kine_app/features/auth/screens/login_screen.dart';
+import 'package:kine_app/features/home_screen.dart';
+import 'package:kine_app/features/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
