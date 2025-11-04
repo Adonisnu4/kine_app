@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// Asegúrate de que este path es correcto para tu servicio
-import 'package:kine_app/services/planes_usuarios_service.dart';
+import 'package:kine_app/features/ejercicios/sesion_ejercicio_screen.dart';
+import 'package:kine_app/services/planes_usuarios_service.dart'; // Servicio para las sesiones
 
-// Importa las funciones y clases del servicio
-// Asumo que PlanTomado está definido en planes_usuarios_service.dart
+// Suponiendo que PlanTomado es una clase definida en planes_usuarios_service.dart
 
 class Index extends StatefulWidget {
   const Index({super.key});
@@ -21,7 +20,28 @@ class _IndexState extends State<Index> {
   void initState() {
     super.initState();
     // Llama a la función del servicio al inicializar el estado
-    _plansFuture = obtenerPlanesEnProgresoPorUsuario();
+    _reloadPlans(); // Llama a la función de recarga al inicio
+  }
+
+  // ⭐️ FUNCIÓN CLAVE: Recarga los datos y actualiza el FutureBuilder
+  void _reloadPlans() {
+    setState(() {
+      _plansFuture = obtenerPlanesEnProgresoPorUsuario();
+    });
+  }
+
+  // ⭐️ FUNCIÓN CLAVE: Maneja la navegación y la recarga al volver
+  void _navigateToSession(String ejecucionId) async {
+    // 1. Navegamos a la pantalla de sesión y ESPERAMOS el regreso (pop)
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SesionEjercicioScreen(ejecucionId: ejecucionId),
+      ),
+    );
+
+    // 2. UNA VEZ QUE REGRESA (pop), forzamos la recarga de los planes
+    _reloadPlans();
   }
 
   @override
@@ -39,7 +59,7 @@ class _IndexState extends State<Index> {
               const Padding(
                 padding: EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 10.0),
                 child: Text(
-                  'KineApp | Mis Sesiones',
+                  'KineApp | Guias',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
@@ -50,6 +70,18 @@ class _IndexState extends State<Index> {
 
               // 1. SECCIÓN: GUÍA DE SALUD
               const _HealthGuideSection(),
+
+              // ------------------------------------
+              // 🌟 BARRA SEPARADORA AÑADIDA
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.0),
+                child: Divider(
+                  height: 30, // Espacio vertical alrededor del divisor
+                  thickness: 1, // Grosor de la línea
+                  color: Colors.black12, // Color de la línea
+                ),
+              ),
+              // ------------------------------------
 
               // 2. TÍTULO DE LA SECCIÓN DE PLANES
               const Padding(
@@ -164,7 +196,13 @@ class _IndexState extends State<Index> {
                       itemCount: plans.length,
                       itemBuilder: (context, index) {
                         final plan = plans[index];
-                        return _PlanCard(plan: plan);
+                        return _PlanCard(
+                          plan: plan,
+                          // ⭐️ CAMBIO APLICADO AQUÍ
+                          onTapResume: () {
+                            _navigateToSession(plan.id);
+                          },
+                        );
                       },
                     );
                   },
@@ -178,7 +216,7 @@ class _IndexState extends State<Index> {
   }
 }
 
-// --- SECCIÓN DE LA GUÍA DE SALUD ---
+// --- SECCIÓN DE LA GUÍA DE SALUD (Se mantiene igual) ---
 class _HealthGuideSection extends StatelessWidget {
   const _HealthGuideSection();
 
@@ -243,21 +281,24 @@ class _HealthGuideSection extends StatelessWidget {
 }
 // ------------------------------------
 
-// Widget de tarjeta para mostrar los detalles de un PlanTomado (Sin cambios)
+// Widget de tarjeta para mostrar los detalles de un PlanTomado (Se mantiene igual)
 class _PlanCard extends StatelessWidget {
   final PlanTomado plan;
+  final VoidCallback onTapResume; // Callback para el botón de reanudar
 
-  const _PlanCard({required this.plan});
+  const _PlanCard({required this.plan, required this.onTapResume});
 
   @override
   Widget build(BuildContext context) {
     String estadoDisplay;
     Color estadoColor;
+    bool showResumeButton = true; // Flag para mostrar el botón
 
     switch (plan.estado) {
       case 'terminado':
         estadoDisplay = 'Completado';
         estadoColor = Colors.green;
+        showResumeButton = false; // No mostrar si está terminado
         break;
       case 'en_progreso':
         estadoDisplay = 'En progreso';
@@ -265,60 +306,87 @@ class _PlanCard extends StatelessWidget {
         break;
       case 'pendiente':
         estadoDisplay = 'Pendiente';
-        estadoColor = Colors.blueGrey;
+        estadoColor = Colors.blueAccent; // Usaremos azul para pendiente/activo
         break;
       default:
         estadoDisplay = 'Desconocido';
         estadoColor = Colors.grey;
+        showResumeButton = false;
     }
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.only(bottom: 16.0),
-      child: InkWell(
-        onTap: () {
-          // TODO: Implementar navegación al detalle del plan
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                plan.nombre,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blueAccent,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              plan.nombre,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.blueAccent,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              plan.descripcion,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+            const Divider(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildInfoChip(
+                  icon: Icons.access_time,
+                  label: 'Sesión: ${plan.sesionActual + 1}',
+                ),
+                _buildInfoChip(
+                  icon: Icons.check_circle_outline,
+                  label: 'Estado: ${estadoDisplay}',
+                  color: estadoColor,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Iniciado el: ${plan.fechaInicio.day}/${plan.fechaInicio.month}/${plan.fechaInicio.year}',
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            // --- NUEVA SECCIÓN PARA EL BOTÓN ---
+            if (showResumeButton) ...[
+              const Divider(height: 20),
+              SizedBox(
+                width: double.infinity, // Ocupar todo el ancho disponible
+                child: ElevatedButton.icon(
+                  onPressed: onTapResume,
+                  icon: Icon(
+                    plan.estado == 'pendiente' ? Icons.play_arrow : Icons.redo,
+                    size: 24,
+                  ),
+                  label: Text(
+                    plan.estado == 'pendiente'
+                        ? 'INICIAR SESIÓN'
+                        : 'REANUDAR SESIÓN',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor:
+                        Colors.teal, // Un color que llame la atención
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                plan.descripcion,
-                style: const TextStyle(fontSize: 14, color: Colors.black87),
-              ),
-              const Divider(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildInfoChip(
-                    icon: Icons.access_time,
-                    label: 'Sesión: ${plan.sesionActual + 1}',
-                  ),
-                  _buildInfoChip(
-                    icon: Icons.check_circle_outline,
-                    label: 'Estado: ${estadoDisplay}',
-                    color: estadoColor,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Iniciado el: ${plan.fechaInicio.day}/${plan.fechaInicio.month}/${plan.fechaInicio.year}',
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
-              ),
             ],
-          ),
+            // -----------------------------------
+          ],
         ),
       ),
     );
@@ -330,6 +398,7 @@ class _PlanCard extends StatelessWidget {
     required String label,
     Color color = Colors.black54,
   }) {
+    // ... (Se mantiene igual)
     return Row(
       children: [
         Icon(icon, size: 16, color: color),
