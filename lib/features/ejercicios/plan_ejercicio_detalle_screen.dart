@@ -43,9 +43,6 @@ class _PlanEjercicioDetalleScreenState
 
     // Referencias
     final DocumentReference planRef = firestore.collection('plan').doc(planId);
-    final DocumentReference userRef = firestore
-        .collection('usuarios')
-        .doc(userId);
 
     // Clonamos las sesiones maestras agregando "completada: false"
     final List<Map<String, dynamic>> sesionesProgreso = sesionesMaestras.map((
@@ -62,7 +59,7 @@ class _PlanEjercicioDetalleScreenState
     );
 
     final DocumentReference ejecucionRef = await ejecucionCollection.add({
-      'usuario': userRef,
+      'usuario': userId,
       'plan': planRef,
       'estado': 'en_progreso',
       'fecha_inicio': FieldValue.serverTimestamp(),
@@ -74,8 +71,6 @@ class _PlanEjercicioDetalleScreenState
 
     // Obtenemos los datos de la primera sesión
     final Map<String, dynamic> sesionActualData = sesionesProgreso.first;
-    final ejerciciosData = sesionActualData['ejercicios'];
-    final nombreSesion = sesionActualData['nombre'] ?? 'Sesión 1';
 
     // Navegar a la pantalla de la sesión
     Navigator.of(context).push(
@@ -129,10 +124,7 @@ class _PlanEjercicioDetalleScreenState
           return Column(
             children: [
               _buildPlanInfoCard(context, descripcion, duracionSemanas),
-              // Lista de sesiones (debe estar expandida)
               Expanded(child: _buildSesionesList(sesiones)),
-
-              // ⭐️ BOTÓN DE ACCIÓN FIJO EN LA PARTE INFERIOR ⭐️
               Padding(
                 padding: const EdgeInsets.only(
                   left: 16.0,
@@ -171,9 +163,6 @@ class _PlanEjercicioDetalleScreenState
     );
   }
 
-  // ... (El resto de las funciones _buildPlanInfoCard y _buildSesionesList quedan igual o con las últimas correcciones)
-  // [CÓDIGO DE _buildPlanInfoCard, _buildSesionesList, _buildEjercicioTileFromRef, y _buildEjercicioTile aquí]
-
   Widget _buildPlanInfoCard(
     BuildContext context,
     String descripcion,
@@ -210,11 +199,9 @@ class _PlanEjercicioDetalleScreenState
                 ),
               ],
             ),
-
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 16),
-
             Text(
               'Descripción del plan',
               style: textTheme.titleMedium?.copyWith(
@@ -288,10 +275,7 @@ class _PlanEjercicioDetalleScreenState
     );
   }
 
-  // Se mantiene la lógica para manejar la lista de referencias
-  // En PlanEjercicioDetalleScreen.dart
   List<Widget> _buildEjerciciosList(dynamic ejerciciosData) {
-    // 1. Verificación de datos nulos/vacíos (Este sí es necesario)
     if (ejerciciosData == null ||
         (ejerciciosData is Map && ejerciciosData.isEmpty) ||
         (ejerciciosData is List && ejerciciosData.isEmpty)) {
@@ -299,69 +283,69 @@ class _PlanEjercicioDetalleScreenState
       return [const ListTile(title: Text('No hay ejercicios en esta sesión.'))];
     }
 
-    // 2. Procesamos el Map<clave_sesion, datos_ejercicio>
     if (ejerciciosData is Map<String, dynamic>) {
       print("TEST: Procesando ejercicios como un MAPA.");
 
-      // Usamos .entries para iterar sobre cada par clave-valor (ejercicio_1, ejercicio_2, etc.)
-      return ejerciciosData.entries.map<Widget>((entry) {
-        final String claveEjercicio = entry.key; // ej. "ejercicio_1"
+      final List<MapEntry<String, dynamic>> sortedEntries = ejerciciosData
+          .entries
+          .toList();
+
+      sortedEntries.sort((a, b) {
+        int numA = int.tryParse(a.key.split('_').last) ?? 0;
+        int numB = int.tryParse(b.key.split('_').last) ?? 0;
+        return numA.compareTo(numB);
+      });
+
+      return sortedEntries.map<Widget>((entry) {
+        final String claveEjercicio = entry.key;
         final Map<String, dynamic> item = entry.value as Map<String, dynamic>;
 
         final bool completado = item['completado'] ?? false;
         final int tiempoSesion = item['tiempo_segundos'] ?? 0;
 
-        // ✅ AHORA EXTRAEMOS LA REFERENCIA DIRECTAMENTE
-        // Asegúrate de que 'ejercicio' sea la clave para el DocumentReference
-        final DocumentReference? ejercicioRef =
-            item['ejercicio'] as DocumentReference?;
+        String? ejercicioIdToUse;
+        final dynamic ejercicioDataRaw = item['ejercicio'];
 
-        // Verificación de referencia
-        if (ejercicioRef == null) {
+        if (ejercicioDataRaw is DocumentReference) {
+          ejercicioIdToUse = ejercicioDataRaw.id;
+        } else if (ejercicioDataRaw is String && ejercicioDataRaw.isNotEmpty) {
+          ejercicioIdToUse = ejercicioDataRaw.split('/').last;
+        }
+
+        if (ejercicioIdToUse == null) {
           print(
-            '❌ Error: El ejercicio "$claveEjercicio" no tiene la clave "ejercicio" (DocumentReference).',
+            '❌ Error: El ejercicio "$claveEjercicio" no tiene una ID o Referencia válida.',
           );
           return ListTile(
-            title: Text('$claveEjercicio - Error de referencia.'),
-            subtitle: const Text(
-              'Falta la referencia al documento del ejercicio.',
-            ),
+            title: Text('$claveEjercicio - Error de referencia/ID.'),
+            subtitle: const Text('Falta la ID del documento del ejercicio.'),
           );
         }
 
-        // ✅ ¡TU PRINT DE DEPURACIÓN AHORA SE EJECUTARÁ AQUÍ!
-        print(
-          '🚀 Referencia a buscar para $claveEjercicio: ${ejercicioRef.id}. Tiempo: $tiempoSesion',
-        );
-
-        // Llamamos a la función de resolución con la ID, ya que _buildEjercicioTileFromRef la espera
         return _buildEjercicioTileFromRef(
-          ejercicioRef.id, // Le pasamos el ID del documento
+          ejercicioIdToUse,
           completado,
           tiempoSesion,
         );
       }).toList();
     }
 
-    // 3. Fallback final
     print(
       '❌ Error: ejerciciosData tiene un tipo de dato inesperado: ${ejerciciosData.runtimeType}.',
     );
     return [const ListTile(title: Text('Error de formato de ejercicios.'))];
   }
 
-  // ✅ FUNCIÓN REFINADA: Solo se garantiza la carga del "nombre"
   Widget _buildEjercicioTileFromRef(
     String ejercicioId,
     bool completado,
-    int tiempoSesion, // Renombrado de 'duracion' a 'tiempoSesion'
+    int tiempoSesion,
   ) {
     final DocumentReference ejercicioRef = _firestore
         .collection('ejercicios')
         .doc(ejercicioId);
-    print(
-      "TEST: Llamada a _buildEjercicioTileFromRef para ID: $ejercicioId",
-    ); // Print de prueba
+
+    print("TEST: Llamada a _buildEjercicioTileFromRef para ID: $ejercicioId");
 
     return StreamBuilder<DocumentSnapshot>(
       stream: ejercicioRef.snapshots(),
@@ -375,10 +359,7 @@ class _PlanEjercicioDetalleScreenState
 
         if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
           return ListTile(
-            leading: const Icon(
-              Icons.error,
-              color: Color.fromARGB(255, 253, 247, 246),
-            ),
+            leading: const Icon(Icons.error, color: Colors.red),
             title: Text('Error al cargar datos del ejercicio ID: $ejercicioId'),
           );
         }
@@ -386,15 +367,15 @@ class _PlanEjercicioDetalleScreenState
         final Map<String, dynamic> ejercicioData =
             snapshot.data!.data() as Map<String, dynamic>;
 
-        // ✅ Mapeo de campos: 'nombre' de la tabla 'ejercicios' a 'nombre_ejercicio' del widget.
         final Map<String, dynamic> finalInfo = {
           'nombre_ejercicio': ejercicioData['nombre'] ?? 'Nombre no encontrado',
-          'tiempo_segundos': tiempoSesion, // Usamos la duración del plan
-          'completado': completado, // Estado de completado del plan
+          'tiempo_segundos': tiempoSesion,
+          'completado': completado,
         };
+
         print(
           '✅ Nombre obtenido para $ejercicioId: ${finalInfo['nombre_ejercicio']}',
-        ); // Print de confirmación de nombre
+        );
 
         return _buildEjercicioTile(finalInfo);
       },
