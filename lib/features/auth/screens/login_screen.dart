@@ -1,8 +1,11 @@
+// lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'register_screen.dart';
 import '../../home_screen.dart';
+// 💡 --- IMPORT AÑADIDO ---
+import 'package:kine_app/shared/widgets/app_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,12 +39,8 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _showSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
+  // 💡 --- FUNCIÓN _showSnackBar ELIMINADA ---
+  // (Ya no se usa, ahora usamos popups)
 
   // ===== Login email/pass (con verificación) =====
   Future<void> _login() async {
@@ -53,27 +52,52 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       final user = cred.user;
       if (user != null) {
-        await user.reload();
+        await user.reload(); // <- Async Gap
+
+        // 💡 --- CORRECCIÓN ASYNC GAP ---
+        // Verificamos 'mounted' DESPUÉS del await
+        if (!mounted) return;
+
         final reloaded = _auth.currentUser;
         if (reloaded != null && reloaded.emailVerified) {
-          _showSnackBar('✅ ¡Inicio de sesión exitoso!');
           _navigateToHome();
         } else {
-          await _auth.signOut();
-          _showSnackBar('🔒 Cuenta no verificada. Revisa tu correo/spam.');
+          await _auth.signOut(); // <- Async Gap
+
+          // 💡 --- CORRECCIÓN ASYNC GAP ---
+          if (!mounted) return;
+          setState(() => _isLoading = false); // Detener loading
+
+          // Muestra el POPUP DE ADVERTENCIA
+          await showAppWarningDialog(
+            context: context,
+            icon: Icons.lock_outline_rounded, // 💡 Icono añadido
+            title: 'Cuenta no Verificada',
+            content:
+                'Tu cuenta aún no ha sido verificada. Revisa tu correo (y la carpeta de spam) para encontrar el enlace de activación.',
+          );
           await user.sendEmailVerification();
         }
       }
     } on FirebaseAuthException catch (e) {
       final msg = switch (e.code) {
-        'user-not-found' => '❌ Correo o contraseña incorrectos.',
-        'wrong-password' => '❌ Correo o contraseña incorrectos.',
-        'invalid-email' => '❌ Formato de correo inválido.',
-        _ => '❌ Error de inicio de sesión: ${e.message}',
+        'user-not-found' => 'Correo o contraseña incorrectos.',
+        'wrong-password' => 'Correo o contraseña incorrectos.',
+        'invalid-email' => 'Formato de correo inválido.',
+        _ => 'Error de inicio de sesión: ${e.message}',
       };
-      _showSnackBar(msg);
-    } finally {
+
+      // 💡 --- MODIFICADO ---
       if (mounted) setState(() => _isLoading = false);
+      // Muestra el POPUP DE ERROR
+      await showAppErrorDialog(
+        context: context,
+        icon: Icons.error_outline_rounded, // 💡 Icono añadido
+        title: 'Error de Inicio de Sesión',
+        content: msg,
+      );
+    } finally {
+      if (mounted && _isLoading) setState(() => _isLoading = false);
     }
   }
 
@@ -82,25 +106,49 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
     try {
       final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return;
+      if (googleUser == null) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
       final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
       await _auth.signInWithCredential(credential);
+
+      if (!mounted) return; // 💡 Corrección Async Gap
       _navigateToHome();
     } on FirebaseAuthException catch (e) {
-      _showSnackBar('Error con Google Sign-In: ${e.message}');
-    } catch (_) {
-      _showSnackBar('Ocurrió un error inesperado al iniciar con Google.');
-    } finally {
       if (mounted) setState(() => _isLoading = false);
+      await showAppErrorDialog(
+        context: context,
+        icon: Icons.g_mobiledata_rounded, // 💡 Icono añadido
+        title: 'Error con Google',
+        content: e.message ?? 'Ocurrió un error al iniciar con Google.',
+      );
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+      await showAppErrorDialog(
+        context: context,
+        icon: Icons.error_outline_rounded, // 💡 Icono añadido
+        title: 'Error Inesperado',
+        content: 'Ocurrió un error inesperado al iniciar con Google.',
+      );
+    } finally {
+      if (mounted && _isLoading) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _loginWithFacebook() async {
-    _showSnackBar('Facebook Login requiere configuración adicional.');
+    // 💡 --- MODIFICADO ---
+    await showAppInfoDialog(
+      context: context,
+      icon: Icons.facebook_rounded, // 💡 Icono añadido
+      title: 'Función no Disponible',
+      content:
+          'El inicio de sesión con Facebook requiere configuración adicional.',
+    );
   }
 
   // ===== Reset password =====
@@ -108,70 +156,137 @@ class _LoginScreenState extends State<LoginScreen> {
     if (email.isEmpty) return;
     setState(() => _isLoading = true);
     try {
-      await _auth.sendPasswordResetEmail(email: email);
-      _showSnackBar('Enviamos un correo de recuperación a $email.');
+      await _auth.sendPasswordResetEmail(email: email); // <- Async Gap
+
+      // 💡 --- CORRECCIÓN ASYNC GAP ---
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      await showAppInfoDialog(
+        context: context,
+        icon: Icons.mark_email_read_rounded, // 💡 Icono añadido
+        title: 'Correo Enviado',
+        content:
+            'Enviamos un correo de recuperación a $email. Revisa tu bandeja de entrada y spam.',
+      );
     } on FirebaseAuthException catch (e) {
       final msg = switch (e.code) {
         'user-not-found' => 'No existe una cuenta con ese correo.',
         'invalid-email' => 'Formato de correo inválido.',
         _ => 'Error al enviar recuperación: ${e.message}',
       };
-      _showSnackBar(msg);
-    } finally {
+
       if (mounted) setState(() => _isLoading = false);
+      await showAppErrorDialog(
+        context: context,
+        icon: Icons.alternate_email_rounded, // 💡 Icono añadido
+        title: 'Error de Recuperación',
+        content: msg,
+      );
+    } finally {
+      if (mounted && _isLoading) setState(() => _isLoading = false);
     }
   }
 
+  // --- FUNCIÓN DE DIÁLOGO DE RESET (MODIFICADA EN LA ÚLTIMA SESIÓN) ---
   Future<void> _showResetPasswordDialog() async {
     final ctrl = TextEditingController();
     final key = GlobalKey<FormState>();
+
     return showDialog(
       context: context,
-      builder: (d) => AlertDialog(
-        title: const Text('Recuperar Contraseña'),
-        content: Form(
-          key: key,
-          child: TextFormField(
-            controller: ctrl,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: 'Ingresa tu correo electrónico',
-              hintText: 'ejemplo@correo.com',
+      builder: (d) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16.0),
             ),
-            validator: (v) {
-              if (v == null || v.isEmpty) return 'El correo es obligatorio.';
-              if (!v.contains('@') || !v.contains('.'))
-                return 'Ingresa un correo válido.';
-              return null;
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(d).pop(),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: _isLoading
-                ? null
-                : () async {
-                    if (key.currentState!.validate()) {
-                      Navigator.of(d).pop();
-                      await _sendPasswordResetEmail(ctrl.text.trim());
-                    }
-                  },
-            child: _isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Text('Enviar Enlace'),
-          ),
-        ],
+            icon: Icon(
+              Icons.lock_reset_rounded,
+              color: Colors.teal.shade700,
+              size: 48,
+            ),
+            title: Text(
+              'Recuperar Contraseña',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.teal.shade700,
+              ),
+            ),
+            content: Form(
+              key: key,
+              child: TextFormField(
+                controller: ctrl,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Ingresa tu correo electrónico',
+                  hintText: 'ejemplo@correo.com',
+                ),
+                validator: (v) {
+                  if (v == null || v.isEmpty)
+                    return 'El correo es obligatorio.';
+                  if (!v.contains('@') || !v.contains('.'))
+                    return 'Ingresa un correo válido.';
+                  return null;
+                },
+              ),
+            ),
+            actionsAlignment: MainAxisAlignment.center,
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(d).pop(),
+                child: const Text(
+                  'Cancelar',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal.shade700,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+                // 💡 Usamos el _isLoading de la pantalla principal
+                onPressed: _isLoading
+                    ? null
+                    : () async {
+                        if (key.currentState!.validate()) {
+                          Navigator.of(d).pop(); // Cierra el diálogo
+                          await _sendPasswordResetEmail(
+                            ctrl.text.trim(),
+                          ); // Llama a la función
+                        }
+                      },
+                child:
+                    _isLoading // 💡 Lee el _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Enviar Enlace',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -212,8 +327,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-
-      // *** NUEVO: AppBar igual a RegisterScreen ***
       appBar: AppBar(
         leading: IconButton(
           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
@@ -228,22 +341,13 @@ class _LoginScreenState extends State<LoginScreen> {
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
-
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            18,
-            8,
-            18,
-            24,
-          ), // antes 16 arriba (bajé un poco)
+          padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // (antes había SizedBox(height: 40) por la píldora) -> lo reducimos
               const SizedBox(height: 12),
-
-              // Logo centrado
               Center(
                 child: Image.asset(
                   'assets/kinesiology.png',
@@ -252,8 +356,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // ===== Título centrado =====
               ConstrainedBox(
                 constraints: BoxConstraints(minHeight: height * 0.18),
                 child: const Center(
@@ -271,8 +373,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-
-              // ===== CAMPOS PÍLDORA =====
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -299,7 +399,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 10),
               Align(
                 alignment: Alignment.centerRight,
@@ -314,7 +413,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 4),
               SizedBox(
                 width: double.infinity,
@@ -341,7 +439,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       : const Text('Ingresar', style: TextStyle(fontSize: 16)),
                 ),
               ),
-
               const SizedBox(height: 16),
               Row(
                 children: const [
@@ -361,7 +458,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               const SizedBox(height: 14),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -388,7 +484,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 18),
               Center(
                 child: TextButton(
