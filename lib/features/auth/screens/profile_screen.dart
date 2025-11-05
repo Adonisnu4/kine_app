@@ -1,6 +1,12 @@
 // lib/screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+// 💡 AÑADIDOS NECESARIOS PARA LA SUBIDA Y FIREBASE
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:typed_data';
+import 'package:supabase_flutter/supabase_flutter.dart';
+// 💡 FIN AÑADIDOS
 import 'package:kine_app/features/Patients_and_Kine/screens/kine_directory_screen.dart';
 import 'package:kine_app/features/auth/services/get_user_data.dart';
 import 'package:kine_app/features/auth/screens/login_screen.dart';
@@ -10,11 +16,15 @@ import '../../Patients_and_Kine/models/edit_presentation_modal.dart'
 import 'package:kine_app/features/auth/services/user_service.dart';
 import '../../Appointments/screens/my_appointments_screen.dart'; // Para Pacientes
 import '../../Appointments/screens/manage_availability_screen.dart'; // Para Kinesiólogos
-// --- Importaciones de Pago ---
+//Importaciones de Pago ---
 import 'package:kine_app/features/Stripe/services/stripe_service.dart';
 import 'package:kine_app/features/Stripe/screens/subscription_screen.dart';
-// 💡 IMPORT AÑADIDO (Ajusta la ruta si es necesario)
+//IMPORT AÑADIDO
 import 'package:kine_app/shared/widgets/app_dialog.dart';
+
+//Dialog de activacion
+// 💡 AHORA IMPORTAMOS LA PANTALLA COMPLETA
+import 'package:kine_app/features/auth/screens/kine_activation_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -31,6 +41,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final StripeService _stripeService = StripeService();
   bool _isPro = false;
   bool _isLoadingProStatus = true;
+
+  // 💡 ESTADO AÑADIDO PARA SUBIDA (Se mantienen por si hay otra funcionalidad, aunque la lógica se mueva)
+  final supabase = Supabase.instance.client;
+  final firestore = FirebaseFirestore.instance;
+  // bool _isUploading = false; // 💡 Ya no es necesario aquí si la lógica se mueve
 
   @override
   void initState() {
@@ -71,8 +86,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           _isPro = isPro;
           _isLoadingProStatus = false;
-          _userDataFuture =
-              _loadUserData(); // 🔄 NUEVO: recarga los datos del usuario
+          _userDataFuture = _loadUserData(); // 🔄 recarga los datos del usuario
         });
       }
     } catch (e) {
@@ -135,14 +149,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _showActivationModal() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Mostrando modal de activación de cuenta... (Función no implementada)',
-        ),
+  // 🗑️ Lógica de subida eliminada y reemplazada por navegación a la pantalla
+  // void _showActivationModal() async { ... }
+  // 💡 Nueva función de navegación para la activación
+  void _navigateToKineActivation() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) =>
+            const KineActivationScreen(), // 👈 Navega a la nueva pantalla
       ),
     );
+    // Refresca el perfil cuando regrese (por si cambió el estado a 'pendiente')
+    _refreshProfile();
   }
 
   void _showEditPresentationModal({
@@ -210,6 +229,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String text,
     required VoidCallback onTap,
     Color textColor = Colors.black87,
+    Widget? trailingWidget,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -229,11 +249,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.grey.shade400,
-              size: 16,
-            ),
+            trailingWidget ??
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.grey.shade400,
+                  size: 16,
+                ),
           ],
         ),
       ),
@@ -480,12 +501,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: () {},
                 ),
 
+                // 💡 Menú de Activación/Revisión
                 if (!isVerified)
                   if (isNormal)
                     _buildProfileMenuItem(
                       icon: Icons.school_outlined,
                       text: 'Activar cuenta de profesional',
-                      onTap: _showActivationModal,
+                      onTap:
+                          _navigateToKineActivation, // 👈 Función de navegación actualizada
+                      trailingWidget:
+                          null, // Ya no se necesita el _isUploading aquí
                     )
                   else if (isPending)
                     _buildProfileMenuItem(
@@ -511,13 +536,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: () {},
                 ),
 
-                // 💡 --- CÓDIGO MODIFICADO AQUÍ ---
                 _buildProfileMenuItem(
                   icon: Icons.logout,
                   text: 'Cerrar Sesión',
                   textColor: Colors.red,
                   onTap: () async {
-                    // 💡 Mostrar diálogo de confirmación
+                    // Mostrar diálogo de confirmación
                     final bool? confirm = await showAppConfirmationDialog(
                       context: context,
                       icon: Icons.logout_rounded,
@@ -544,7 +568,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                 ),
 
-                // 💡 --- FIN DE CÓDIGO MODIFICADO ---
                 const SizedBox(height: 20),
               ],
             ),
