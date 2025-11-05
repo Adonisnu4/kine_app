@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// --- 👇 IMPORTANTE 👇 ---
 import 'package:intl/date_symbol_data_local.dart';
 import 'auth/auth_gate.dart';
 import 'firebase_options.dart';
@@ -54,6 +53,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-// Clase 'WelcomeScreen' que usas en tu main.dart
-// (Si ya la tienes en otro archivo, ignora est
