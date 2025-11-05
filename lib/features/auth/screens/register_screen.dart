@@ -1,6 +1,10 @@
+// lib/screens/register_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+// 💡 IMPORTAMOS AMBOS TIPOS DE POPUP
+import 'package:kine_app/shared/widgets/app_dialog.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -47,15 +51,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // =======================
   // 2) Helpers
   // =======================
-  void _showSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
+
+  // (La función _showSnackBar ya no es necesaria)
 
   // =======================
-  // 3) Lógica de registro
+  // 3) Lógica de registro (💡 MODIFICADA)
   // =======================
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
@@ -69,13 +69,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       final user = cred.user;
       if (user != null) {
-        await user.sendEmailVerification();
+        await user.sendEmailVerification(); // <- Async Gap
 
         final tipoUsuarioRef = _firestore
             .collection('tipo_usuario')
             .doc('1'); // Paciente por defecto
 
-        // Creación del Map de datos del usuario
         final userData = {
           'nombre_completo': _nameController.text.trim(),
           'nombre_usuario': _usernameController.text.trim(),
@@ -84,44 +83,85 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'sexo': _selectedGender,
           'tipo_usuario': tipoUsuarioRef,
           'fecha_registro': FieldValue.serverTimestamp(),
-
-          // --- 👇 CAMPOS DEL PLAN AÑADIDOS ---
           'plan': 'estandar',
           'perfilDestacado': false,
           'limitePacientes': 50,
-          // ----------------------------------
         };
 
-        // Guardar los datos en Firestore
-        await _firestore.collection('usuarios').doc(user.uid).set(userData);
+        await _firestore
+            .collection('usuarios')
+            .doc(user.uid)
+            .set(userData); // <- Async Gap
 
-        await _auth.signOut();
+        await _auth.signOut(); // <- Async Gap
 
+        // 💡 --- CORRECCIÓN ASYNC GAP ---
         if (!mounted) return;
-        Navigator.pop(context);
-        _showSnackBar(
-          '✅ ¡Registro exitoso! Te enviamos un correo de verificación.',
+
+        // 1. Muestra el popup de éxito
+        await showAppInfoDialog(
+          context: context,
+          icon: Icons.mark_email_read_rounded,
+          title: '¡Registro Exitoso!',
+          content:
+              'Te enviamos un correo de verificación. Por favor, revisa tu bandeja de entrada y spam.',
+          confirmText: 'Entendido',
         );
+
+        // 2. Vuelve al login
+        if (mounted) {
+          // 💡 Doble chequeo por si acaso
+          Navigator.pop(context);
+        }
       }
     } on FirebaseAuthException catch (e) {
+      // 💡 --- SECCIÓN DE ERROR MODIFICADA ---
+      String title;
       String message;
+      IconData icon;
+
       if (e.code == 'weak-password') {
-        message = '⚠️ La contraseña es demasiado débil (mínimo 6 caracteres).';
+        title = 'Contraseña Débil';
+        message = 'La contraseña es demasiado débil (mínimo 6 caracteres).';
+        icon = Icons.lock_clock_rounded;
       } else if (e.code == 'email-already-in-use') {
-        message = '⚠️ Ya existe una cuenta con este correo.';
+        title = 'Correo ya Existe';
+        message = 'Ya existe una cuenta registrada con este correo.';
+        icon = Icons.alternate_email_rounded;
       } else if (e.code == 'invalid-email') {
-        message = '⚠️ El formato del correo electrónico es inválido.';
+        title = 'Correo Inválido';
+        message = 'El formato del correo electrónico es inválido.';
+        icon = Icons.email_outlined;
       } else {
-        message = '❌ Error desconocido: ${e.message}';
+        title = 'Error Desconocido';
+        message = 'Ocurrió un error inesperado. Por favor, inténtalo de nuevo.';
+        icon = Icons.error_outline_rounded;
       }
-      _showSnackBar(message);
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+
+      // Muestra el POPUP de error
+      await showAppErrorDialog(
+        context: context,
+        icon: icon, // 💡 Icono añadido
+        title: title,
+        content: message,
+      );
+
+      return;
+
+      // 💡 --- FIN DE LA MODIFICACIÓN ---
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted && _isLoading) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   // =======================
-  // 4) UI (mismo estilo que Login)
+  // 4) UI (Sin cambios)
   // =======================
   @override
   Widget build(BuildContext context) {
@@ -136,10 +176,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
 
     return Scaffold(
-      // back como en login (icono simple)
       appBar: AppBar(
         leading: IconButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
         ),
         elevation: 0,
@@ -312,30 +351,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 52,
-                      child: _isLoading
-                          ? const Center(child: CircularProgressIndicator())
-                          : ElevatedButton(
-                              onPressed: _register,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.black,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(28),
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _register,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          elevation: 0,
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 3,
                                 ),
-                                textStyle: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                                elevation: 0,
-                              ),
-                              child: const Text('Registrarme'),
-                            ),
+                              )
+                            : const Text('Registrarme'),
+                      ),
                     ),
                     const SizedBox(height: 14),
 
                     // Link sutil como en login
                     TextButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: _isLoading
+                          ? null
+                          : () => Navigator.pop(context),
                       child: Text.rich(
                         TextSpan(
                           text: '¿Ya tienes una cuenta? ',

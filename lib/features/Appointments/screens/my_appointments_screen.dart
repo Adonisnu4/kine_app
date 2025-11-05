@@ -5,6 +5,8 @@ import 'package:kine_app/features/Appointments/models/appointment.dart'; // Impo
 import 'package:kine_app/features/Appointments/services/appointment_service.dart'; // Importa tu servicio
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+// 💡 IMPORT AÑADIDO
+import 'package:kine_app/shared/widgets/app_dialog.dart';
 
 // Puedes importar estas si quieres añadir navegación
 // import 'kine_presentation_screen.dart';
@@ -33,27 +35,18 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
 
   // --- Función para Cancelar Cita Pendiente ---
   void _handleCancelAppointment(Appointment appointment) async {
-    // Pide confirmación
-    bool? confirm = await showDialog<bool>(
+    // Pide confirmación (con el nuevo diálogo)
+    // 💡 --- CÓDIGO MODIFICADO AQUÍ ---
+    bool? confirm = await showAppConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancelar Cita'),
-        content: const Text(
-          '¿Estás seguro de que quieres cancelar esta solicitud de cita?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false), // No
-            child: const Text('No'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true), // Sí
-            child: const Text('Sí, Cancelar'),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-          ),
-        ],
-      ),
+      icon: Icons.warning_amber_rounded, // Icono de advertencia
+      title: 'Cancelar Cita',
+      content: '¿Estás seguro de que quieres cancelar esta solicitud de cita?',
+      confirmText: 'Sí, Cancelar',
+      cancelText: 'No',
+      isDestructive: true, // ¡Esta sí es destructiva! (Botón rojo)
     );
+    // 💡 --- FIN DE CÓDIGO MODIFICADO ---
 
     // Si confirma, llama al servicio para borrar
     if (confirm == true) {

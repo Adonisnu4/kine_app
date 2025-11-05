@@ -9,6 +9,9 @@ import 'package:intl/intl.dart';
 // 🚀 AÑADIR ESTE IMPORT: Para navegar directamente a la pantalla de chat
 import 'package:kine_app/features/Chat/screens/chat_screen.dart';
 
+// 💡 --- IMPORTAMOS LOS DIÁLOGOS ---
+import 'package:kine_app/shared/widgets/app_dialog.dart';
+
 /// Pantalla para agendar una nueva cita con un kinesiólogo específico.
 class BookingScreen extends StatefulWidget {
   final String kineId;
@@ -60,6 +63,21 @@ class _BookingScreenState extends State<BookingScreen> {
     _loadSlotsForSelectedDay();
   }
 
+  // 💡 --- NUEVOS HELPERS DE POPUP (para errores) ---
+
+  /// Muestra un Popup de ERROR (rojo)
+  Future<void> _showErrorPopup(String title, String content) async {
+    if (!mounted) return;
+    await showAppErrorDialog(
+      context: context,
+      icon: Icons.error_outline_rounded,
+      title: title,
+      content: content,
+    );
+  }
+
+  // 💡 --- FIN DE HELPERS ---
+
   /// Carga los horarios disponibles desde Firestore para la fecha actual.
   Future<void> _loadSlotsForSelectedDay() async {
     if (!mounted) return; // 🛡️ Protección de estado
@@ -79,11 +97,10 @@ class _BookingScreenState extends State<BookingScreen> {
       });
     } catch (e) {
       if (!mounted) return; // 🛡️ Protección de estado
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al cargar horarios: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
+      // 💡 USA POPUP DE ERROR
+      _showErrorPopup(
+        'Error al Cargar',
+        'No se pudieron cargar los horarios: ${e.toString()}',
       );
     } finally {
       if (mounted) {
@@ -144,11 +161,10 @@ class _BookingScreenState extends State<BookingScreen> {
         _hasPending = false; // Asume que no hay cita si hay error
         _hasConfirmed = false; // Asume que no hay cita si hay error
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al verificar historial: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
+      // 💡 USA POPUP DE ERROR
+      _showErrorPopup(
+        'Error de Verificación',
+        'Error al verificar historial: ${e.toString()}',
       );
     } finally {
       if (mounted) {
@@ -189,6 +205,7 @@ class _BookingScreenState extends State<BookingScreen> {
     setState(() {
       _isBooking = true; // Inicia el proceso de reserva
     });
+
     try {
       final slotTime = _availableSlotsForDay[_selectedTimeSlot!];
       final fullDateTime = DateTime(
@@ -238,7 +255,9 @@ class _BookingScreenState extends State<BookingScreen> {
       );
       if (isTaken) {
         _loadSlotsForSelectedDay(); // Recarga los slots para reflejar el cambio
-        throw Exception('Este horario acaba de ser reservado.');
+        throw Exception(
+          'Este horario acaba de ser reservado por otra persona.',
+        );
       }
 
       // Procede con la solicitud de cita
@@ -248,23 +267,31 @@ class _BookingScreenState extends State<BookingScreen> {
         fechaCita: fullDateTime,
       );
 
+      // 💡 --- CÓDIGO MODIFICADO ---
       // Muestra éxito y cierra la pantalla
       if (!mounted) return; // 🛡️ Doble verificación
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Solicitud enviada. Espera la confirmación.'),
-          backgroundColor: Colors.green,
-        ),
+
+      // 1. Muestra el POPUP de éxito
+      await showAppInfoDialog(
+        context: context,
+        icon: Icons.check_circle_outline_rounded,
+        title: '¡Solicitud Enviada!',
+        content:
+            'Tu solicitud fue enviada con éxito. Espera la confirmación del profesional.',
       );
-      Navigator.pop(context);
+
+      // 2. Cierra la pantalla DESPUÉS de que el usuario presione "Entendido"
+      if (mounted) {
+        Navigator.pop(context);
+      }
+      // 💡 --- FIN DE LA MODIFICACIÓN ---
     } catch (e) {
       // Muestra error
       if (!mounted) return; // 🛡️ Protección de estado
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Error al solicitar cita: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
+      // 💡 USA POPUP DE ERROR
+      _showErrorPopup(
+        'Error al Solicitar',
+        'No se pudo agendar la cita: ${e.toString()}',
       );
     } finally {
       // Siempre desactiva la carga

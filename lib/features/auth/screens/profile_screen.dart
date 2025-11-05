@@ -13,6 +13,8 @@ import '../../Appointments/screens/manage_availability_screen.dart'; // Para Kin
 // --- Importaciones de Pago ---
 import 'package:kine_app/features/Stripe/services/stripe_service.dart';
 import 'package:kine_app/features/Stripe/screens/subscription_screen.dart';
+// 💡 IMPORT AÑADIDO (Ajusta la ruta si es necesario)
+import 'package:kine_app/shared/widgets/app_dialog.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -508,23 +510,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   text: 'Ayuda y Soporte',
                   onTap: () {},
                 ),
+
+                // 💡 --- CÓDIGO MODIFICADO AQUÍ ---
                 _buildProfileMenuItem(
                   icon: Icons.logout,
                   text: 'Cerrar Sesión',
                   textColor: Colors.red,
                   onTap: () async {
-                    await FirebaseAuth.instance.signOut();
-                    if (mounted) {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
-                        ),
-                        (Route<dynamic> route) => false,
-                      );
+                    // 💡 Mostrar diálogo de confirmación
+                    final bool? confirm = await showAppConfirmationDialog(
+                      context: context,
+                      icon: Icons.logout_rounded,
+                      title: 'Cerrar Sesión',
+                      content: '¿Estás seguro de que quieres cerrar tu sesión?',
+                      confirmText: 'Sí, Salir',
+                      cancelText: 'Cancelar',
+                      isDestructive: true,
+                    );
+
+                    // Si el usuario confirma, proceder a cerrar sesión
+                    if (confirm == true) {
+                      await FirebaseAuth.instance.signOut();
+                      if (mounted) {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginScreen(),
+                          ),
+                          (Route<dynamic> route) => false,
+                        );
+                      }
                     }
                   },
                 ),
+
+                // 💡 --- FIN DE CÓDIGO MODIFICADO ---
                 const SizedBox(height: 20),
               ],
             ),
