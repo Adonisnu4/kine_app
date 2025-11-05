@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kine_app/features/ejercicios/sesion_ejercicio_screen.dart';
+import 'package:kine_app/features/ejercicios/screens/sesion_ejercicio_screen.dart';
 
 class PlanEjercicioDetalleScreen extends StatefulWidget {
   final String planId;
