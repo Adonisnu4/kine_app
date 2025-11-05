@@ -1,6 +1,12 @@
 // lib/screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+// 💡 AÑADIDOS NECESARIOS PARA LA SUBIDA Y FIREBASE
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:typed_data';
+import 'package:supabase_flutter/supabase_flutter.dart';
+// 💡 FIN AÑADIDOS
 import 'package:kine_app/features/Patients_and_Kine/screens/kine_directory_screen.dart';
 import 'package:kine_app/features/auth/services/get_user_data.dart';
 import 'package:kine_app/features/auth/screens/login_screen.dart';
@@ -10,9 +16,15 @@ import '../../Patients_and_Kine/models/edit_presentation_modal.dart'
 import 'package:kine_app/features/auth/services/user_service.dart';
 import '../../Appointments/screens/my_appointments_screen.dart'; // Para Pacientes
 import '../../Appointments/screens/manage_availability_screen.dart'; // Para Kinesiólogos
-// --- Importaciones de Pago ---
+//Importaciones de Pago ---
 import 'package:kine_app/features/Stripe/services/stripe_service.dart';
 import 'package:kine_app/features/Stripe/screens/subscription_screen.dart';
+//IMPORT AÑADIDO
+import 'package:kine_app/shared/widgets/app_dialog.dart';
+
+//Dialog de activacion
+// 💡 AHORA IMPORTAMOS LA PANTALLA COMPLETA
+import 'package:kine_app/features/auth/screens/kine_activation_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -29,6 +41,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final StripeService _stripeService = StripeService();
   bool _isPro = false;
   bool _isLoadingProStatus = true;
+
+  // 💡 ESTADO AÑADIDO PARA SUBIDA (Se mantienen por si hay otra funcionalidad, aunque la lógica se mueva)
+  final supabase = Supabase.instance.client;
+  final firestore = FirebaseFirestore.instance;
+  // bool _isUploading = false; // 💡 Ya no es necesario aquí si la lógica se mueve
 
   @override
   void initState() {
@@ -56,25 +73,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _checkSubscriptionStatus(); // Refresca también el estado "Pro"
   }
 
-  /// Comprueba el estado de la suscripción Pro
+  /// ✅ Comprueba el estado de la suscripción Pro
   Future<void> _checkSubscriptionStatus() async {
-    if (mounted)
+    if (mounted) {
       setState(() {
         _isLoadingProStatus = true;
       });
+    }
     try {
       final isPro = await _stripeService.checkProSubscriptionStatus();
       if (mounted) {
         setState(() {
           _isPro = isPro;
           _isLoadingProStatus = false;
+          _userDataFuture = _loadUserData(); // 🔄 recarga los datos del usuario
         });
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _isLoadingProStatus = false;
         });
+      }
       print("Error al comprobar estado Pro: $e");
     }
   }
@@ -92,7 +112,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // --- Funciones de Navegación y Modales ---
-
   Future<void> _savePresentation(PresentationData data) async {
     try {
       await updateKinePresentation(
@@ -130,14 +149,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _showActivationModal() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Mostrando modal de activación de cuenta... (Función no implementada)',
-        ),
+  // 🗑️ Lógica de subida eliminada y reemplazada por navegación a la pantalla
+  // void _showActivationModal() async { ... }
+  // 💡 Nueva función de navegación para la activación
+  void _navigateToKineActivation() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) =>
+            const KineActivationScreen(), // 👈 Navega a la nueva pantalla
       ),
     );
+    // Refresca el perfil cuando regrese (por si cambió el estado a 'pendiente')
+    _refreshProfile();
   }
 
   void _showEditPresentationModal({
@@ -205,6 +229,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String text,
     required VoidCallback onTap,
     Color textColor = Colors.black87,
+    Widget? trailingWidget,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -224,16 +249,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.grey.shade400,
-              size: 16,
-            ),
+            trailingWidget ??
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.grey.shade400,
+                  size: 16,
+                ),
           ],
         ),
       ),
     );
   }
+
   // --- Fin Widgets Helpers ---
 
   @override
@@ -269,7 +296,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
 
-          // --- Datos del Usuario ---
           final userData = snapshot.data!;
           final userName = userData['nombre_completo'] ?? 'Usuario';
           final userEmail =
@@ -278,9 +304,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               userData['tipo_usuario_nombre'] ?? 'No especificado';
           final userStatusId = userData['tipo_usuario_id'] ?? 1;
 
-          final isVerified = userStatusId == 3; // Kine Verificado
-          final isPending = userStatusId == 2; // Kine Pendiente
-          final isNormal = userStatusId == 1; // Paciente
+          final isVerified = userStatusId == 3;
+          final isPending = userStatusId == 2;
+          final isNormal = userStatusId == 1;
           final userTypeString = isVerified ? "kine" : "patient";
 
           final String currentSpecialization = userData['specialization'] ?? '';
@@ -292,242 +318,259 @@ class _ProfileScreenState extends State<ProfileScreen> {
               userData['imagen_perfil'] ?? 'https://via.placeholder.com/120';
 
           // --- Construcción del ListView ---
-          return ListView(
-            physics: const BouncingScrollPhysics(),
-            children: [
-              const SizedBox(height: 30),
-              // --- Cabecera de Perfil ---
-              Center(
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.center,
-                  children: [
-                    CircleAvatar(
-                      radius: 60,
-                      backgroundColor: Colors.grey.shade300,
-                      backgroundImage: NetworkImage(userImageUrl),
-                    ),
-                    Positioned(
-                      bottom: -10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isVerified
-                              ? Colors.blue.shade600
-                              : (isPending
-                                    ? Colors.orange.shade700
-                                    : Colors.teal.shade400),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
-                              spreadRadius: 1,
-                              blurRadius: 3,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          userStatusName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 25),
-              Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      userName,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    if (isVerified)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: Icon(
-                          Icons.verified,
-                          color: Colors.blue.shade400,
-                          size: 24,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Center(
-                child: Text(
-                  userEmail,
-                  style: const TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              ),
-              const SizedBox(height: 20),
-              // --- Stats ---
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildStatItem('Citas', '23'), // Datos de ejemplo
-                    _buildStatItem('Seguidores', '1.2k'),
-                    _buildStatItem('Siguiendo', '345'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 30),
-
-              // --- Botón "Pro" (Sigue igual) ---
-              if (!_isPro)
-                _buildProfileMenuItem(
-                  icon: Icons.star_purple500_outlined,
-                  text: 'Actualizar a Plan Pro',
-                  onTap: () => _navigateToSubscriptions(userTypeString),
-                  textColor: Colors.blue.shade700,
-                ),
-              if (_isPro)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
-                  ),
-                  child: Row(
+          return RefreshIndicator(
+            onRefresh: () async => _refreshProfile(),
+            child: ListView(
+              physics: const BouncingScrollPhysics(),
+              children: [
+                const SizedBox(height: 30),
+                // --- Cabecera de Perfil ---
+                Center(
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.center,
                     children: [
-                      Icon(Icons.star, color: Colors.amber.shade700, size: 28),
-                      const SizedBox(width: 20),
-                      Text(
-                        'Plan Pro Activo',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.amber.shade800,
+                      CircleAvatar(
+                        radius: 60,
+                        backgroundColor: Colors.grey.shade300,
+                        backgroundImage: NetworkImage(userImageUrl),
+                      ),
+                      Positioned(
+                        bottom: -10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isVerified
+                                ? Colors.blue.shade600
+                                : (isPending
+                                      ? Colors.orange.shade700
+                                      : Colors.teal.shade400),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                spreadRadius: 1,
+                                blurRadius: 3,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            userStatusName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-
-              // --- Menú General ---
-              _buildProfileMenuItem(
-                icon: Icons.person_outline,
-                text: 'Editar Perfil',
-                onTap: () {},
-              ),
-
-              // Opciones para Paciente (isNormal)
-              if (isNormal)
-                _buildProfileMenuItem(
-                  icon: Icons.calendar_month_outlined,
-                  text: 'Mis Citas Solicitadas',
-                  onTap: _navigateToMyAppointments,
-                ),
-              if (isNormal)
-                _buildProfileMenuItem(
-                  icon: Icons.search_outlined,
-                  text: 'Buscar Kinesiólogos',
-                  onTap: _navigateToServices,
-                ),
-
-              // --- 👇 6. CAMBIO REALIZADO AQUÍ 👇 ---
-              // Esta función ahora es gratis para todos los Kines Verificados
-              if (isVerified)
-                _buildProfileMenuItem(
-                  icon: Icons.schedule,
-                  text: 'Gestionar Disponibilidad',
-                  // Ya no comprueba _isPro, va directo a la función
-                  onTap: _navigateToManageAvailability,
-                  // Color de texto normal
-                  textColor: Colors.black87,
-                ),
-
-              // --- FIN DEL CAMBIO ---
-              if (isVerified)
-                _buildProfileMenuItem(
-                  icon: Icons.article_outlined,
-                  text: 'Carta de Presentación',
-                  // Esta función sigue siendo gratis
-                  onTap: () => _showEditPresentationModal(
-                    specialization: currentSpecialization,
-                    experience: currentExperience,
-                    presentation: currentPresentation,
-                  ),
-                ),
-
-              // Opciones Comunes
-              _buildProfileMenuItem(
-                icon: Icons.settings_outlined,
-                text: 'Configuración',
-                onTap: () {},
-              ),
-              _buildProfileMenuItem(
-                icon: Icons.notifications_outlined,
-                text: 'Notificaciones',
-                onTap: () {},
-              ),
-
-              // Lógica de Activación de Cuenta
-              if (!isVerified)
-                if (isNormal)
-                  _buildProfileMenuItem(
-                    icon: Icons.school_outlined,
-                    text: 'Activar cuenta de profesional',
-                    onTap: _showActivationModal,
-                  )
-                else if (isPending)
-                  _buildProfileMenuItem(
-                    icon: Icons.access_time_filled,
-                    text: 'Revisión en curso (Pendiente)',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Tu solicitud ya fue sentada y está siendo revisada.',
+                const SizedBox(height: 25),
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        userName,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      if (isVerified)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: Icon(
+                            Icons.verified,
+                            color: Colors.blue.shade400,
+                            size: 24,
                           ),
                         ),
-                      );
-                    },
-                    textColor: Colors.orange.shade800,
+                    ],
+                  ),
+                ),
+                Center(
+                  child: Text(
+                    userEmail,
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // --- Stats ---
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildStatItem('Citas', '23'),
+                      _buildStatItem('Seguidores', '1.2k'),
+                      _buildStatItem('Siguiendo', '345'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 30),
+
+                // --- Botón "Pro" ---
+                if (!_isPro)
+                  _buildProfileMenuItem(
+                    icon: Icons.star_purple500_outlined,
+                    text: 'Actualizar a Plan Pro',
+                    onTap: () => _navigateToSubscriptions(userTypeString),
+                    textColor: Colors.blue.shade700,
+                  ),
+                if (_isPro)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.star,
+                          color: Colors.amber.shade700,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 20),
+                        Text(
+                          'Plan Pro Activo',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
-              const Divider(height: 40, indent: 20, endIndent: 20),
+                // --- Menú General ---
+                _buildProfileMenuItem(
+                  icon: Icons.person_outline,
+                  text: 'Editar Perfil',
+                  onTap: () {},
+                ),
 
-              // Ayuda y Cerrar Sesión
-              _buildProfileMenuItem(
-                icon: Icons.help_outline,
-                text: 'Ayuda y Soporte',
-                onTap: () {},
-              ),
-              _buildProfileMenuItem(
-                icon: Icons.logout,
-                text: 'Cerrar Sesión',
-                textColor: Colors.red,
-                onTap: () async {
-                  await FirebaseAuth.instance.signOut();
-                  if (mounted) {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LoginScreen(),
-                      ),
-                      (Route<dynamic> route) => false,
+                // Opciones según tipo de usuario
+                if (isNormal)
+                  _buildProfileMenuItem(
+                    icon: Icons.calendar_month_outlined,
+                    text: 'Mis Citas Solicitadas',
+                    onTap: _navigateToMyAppointments,
+                  ),
+                if (isNormal)
+                  _buildProfileMenuItem(
+                    icon: Icons.search_outlined,
+                    text: 'Buscar Kinesiólogos',
+                    onTap: _navigateToServices,
+                  ),
+
+                if (isVerified)
+                  _buildProfileMenuItem(
+                    icon: Icons.schedule,
+                    text: 'Gestionar Disponibilidad',
+                    onTap: _navigateToManageAvailability,
+                  ),
+                if (isVerified)
+                  _buildProfileMenuItem(
+                    icon: Icons.article_outlined,
+                    text: 'Carta de Presentación',
+                    onTap: () => _showEditPresentationModal(
+                      specialization: currentSpecialization,
+                      experience: currentExperience,
+                      presentation: currentPresentation,
+                    ),
+                  ),
+
+                _buildProfileMenuItem(
+                  icon: Icons.settings_outlined,
+                  text: 'Configuración',
+                  onTap: () {},
+                ),
+                _buildProfileMenuItem(
+                  icon: Icons.notifications_outlined,
+                  text: 'Notificaciones',
+                  onTap: () {},
+                ),
+
+                // 💡 Menú de Activación/Revisión
+                if (!isVerified)
+                  if (isNormal)
+                    _buildProfileMenuItem(
+                      icon: Icons.school_outlined,
+                      text: 'Activar cuenta de profesional',
+                      onTap:
+                          _navigateToKineActivation, // 👈 Función de navegación actualizada
+                      trailingWidget:
+                          null, // Ya no se necesita el _isUploading aquí
+                    )
+                  else if (isPending)
+                    _buildProfileMenuItem(
+                      icon: Icons.access_time_filled,
+                      text: 'Revisión en curso (Pendiente)',
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Tu solicitud ya fue enviada y está siendo revisada.',
+                            ),
+                          ),
+                        );
+                      },
+                      textColor: Colors.orange.shade800,
+                    ),
+
+                const Divider(height: 40, indent: 20, endIndent: 20),
+
+                _buildProfileMenuItem(
+                  icon: Icons.help_outline,
+                  text: 'Ayuda y Soporte',
+                  onTap: () {},
+                ),
+
+                _buildProfileMenuItem(
+                  icon: Icons.logout,
+                  text: 'Cerrar Sesión',
+                  textColor: Colors.red,
+                  onTap: () async {
+                    // Mostrar diálogo de confirmación
+                    final bool? confirm = await showAppConfirmationDialog(
+                      context: context,
+                      icon: Icons.logout_rounded,
+                      title: 'Cerrar Sesión',
+                      content: '¿Estás seguro de que quieres cerrar tu sesión?',
+                      confirmText: 'Sí, Salir',
+                      cancelText: 'Cancelar',
+                      isDestructive: true,
                     );
-                  }
-                },
-              ),
-              const SizedBox(height: 20), // Espacio al final
-            ],
+
+                    // Si el usuario confirma, proceder a cerrar sesión
+                    if (confirm == true) {
+                      await FirebaseAuth.instance.signOut();
+                      if (mounted) {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginScreen(),
+                          ),
+                          (Route<dynamic> route) => false,
+                        );
+                      }
+                    }
+                  },
+                ),
+
+                const SizedBox(height: 20),
+              ],
+            ),
           );
         },
       ),

@@ -8,13 +8,21 @@ import 'firebase_options.dart';
 import 'package:kine_app/features/auth/screens/login_screen.dart';
 import 'package:kine_app/features/home_screen.dart';
 import 'package:kine_app/features/splash_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // --- 👇 ESTA LÍNEA ES CORRECTA 👇 ---
   // Carga los datos de formato para el idioma "Español"
+  await initializeDateFormatting('es_ES', null);
+
+  //Conexion con subapase
+  await sb.Supabase.initialize(
+    url: 'https://gwnbsjunvxiexmqpthkv.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3bmJzanVudnhpZXhtcXB0aGt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxOTE3NTEsImV4cCI6MjA3NDc2Nzc1MX0.ZpQIlCgkRYr7SwDY7mtWHqTsgiOzsDqciXSvqugBk8U',
+  );
   await initializeDateFormatting('es_ES', null);
 
   runApp(const MyApp());

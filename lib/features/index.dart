@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kine_app/features/ejercicios/sesion_ejercicio_screen.dart';
-import 'package:kine_app/services/planes_usuarios_service.dart'; // Servicio para las sesiones
+import 'package:kine_app/features/ejercicios/screens/sesion_ejercicio_screen.dart';
+import 'package:kine_app/features/ejercicios/service/plan_service.dart'; // Servicio para las sesiones
 
-// Suponiendo que PlanTomado es una clase definida en planes_usuarios_service.dart
+// Suponiendo que PlanTomado es una clase definida en plan_service.dart o planes_usuarios_service.dart
 
 class Index extends StatefulWidget {
   const Index({super.key});
@@ -13,6 +13,9 @@ class Index extends StatefulWidget {
 }
 
 class _IndexState extends State<Index> {
+  // Instancia del servicio de planes
+  final PlanService _planService = PlanService();
+
   // Almacena el Future para evitar recargas constantes al reconstruir el widget
   late Future<List<PlanTomado>> _plansFuture;
 
@@ -26,7 +29,7 @@ class _IndexState extends State<Index> {
   // ⭐️ FUNCIÓN CLAVE: Recarga los datos y actualiza el FutureBuilder
   void _reloadPlans() {
     setState(() {
-      _plansFuture = obtenerPlanesEnProgresoPorUsuario();
+      _plansFuture = _planService.obtenerPlanesEnProgresoPorUsuario();
     });
   }
 
@@ -50,7 +53,6 @@ class _IndexState extends State<Index> {
       value: SystemUiOverlayStyle.dark, // status bar con iconos oscuros
       child: Scaffold(
         backgroundColor: Colors.grey[50],
-        // Usamos ListView para hacer toda la pantalla desplazable (incluyendo la Guía)
         body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,17 +73,11 @@ class _IndexState extends State<Index> {
               // 1. SECCIÓN: GUÍA DE SALUD
               const _HealthGuideSection(),
 
-              // ------------------------------------
-              // 🌟 BARRA SEPARADORA AÑADIDA
+              // 🌟 BARRA SEPARADORA
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20.0),
-                child: Divider(
-                  height: 30, // Espacio vertical alrededor del divisor
-                  thickness: 1, // Grosor de la línea
-                  color: Colors.black12, // Color de la línea
-                ),
+                child: Divider(height: 30, thickness: 1, color: Colors.black12),
               ),
-              // ------------------------------------
 
               // 2. TÍTULO DE LA SECCIÓN DE PLANES
               const Padding(
@@ -102,12 +98,10 @@ class _IndexState extends State<Index> {
                   future: _plansFuture,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      // Muestra un indicador de carga mientras se obtienen los datos
                       return const Center(child: CircularProgressIndicator());
                     }
 
                     if (snapshot.hasError) {
-                      // Muestra el error en caso de fallo (útil para debug)
                       return Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24.0),
@@ -123,14 +117,12 @@ class _IndexState extends State<Index> {
                       );
                     }
 
-                    // Si no hay datos (la lista está vacía)
                     if (!snapshot.hasData || snapshot.data!.isEmpty) {
                       return Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24.0),
                           child: Column(
-                            mainAxisSize: MainAxisSize
-                                .min, // Ocupar solo el espacio necesario verticalmente
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               const Text(
                                 'Actualmente no tienes planes de ejercicios en progreso.',
@@ -143,12 +135,9 @@ class _IndexState extends State<Index> {
                               const SizedBox(height: 20),
                               ElevatedButton.icon(
                                 onPressed: () {
-                                  // 💡 Implementación para cambiar la pestaña en el HomeScreen
                                   final TabController? controller =
                                       DefaultTabController.of(context);
-
                                   if (controller != null) {
-                                    // El índice 1 corresponde a la pestaña 'Ejercicios' (PlanEjercicioScreen)
                                     controller.animateTo(1);
                                   } else {
                                     print(
@@ -163,7 +152,7 @@ class _IndexState extends State<Index> {
                                 label: const Text('COMIENZA YA'),
                                 style: ElevatedButton.styleFrom(
                                   foregroundColor: Colors.white,
-                                  backgroundColor: const Color.fromARGB(
+                                  backgroundColor: Color.fromARGB(
                                     255,
                                     0,
                                     217,
@@ -184,24 +173,16 @@ class _IndexState extends State<Index> {
                       );
                     }
 
-                    // Si los datos están listos, muestra la lista de planes
+                    // ✅ Lista de planes cargados
                     final plans = snapshot.data!;
                     return ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(
-                        16.0,
-                        0,
-                        16.0,
-                        16.0,
-                      ), // Ajuste de padding
+                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
                       itemCount: plans.length,
                       itemBuilder: (context, index) {
                         final plan = plans[index];
                         return _PlanCard(
                           plan: plan,
-                          // ⭐️ CAMBIO APLICADO AQUÍ
-                          onTapResume: () {
-                            _navigateToSession(plan.id);
-                          },
+                          onTapResume: () => _navigateToSession(plan.id),
                         );
                       },
                     );
@@ -216,7 +197,7 @@ class _IndexState extends State<Index> {
   }
 }
 
-// --- SECCIÓN DE LA GUÍA DE SALUD (Se mantiene igual) ---
+// --- SECCIÓN DE LA GUÍA DE SALUD ---
 class _HealthGuideSection extends StatelessWidget {
   const _HealthGuideSection();
 
@@ -241,7 +222,6 @@ class _HealthGuideSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Título específico de la Guía
           const Text(
             'Tu Guía de Kinesiología 🧘‍♀️',
             style: TextStyle(
@@ -257,13 +237,9 @@ class _HealthGuideSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Row(
-            children: [
-              const Icon(
-                Icons.fitness_center,
-                size: 20,
-                color: Colors.blueAccent,
-              ),
-              const SizedBox(width: 8),
+            children: const [
+              Icon(Icons.fitness_center, size: 20, color: Colors.blueAccent),
+              SizedBox(width: 8),
               Text(
                 'Estado: En progreso',
                 style: TextStyle(
@@ -279,12 +255,11 @@ class _HealthGuideSection extends StatelessWidget {
     );
   }
 }
-// ------------------------------------
 
-// Widget de tarjeta para mostrar los detalles de un PlanTomado (Se mantiene igual)
+// --- TARJETA DE PLAN ---
 class _PlanCard extends StatelessWidget {
   final PlanTomado plan;
-  final VoidCallback onTapResume; // Callback para el botón de reanudar
+  final VoidCallback onTapResume;
 
   const _PlanCard({required this.plan, required this.onTapResume});
 
@@ -292,13 +267,13 @@ class _PlanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     String estadoDisplay;
     Color estadoColor;
-    bool showResumeButton = true; // Flag para mostrar el botón
+    bool showResumeButton = true;
 
     switch (plan.estado) {
       case 'terminado':
         estadoDisplay = 'Completado';
         estadoColor = Colors.green;
-        showResumeButton = false; // No mostrar si está terminado
+        showResumeButton = false;
         break;
       case 'en_progreso':
         estadoDisplay = 'En progreso';
@@ -306,7 +281,7 @@ class _PlanCard extends StatelessWidget {
         break;
       case 'pendiente':
         estadoDisplay = 'Pendiente';
-        estadoColor = Colors.blueAccent; // Usaremos azul para pendiente/activo
+        estadoColor = Colors.blueAccent;
         break;
       default:
         estadoDisplay = 'Desconocido';
@@ -346,7 +321,7 @@ class _PlanCard extends StatelessWidget {
                 ),
                 _buildInfoChip(
                   icon: Icons.check_circle_outline,
-                  label: 'Estado: ${estadoDisplay}',
+                  label: 'Estado: $estadoDisplay',
                   color: estadoColor,
                 ),
               ],
@@ -356,11 +331,10 @@ class _PlanCard extends StatelessWidget {
               'Iniciado el: ${plan.fechaInicio.day}/${plan.fechaInicio.month}/${plan.fechaInicio.year}',
               style: const TextStyle(fontSize: 12, color: Colors.black54),
             ),
-            // --- NUEVA SECCIÓN PARA EL BOTÓN ---
             if (showResumeButton) ...[
               const Divider(height: 20),
               SizedBox(
-                width: double.infinity, // Ocupar todo el ancho disponible
+                width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: onTapResume,
                   icon: Icon(
@@ -375,8 +349,7 @@ class _PlanCard extends StatelessWidget {
                   ),
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    backgroundColor:
-                        Colors.teal, // Un color que llame la atención
+                    backgroundColor: Colors.teal,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -385,20 +358,17 @@ class _PlanCard extends StatelessWidget {
                 ),
               ),
             ],
-            // -----------------------------------
           ],
         ),
       ),
     );
   }
 
-  // Pequeño widget auxiliar para mostrar información en 'chips'
   Widget _buildInfoChip({
     required IconData icon,
     required String label,
     Color color = Colors.black54,
   }) {
-    // ... (Se mantiene igual)
     return Row(
       children: [
         Icon(icon, size: 16, color: color),

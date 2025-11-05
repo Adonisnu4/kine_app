@@ -10,6 +10,9 @@ import 'package:kine_app/features/Appointments/models/appointment.dart';
 import 'package:kine_app/features/Appointments/services/appointment_service.dart';
 import 'package:kine_app/features/Chat/screens/chat_screen.dart'; // Importación necesaria para la navegación al chat
 
+// 💡 IMPORTAMOS LOS DIÁLOGOS (Asegúrate que la ruta sea correcta)
+import 'package:kine_app/shared/widgets/app_dialog.dart';
+
 class KinePanelScreen extends StatefulWidget {
   const KinePanelScreen({super.key});
   @override
@@ -36,10 +39,8 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
     );
   }
 
-  // Devuelve la lista de citas (eventos) para marcar en el calendario
   List<Appointment> _getEventsForDay(DateTime day) {
     return _allAppointments.where((appointment) {
-      // Solo marcar citas pendientes o confirmadas
       if (appointment.estado == 'confirmada' ||
           appointment.estado == 'pendiente') {
         return isSameDay(appointment.fechaCitaDT, day);
@@ -48,73 +49,100 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
     }).toList();
   }
 
+  // 💡 --- FUNCIÓN MODIFICADA ---
   /// Maneja la acción de Aceptar, Denegar o CANCELAR una cita.
-  void _handleUpdateStatus(Appointment appointment, String newStatus) async {
-    // 1. CONFIRMACIÓN (Solo para cancelación)
-    if (newStatus == 'cancelada') {
-      final bool? confirm = await showDialog<bool>(
+  Future<void> _handleUpdateStatus(
+    Appointment appointment,
+    String newStatus,
+  ) async {
+    // 💡 --- INICIO DE CONFIRMACIONES ---
+    // 1. CONFIRMACIÓN para ACEPTAR
+    if (newStatus == 'confirmada') {
+      final bool? confirm = await showAppConfirmationDialog(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Confirmar Cancelación'),
-          content: Text(
-            '¿Estás seguro de cancelar esta cita confirmada con ${appointment.pacienteNombre}? Se notificará al paciente por correo.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('No, Mantener'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text(
-                'Sí, Cancelar Cita',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        ),
+        icon: Icons.check_circle_outline_rounded,
+        title: 'Confirmar Cita',
+        content:
+            '¿Estás seguro de confirmar esta cita con ${appointment.pacienteNombre}?',
+        confirmText: 'Sí, Confirmar',
+        cancelText: 'Cancelar',
+        isDestructive: false, // Es una acción positiva
       );
-      if (confirm != true) return;
+      if (confirm != true) return; // Si cancela, no hace nada
     }
 
-    // 2. ACTUALIZACIÓN DEL ESTADO (El servicio valida que no sea una cita pasada)
+    // 2. CONFIRMACIÓN para RECHAZAR (Denegar)
+    if (newStatus == 'denegada') {
+      final bool? confirm = await showAppConfirmationDialog(
+        context: context,
+        icon: Icons.block_rounded,
+        title: 'Rechazar Cita',
+        content:
+            '¿Estás seguro de rechazar esta solicitud de ${appointment.pacienteNombre}?',
+        confirmText: 'Sí, Rechazar',
+        cancelText: 'Cancelar',
+        isDestructive: true, // Es una acción destructiva/negativa
+      );
+      if (confirm != true) return; // Si cancela, no hace nada
+    }
+
+    // 3. CONFIRMACIÓN para CANCELAR (Esta ya estaba)
+    if (newStatus == 'cancelada') {
+      final bool? confirm = await showAppConfirmationDialog(
+        context: context,
+        icon: Icons.warning_amber_rounded,
+        title: 'Confirmar Cancelación',
+        content:
+            '¿Estás seguro de cancelar esta cita confirmada con ${appointment.pacienteNombre}? Se notificará al paciente.',
+        confirmText: 'Sí, Cancelar Cita',
+        cancelText: 'No, Mantener',
+        isDestructive: true,
+      );
+      if (confirm != true) return; // Si cancela, no hace nada
+    }
+    // 💡 --- FIN DE CONFIRMACIONES ---
+
+    // 4. ACTUALIZACIÓN DEL ESTADO (Solo se ejecuta si se confirmó)
     try {
       await _appointmentService.updateAppointmentStatus(appointment, newStatus);
-      if (mounted) {
-        String message;
-        Color color;
 
-        if (newStatus == 'confirmada') {
-          message = 'Cita confirmada.';
-          color = Colors.green;
-        } else if (newStatus == 'denegada') {
-          message = 'Cita rechazada.';
-          color = Colors.orange;
-        } else if (newStatus == 'cancelada') {
-          message = 'Cita cancelada con éxito. Se envió un correo al paciente.';
-          color = Colors.red.shade700;
-        } else {
-          message = 'Estado actualizado.';
-          color = Colors.blue;
-        }
+      if (!mounted) return; // Verificación Async Gap
 
-        // Muestra mensaje de éxito
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: color),
+      // Muestra el POPUP de RESULTADO
+      if (newStatus == 'confirmada') {
+        await showAppInfoDialog(
+          context: context,
+          icon: Icons.check_circle_outline_rounded,
+          title: '¡Confirmada!',
+          content: 'La cita ha sido confirmada con éxito.',
+        );
+      } else if (newStatus == 'denegada') {
+        await showAppWarningDialog(
+          context: context,
+          icon: Icons.block_rounded,
+          title: 'Cita Rechazada',
+          content: 'La solicitud de cita ha sido rechazada.',
+        );
+      } else if (newStatus == 'cancelada') {
+        await showAppErrorDialog(
+          context: context,
+          icon: Icons.cancel_outlined,
+          title: 'Cita Cancelada',
+          content: 'La cita ha sido cancelada. Se notificó al paciente.',
         );
       }
     } catch (e) {
-      if (mounted) {
-        // Muestra mensaje de error (incluye la excepción si la cita ya pasó)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al actualizar: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (!mounted) return; // Verificación Async Gap
+
+      await showAppErrorDialog(
+        context: context,
+        icon: Icons.error_outline_rounded,
+        title: 'Error al Actualizar',
+        content: 'No se pudo actualizar la cita: ${e.toString()}',
+      );
     }
   }
+  // 💡 --- FIN DE LA FUNCIÓN MODIFICADA ---
 
   /// Muestra el modal con los detalles del paciente y el botón de chat funcional.
   void _showPatientDetailsModal(BuildContext context, Appointment appointment) {
@@ -163,7 +191,7 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
               ),
               const SizedBox(height: 20),
 
-              // 🚀 BOTÓN DE CHAT CORREGIDO: Navegación real
+              // BOTÓN DE CHAT
               ElevatedButton.icon(
                 icon: const Icon(Icons.chat_bubble_outline),
                 label: const Text('Enviar Mensaje'),
@@ -172,15 +200,12 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
                 ),
                 onPressed: () {
                   Navigator.pop(ctx); // Cierra el modal
-
-                  // Inicia navegación real al chat
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => ChatScreen(
                         receiverId: appointment.pacienteId,
-                        receiverName: appointment
-                            .pacienteNombre, // Usando la ruta nombrada estática
+                        receiverName: appointment.pacienteNombre,
                       ),
                     ),
                   );
@@ -226,7 +251,6 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
 
     return Column(
       children: [
-        // ... (TableCalendar - Lógica original) ...
         TableCalendar<Appointment>(
           locale: 'es_ES',
           firstDay: DateTime.utc(2020, 1, 1),
@@ -323,7 +347,6 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
           if (otras.isNotEmpty)
             const Divider(height: 30, indent: 20, endIndent: 20),
         ],
-        // Sección de Citas Confirmadas/Denegadas (y Canceladas)
         if (otras.isNotEmpty) ...[
           Text(
             ' Citas Programadas',
@@ -346,7 +369,6 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
     IconData estadoIcon;
     Color estadoColor;
 
-    // CONDICIÓN DE TIEMPO: Comprueba si la cita ya ha pasado
     final bool isPastAppointment = appointment.fechaCitaDT.isBefore(
       DateTime.now(),
     );
@@ -364,7 +386,7 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
         estadoIcon = Icons.check_box;
         estadoColor = Colors.blueGrey;
         break;
-      case 'cancelada': // Nuevo estado
+      case 'cancelada':
         estadoIcon = Icons.close;
         estadoColor = Colors.red.shade700;
         break;
@@ -381,10 +403,7 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
       child: Column(
         children: [
           ListTile(
-            onTap: () => _showPatientDetailsModal(
-              context,
-              appointment,
-            ), // Abre el modal al tocar
+            onTap: () => _showPatientDetailsModal(context, appointment),
             leading: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -455,10 +474,8 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
                       'Cancelar Cita',
                       style: TextStyle(color: Colors.red),
                     ),
-                    onPressed: () => _handleUpdateStatus(
-                      appointment,
-                      'cancelada', // NUEVO ESTADO DE CANCELACIÓN
-                    ),
+                    onPressed: () =>
+                        _handleUpdateStatus(appointment, 'cancelada'),
                   ),
 
                 // 3. INDICADOR para citas CONFIRMADAS PASADAS (No se pueden cancelar)

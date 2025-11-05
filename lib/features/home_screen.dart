@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:kine_app/features/Patients_and_Kine/screens/kine_panel_screen.dart';
 import 'package:kine_app/features/auth/services/get_user_data.dart';
 import 'package:kine_app/features/chat/screens/contacts_screen.dart'; // Asegúrate de tener una pantalla de login para el caso de no estar autenticado
-import 'package:kine_app/features/ejercicios/plan_ejercicios_screen.dart'; // Paciente ve esto
+import 'package:kine_app/features/ejercicios/screens/plan_ejercicios_screen.dart'; // Paciente ve esto
 import 'package:kine_app/features/index.dart';
 import 'package:kine_app/features/auth/screens/profile_screen.dart'; // Ambos
 import 'package:kine_app/features/Patients_and_Kine/screens/kine_directory_screen.dart'; // Paciente
