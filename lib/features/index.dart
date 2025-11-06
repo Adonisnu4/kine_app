@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:kine_app/features/ejercicios/models/plan_tomado.dart';
 import 'package:kine_app/features/ejercicios/screens/sesion_ejercicio_screen.dart';
 import 'package:kine_app/features/ejercicios/service/plan_service.dart'; // Servicio para las sesiones
 
