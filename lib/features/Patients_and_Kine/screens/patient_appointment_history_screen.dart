@@ -136,11 +136,7 @@ class _PatientAppointmentHistoryScreenState
                 ), // Ícono de estado
                 title: Text(
                   // Fecha y Hora de la cita
-                  DateFormat(
-                        'EEEE dd MMM yyyy - HH:mm',
-                        'es_ES',
-                      ).format(appointment.fechaCitaDT) +
-                      ' hrs',
+                  '${DateFormat('EEEE dd MMM yyyy - HH:mm', 'es_ES').format(appointment.fechaCitaDT)} hrs',
                   style: const TextStyle(
                     fontWeight: FontWeight.w500,
                     fontSize: 16,

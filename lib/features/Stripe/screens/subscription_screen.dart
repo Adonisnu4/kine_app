@@ -264,9 +264,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     ),
                     const SizedBox(height: 15),
                     // Mapea la lista de beneficios (que ya no es null)
-                    ..._selectedFeatures
-                        .map((feature) => _buildFeatureRow(feature))
-                        .toList(),
+                    ..._selectedFeatures.map(
+                      (feature) => _buildFeatureRow(feature),
+                    ),
                   ],
                 ),
               ),

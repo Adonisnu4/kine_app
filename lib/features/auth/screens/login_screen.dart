@@ -1,10 +1,9 @@
 // lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:kine_app/features/auth/services/auth_service.dart';
 import 'register_screen.dart';
 import '../../home_screen.dart';
-// 💡 --- IMPORT AÑADIDO ---
 import 'package:kine_app/shared/widgets/app_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -19,7 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final AuthService _authService = AuthService(); // ✅ NUEVO
   bool _isLoading = false;
   bool _showPassword = false;
 
@@ -30,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // ===== Navegación / mensajes =====
+  // ===== Navegación =====
   void _navigateToHome() {
     if (!mounted) return;
     Navigator.pushReplacement(
@@ -39,10 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // 💡 --- FUNCIÓN _showSnackBar ELIMINADA ---
-  // (Ya no se usa, ahora usamos popups)
-
-  // ===== Login email/pass (con verificación) =====
+  // ===== Login con correo =====
   Future<void> _login() async {
     setState(() => _isLoading = true);
     try {
@@ -52,26 +48,19 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       final user = cred.user;
       if (user != null) {
-        await user.reload(); // <- Async Gap
-
-        // 💡 --- CORRECCIÓN ASYNC GAP ---
-        // Verificamos 'mounted' DESPUÉS del await
+        await user.reload();
         if (!mounted) return;
-
         final reloaded = _auth.currentUser;
+
         if (reloaded != null && reloaded.emailVerified) {
           _navigateToHome();
         } else {
-          await _auth.signOut(); // <- Async Gap
-
-          // 💡 --- CORRECCIÓN ASYNC GAP ---
+          await _auth.signOut();
           if (!mounted) return;
-          setState(() => _isLoading = false); // Detener loading
-
-          // Muestra el POPUP DE ADVERTENCIA
+          setState(() => _isLoading = false);
           await showAppWarningDialog(
             context: context,
-            icon: Icons.lock_outline_rounded, // 💡 Icono añadido
+            icon: Icons.lock_outline_rounded,
             title: 'Cuenta no Verificada',
             content:
                 'Tu cuenta aún no ha sido verificada. Revisa tu correo (y la carpeta de spam) para encontrar el enlace de activación.',
@@ -86,13 +75,10 @@ class _LoginScreenState extends State<LoginScreen> {
         'invalid-email' => 'Formato de correo inválido.',
         _ => 'Error de inicio de sesión: ${e.message}',
       };
-
-      // 💡 --- MODIFICADO ---
       if (mounted) setState(() => _isLoading = false);
-      // Muestra el POPUP DE ERROR
       await showAppErrorDialog(
         context: context,
-        icon: Icons.error_outline_rounded, // 💡 Icono añadido
+        icon: Icons.error_outline_rounded,
         title: 'Error de Inicio de Sesión',
         content: msg,
       );
@@ -101,70 +87,57 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ===== Social =====
+  // ===== LOGIN CON GOOGLE =====
   Future<void> _loginWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        if (mounted) setState(() => _isLoading = false);
-        return;
-      }
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      await _auth.signInWithCredential(credential);
-
-      if (!mounted) return; // 💡 Corrección Async Gap
+      await _authService.signInWithGoogle();
+      if (!mounted) return;
       _navigateToHome();
-    } on FirebaseAuthException catch (e) {
+    } catch (e) {
       if (mounted) setState(() => _isLoading = false);
       await showAppErrorDialog(
         context: context,
-        icon: Icons.g_mobiledata_rounded, // 💡 Icono añadido
+        icon: Icons.g_mobiledata_rounded,
         title: 'Error con Google',
-        content: e.message ?? 'Ocurrió un error al iniciar con Google.',
-      );
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
-      await showAppErrorDialog(
-        context: context,
-        icon: Icons.error_outline_rounded, // 💡 Icono añadido
-        title: 'Error Inesperado',
-        content: 'Ocurrió un error inesperado al iniciar con Google.',
+        content: e.toString(),
       );
     } finally {
       if (mounted && _isLoading) setState(() => _isLoading = false);
     }
   }
 
+  // ===== LOGIN CON FACEBOOK =====
   Future<void> _loginWithFacebook() async {
-    // 💡 --- MODIFICADO ---
-    await showAppInfoDialog(
-      context: context,
-      icon: Icons.facebook_rounded, // 💡 Icono añadido
-      title: 'Función no Disponible',
-      content:
-          'El inicio de sesión con Facebook requiere configuración adicional.',
-    );
+    setState(() => _isLoading = true);
+    try {
+      await _authService.signInWithFacebook();
+      if (!mounted) return;
+      _navigateToHome();
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+      await showAppErrorDialog(
+        context: context,
+        icon: Icons.facebook_rounded,
+        title: 'Error con Facebook',
+        content: e.toString(),
+      );
+    } finally {
+      if (mounted && _isLoading) setState(() => _isLoading = false);
+    }
   }
 
-  // ===== Reset password =====
+  // ===== RESET PASSWORD =====
   Future<void> _sendPasswordResetEmail(String email) async {
     if (email.isEmpty) return;
     setState(() => _isLoading = true);
     try {
-      await _auth.sendPasswordResetEmail(email: email); // <- Async Gap
-
-      // 💡 --- CORRECCIÓN ASYNC GAP ---
+      await _auth.sendPasswordResetEmail(email: email);
       if (!mounted) return;
       setState(() => _isLoading = false);
-
       await showAppInfoDialog(
         context: context,
-        icon: Icons.mark_email_read_rounded, // 💡 Icono añadido
+        icon: Icons.mark_email_read_rounded,
         title: 'Correo Enviado',
         content:
             'Enviamos un correo de recuperación a $email. Revisa tu bandeja de entrada y spam.',
@@ -175,11 +148,10 @@ class _LoginScreenState extends State<LoginScreen> {
         'invalid-email' => 'Formato de correo inválido.',
         _ => 'Error al enviar recuperación: ${e.message}',
       };
-
       if (mounted) setState(() => _isLoading = false);
       await showAppErrorDialog(
         context: context,
-        icon: Icons.alternate_email_rounded, // 💡 Icono añadido
+        icon: Icons.alternate_email_rounded,
         title: 'Error de Recuperación',
         content: msg,
       );
@@ -188,7 +160,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // --- FUNCIÓN DE DIÁLOGO DE RESET (MODIFICADA EN LA ÚLTIMA SESIÓN) ---
   Future<void> _showResetPasswordDialog() async {
     final ctrl = TextEditingController();
     final key = GlobalKey<FormState>();
@@ -224,10 +195,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   hintText: 'ejemplo@correo.com',
                 ),
                 validator: (v) {
-                  if (v == null || v.isEmpty)
+                  if (v == null || v.isEmpty) {
                     return 'El correo es obligatorio.';
-                  if (!v.contains('@') || !v.contains('.'))
+                  }
+                  if (!v.contains('@') || !v.contains('.')) {
                     return 'Ingresa un correo válido.';
+                  }
                   return null;
                 },
               ),
@@ -255,19 +228,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     vertical: 12,
                   ),
                 ),
-                // 💡 Usamos el _isLoading de la pantalla principal
                 onPressed: _isLoading
                     ? null
                     : () async {
                         if (key.currentState!.validate()) {
-                          Navigator.of(d).pop(); // Cierra el diálogo
-                          await _sendPasswordResetEmail(
-                            ctrl.text.trim(),
-                          ); // Llama a la función
+                          Navigator.of(d).pop();
+                          await _sendPasswordResetEmail(ctrl.text.trim());
                         }
                       },
-                child:
-                    _isLoading // 💡 Lee el _isLoading
+                child: _isLoading
                     ? const SizedBox(
                         width: 20,
                         height: 20,
@@ -291,7 +260,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ===== Decoración tipo "píldora" =====
+  // ===== DECORACIÓN INPUT =====
   InputDecoration _pillDecoration({required String hint, Widget? suffix}) {
     const borderColor = Color(0xFFD9D9D9);
     final base = OutlineInputBorder(
@@ -318,6 +287,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // ===== UI =====
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
@@ -356,19 +326,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              ConstrainedBox(
-                constraints: BoxConstraints(minHeight: height * 0.18),
-                child: const Center(
-                  child: Text(
-                    'Ingresa tus datos\npara iniciar\nsesión.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 28,
-                      height: 1.15,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.2,
-                    ),
+              const Center(
+                child: Text(
+                  'Ingresa tus datos\npara iniciar\nsesión.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 28,
+                    height: 1.15,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
                   ),
                 ),
               ),

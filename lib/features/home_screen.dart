@@ -18,10 +18,8 @@ class HomeScreen extends StatefulWidget {
 
   // Static method to navigate tabs (optional, keep if used)
   static void navigateToTabIndex(BuildContext context, int index) {
-    final TabController? controller = DefaultTabController.of(context);
-    if (controller != null) {
-      controller.animateTo(index);
-    }
+    final TabController controller = DefaultTabController.of(context);
+    controller.animateTo(index);
   }
 
   @override
@@ -63,8 +61,9 @@ class _HomeScreenState extends State<HomeScreen>
     _tabController =
         TabController(length: tabLength, vsync: this, initialIndex: 0)
           ..addListener(() {
-            if (mounted)
+            if (mounted) {
               setState(() {}); // refrescar título del header al cambiar de tab
+            }
           });
 
     // Update the state to indicate loading is complete

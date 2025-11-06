@@ -135,15 +135,9 @@ class _IndexState extends State<Index> {
                               const SizedBox(height: 20),
                               ElevatedButton.icon(
                                 onPressed: () {
-                                  final TabController? controller =
+                                  final TabController controller =
                                       DefaultTabController.of(context);
-                                  if (controller != null) {
-                                    controller.animateTo(1);
-                                  } else {
-                                    print(
-                                      'Error: TabController no encontrado.',
-                                    );
-                                  }
+                                  controller.animateTo(1);
                                 },
                                 icon: const Icon(
                                   Icons.add_circle_outline,

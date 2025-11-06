@@ -3,9 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 // --- 👇 IMPORTANTE 👇 ---
 import 'package:intl/date_symbol_data_local.dart';
-import 'auth/auth_gate.dart';
 import 'firebase_options.dart';
-import 'package:kine_app/features/auth/screens/login_screen.dart';
 import 'package:kine_app/features/home_screen.dart';
 import 'package:kine_app/features/splash_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 🔹 Configuración oficial de Facebook -->
+    <string name="facebook_app_id">24682638824725956</string>
+    <string name="fb_login_protocol_scheme">fb24682638824725956</string>
+    <string name="facebook_client_token">89845585bc33a998fa620b0b6a7731bc</string>
+
+    <!-- 🔹 Nombre de la aplicación -->
+    <string name="app_name">kine_app</string>
+</resources>
