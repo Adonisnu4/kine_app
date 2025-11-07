@@ -300,8 +300,9 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
                 day.weekday != DateTime.sunday,
             onDaySelected: (selectedDay, focusedDay) {
               if (selectedDay.weekday == DateTime.saturday ||
-                  selectedDay.weekday == DateTime.sunday)
+                  selectedDay.weekday == DateTime.sunday) {
                 return;
+              }
 
               if (!isSameDay(_selectedDay, selectedDay)) {
                 setState(() {

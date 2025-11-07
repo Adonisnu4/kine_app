@@ -1,6 +1,6 @@
 // lib/screens/my_appointments_screen.dart
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
+// Import Firestore
 import 'package:kine_app/features/Appointments/models/appointment.dart'; // Importa tu modelo
 import 'package:kine_app/features/Appointments/services/appointment_service.dart'; // Importa tu servicio
 import 'package:firebase_auth/firebase_auth.dart';
