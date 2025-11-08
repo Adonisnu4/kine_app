@@ -3,20 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kine_app/features/Patients_and_Kine/screens/kine_panel_screen.dart';
 import 'package:kine_app/features/auth/services/get_user_data.dart';
-import 'package:kine_app/features/chat/screens/contacts_screen.dart'; // Asegúrate de tener una pantalla de login para el caso de no estar autenticado
-import 'package:kine_app/features/ejercicios/screens/plan_ejercicios_screen.dart'; // Paciente ve esto
+import 'package:kine_app/features/chat/screens/contacts_screen.dart';
+import 'package:kine_app/features/ejercicios/screens/plan_ejercicios_screen.dart';
 import 'package:kine_app/features/index.dart';
-import 'package:kine_app/features/auth/screens/profile_screen.dart'; // Ambos
-import 'package:kine_app/features/Patients_and_Kine/screens/kine_directory_screen.dart'; // Paciente
-import 'package:kine_app/features/Patients_and_Kine/screens/my_patients_screen.dart'; // Kine (Lista Pacientes)
+import 'package:kine_app/features/auth/screens/profile_screen.dart';
+import 'package:kine_app/features/Patients_and_Kine/screens/kine_directory_screen.dart';
+import 'package:kine_app/features/Patients_and_Kine/screens/my_patients_screen.dart';
 
-// GlobalKey can remain if used elsewhere
 final GlobalKey<_HomeScreenState> homeScreenKey = GlobalKey<_HomeScreenState>();
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  // Static method to navigate tabs (optional, keep if used)
   static void navigateToTabIndex(BuildContext context, int index) {
     final TabController controller = DefaultTabController.of(context);
     controller.animateTo(index);
@@ -26,47 +24,31 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-// Uses SingleTickerProviderStateMixin for the TabController animation
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
-  // TabController manages the state of the tabs
   late TabController _tabController;
-  // Flags to track user role and loading state
   bool _isKineVerified = false;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // Start loading user data and setting up tabs when the screen initializes
     _loadUserStateAndSetupTabs();
   }
 
-  /// Fetches user data asynchronously and configures the TabController.
   Future<void> _loadUserStateAndSetupTabs() async {
-    // Get user data (including role ID) from the service
     final userData = await getUserData();
-    // Default to role 1 (Patient) if data is missing or incomplete
     final userStatusId = userData?['tipo_usuario_id'] ?? 1;
 
-    // Determine if the user is a verified Kinesiologist (ID 3)
     _isKineVerified = (userStatusId == 3);
-
-    // Set the number of tabs based on the user role
-    // Kine tiene 5 tabs (Inicio,Ejercicios, Citas, Mensajes, Pacientes)
-    // PAciente tiene 4 tabs (Inicio, Ejercicios, Servicios, Mensajes)
-    //5 para Kine, 4 para Paciente
     final tabLength = _isKineVerified ? 5 : 4;
 
     _tabController =
         TabController(length: tabLength, vsync: this, initialIndex: 0)
           ..addListener(() {
-            if (mounted) {
-              setState(() {}); // refrescar título del header al cambiar de tab
-            }
+            if (mounted) setState(() {});
           });
 
-    // Update the state to indicate loading is complete
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -76,109 +58,81 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
-    // Clean up the TabController when the screen is removed
     if (!_isLoading) {
       _tabController.dispose();
     }
     super.dispose();
   }
 
-  /// Navigates to the ProfileScreen when the profile icon in the header is tapped.
   Future<void> _onProfileTap() async {
     if (!mounted) return;
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
   }
 
+  // ---------- vistas ----------
   List<Widget> _getTabViews() {
     if (_isKineVerified) {
-      //Pestañas para el kinesiologo
       return const [
-        Index(), // 0: Inicio
-        PlanEjercicioScreen(), // 1: Ejercicios
-        KinePanelScreen(), // 2: Citas
-        ContactsScreen(), // 3: Mensajes
-        MyPatientsScreen(), // 4: Mis Pacientes
+        Index(),
+        PlanEjercicioScreen(),
+        KinePanelScreen(),
+        ContactsScreen(),
+        MyPatientsScreen(),
       ];
     } else {
-      //Pestañas para el usuario
       return const [
-        Index(), // 0: Inicio
-        PlanEjercicioScreen(), // 1: Ejercicios
-        KineDirectoryScreen(), // 2: Servicios/Directorio
-        ContactsScreen(), // 3: Mensajes
+        Index(),
+        PlanEjercicioScreen(),
+        KineDirectoryScreen(),
+        ContactsScreen(),
       ];
     }
   }
 
-  /// Helper to create Tab icons with a consistent size.
-  Widget _navIcon(IconData data) =>
-      Icon(data, size: 24); // Slightly larger icon size
-
-  /// Returns the list of Tab widgets for the BottomNavigationBar based on user role.
-  List<Tab> _getBottomNavBarTabs() {
+  // ---------- datos de los tabs para el footer custom ----------
+  List<_BottomItem> _bottomItems() {
     if (_isKineVerified) {
-      // Tabs para el kinesiologo
-      return [
-        Tab(icon: _navIcon(Icons.home_rounded), text: 'Inicio'),
-        Tab(icon: _navIcon(Icons.fitness_center), text: 'Ejercicios'),
-        Tab(icon: _navIcon(Icons.assignment_rounded), text: 'Citas'),
-        Tab(
-          icon: _navIcon(Icons.chat_bubble_outline_rounded),
-          text: 'Mensajes',
-        ),
-        Tab(
-          icon: _navIcon(Icons.people_alt_rounded), // (Icono de pacientes)
-          text: 'Pacientes',
-        ),
+      return const [
+        _BottomItem(Icons.home_rounded, 'Inicio'),
+        _BottomItem(Icons.self_improvement_rounded, 'Ejercicios'),
+        _BottomItem(Icons.event_available_rounded, 'Citas'),
+        _BottomItem(Icons.forum_rounded, 'Mensajes'),
+        _BottomItem(Icons.groups_rounded, 'Pacientes'),
       ];
-      // --- FIN CORRECCIÓN ---
     } else {
-      // Tabs para el paciente
-      return [
-        Tab(icon: _navIcon(Icons.home_rounded), text: 'Inicio'),
-        Tab(icon: _navIcon(Icons.fitness_center), text: 'Ejercicios'),
-        Tab(icon: _navIcon(Icons.medical_services_rounded), text: 'Servicios'),
-        Tab(
-          icon: _navIcon(Icons.chat_bubble_outline_rounded),
-          text: 'Mensajes',
-        ),
+      return const [
+        _BottomItem(Icons.home_rounded, 'Inicio'),
+        _BottomItem(Icons.self_improvement_rounded, 'Ejercicios'),
+        _BottomItem(Icons.health_and_safety_rounded, 'Servicios'),
+        _BottomItem(Icons.forum_rounded, 'Mensajes'),
       ];
     }
   }
 
+  // ---------- labels para el header ----------
   List<String> _tabLabels() {
-    //Para kine
     if (_isKineVerified) {
-      // return ['Inicio', 'Ejercicios', 'Citas', 'Mis Pacientes', 'Mensajes'];
-      // Titles for KINESIOLOGIST
-      // --- 👇 CORREGIDO: ORDEN SINCRONIZADO CON _getTabViews 👇 ---
       return [
-        'Inicio', // 0: Index
-        'Ejercicios', // 1: KinePanelScreen
-        'Citas', // 2: KinePanelScreen
-        'Mensajes', // 3: ContactsScreen
-        'Mis Pacientes', // 4: MyPatientsScreen
+        'Inicio',
+        'Ejercicios',
+        'Citas',
+        'Mensajes',
+        'Mis Pacientes',
       ];
-      // --- FIN CORRECCIÓN ---
     } else {
-      //Para paciente
       return ['Inicio', 'Ejercicios', 'Servicios', 'Mensajes'];
     }
   }
 
-  /// Builds the custom AppBar (Header).
+  // ---------- header ----------
   PreferredSizeWidget _buildHeader() {
     final labels = _tabLabels();
-    // Get the title based on the current tab, show 'Cargando...' if not ready
     final title = _isLoading ? 'Cargando...' : labels[_tabController.index];
 
-    // --- 👇 RESTORED PreferredSize CODE 👇 ---
     return PreferredSize(
-      preferredSize: const Size.fromHeight(56), // Standard AppBar height
+      preferredSize: const Size.fromHeight(56),
       child: Container(
-        // Styling for the header (white background, shadow, bottom border)
         decoration: const BoxDecoration(
           color: Colors.white,
           boxShadow: [
@@ -189,22 +143,16 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ],
           border: Border(
-            bottom: BorderSide(
-              color: Color(0x14000000),
-              width: 1,
-            ), // línea finita
+            bottom: BorderSide(color: Color(0x14000000), width: 1),
           ),
         ),
         child: SafeArea(
-          // Ensures content is below status bar
-          bottom: false, // No padding at the bottom
+          bottom: false,
           child: SizedBox(
-            height: 56, // Enforce height
+            height: 56,
             child: Row(
-              // Layout: Icon - Title - Spacer
               children: [
                 const SizedBox(width: 12),
-                // Left Icon Button -> Navigates to Profile
                 IconButton(
                   onPressed: _onProfileTap,
                   icon: const Icon(
@@ -214,39 +162,97 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                   tooltip: 'Mi perfil',
                 ),
-                // Mover un poco más a la derecha el texto:
-                const SizedBox(
-                  width: 14,
-                ), // antes 8 → ahora un poco más separado
+                const SizedBox(width: 14),
                 Text(
                   title,
                   style: const TextStyle(
                     color: Colors.black87,
                     fontSize: 18,
-                    fontWeight: FontWeight.w600, // Semi-bold
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const Spacer(), // Pushes content to the left
-                // Optional: Add icons on the right if needed
-                const SizedBox(width: 12), // Right padding
+                const Spacer(),
+                const SizedBox(width: 12),
               ],
             ),
           ),
         ),
       ),
     );
-    // --- FIN RESTAURACIÓN ---
+  }
+
+  // ---------- footer custom ----------
+  Widget _buildBottomBar() {
+    final items = _bottomItems();
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),  // <- puntas redondeadas arriba
+          topRight: Radius.circular(20),
+        ),
+        boxShadow: [
+            BoxShadow(
+              color: Color(0x22000000),
+              offset: Offset(0, -2),
+              blurRadius: 10,
+            ),
+          ],
+      ),
+      height: 58,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(items.length, (index) {
+          final selected = _tabController.index == index;
+          final item = items[index];
+          return Expanded(
+            child: InkWell(
+              onTap: () => _tabController.animateTo(index),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                height: selected ? 56 : 50,
+                margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                decoration: BoxDecoration(
+                  // ahora el seleccionado es negro MUY suave
+                  color: selected ? Colors.black.withOpacity(0.06) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      item.icon,
+                      size: selected ? 27 : 23,
+                      color: selected ? Colors.black : const Color(0xFF6B7280),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item.label,
+                      style: TextStyle(
+                        fontSize: selected ? 12 : 11,
+                        fontWeight:
+                            selected ? FontWeight.w700 : FontWeight.w500,
+                        color: selected ? Colors.black : const Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Show loading indicator until user data and tabs are ready
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final views = _getTabViews();
-    final tabs = _getBottomNavBarTabs();
 
     return DefaultTabController(
       length: _tabController.length,
@@ -254,47 +260,21 @@ class _HomeScreenState extends State<HomeScreen>
         value: SystemUiOverlayStyle.dark,
         child: Scaffold(
           appBar: _buildHeader(),
-
           body: TabBarView(
-            // controller: _tabController,
+            controller: _tabController,
             physics: const NeverScrollableScrollPhysics(),
             children: views,
           ),
-
-          bottomNavigationBar: Container(
-            decoration: const BoxDecoration(
-              color: Colors.black, // Background color
-              boxShadow: [
-                // Shadow above the bar
-                BoxShadow(
-                  color: Colors.black26,
-                  offset: Offset(0, -4),
-                  blurRadius: 12,
-                  spreadRadius: 2,
-                ),
-              ],
-              border: Border(
-                top: BorderSide(color: Color(0x1FFFFFFF), width: 1),
-              ), // Subtle top border
-            ),
-            child: TabBar(
-              isScrollable: false,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white70,
-              indicatorColor: Colors.transparent,
-              labelStyle: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
-              unselectedLabelStyle: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-              tabs: tabs,
-            ),
-          ),
+          bottomNavigationBar: _buildBottomBar(),
         ),
       ),
     );
   }
+}
+
+// modelo para el footer
+class _BottomItem {
+  final IconData icon;
+  final String label;
+  const _BottomItem(this.icon, this.label);
 }
