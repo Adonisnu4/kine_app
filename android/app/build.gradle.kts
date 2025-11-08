@@ -14,8 +14,10 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // ✅ Mantiene Java 11 y habilita el desugaring
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true // ✅ CORREGIDO: Sintaxis Kotlin
     }
 
     kotlinOptions {
@@ -31,6 +33,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // ✅ Habilita multidex
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -44,4 +49,12 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // ✅ CORREGIDO: Sintaxis Kotlin usa paréntesis
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+
+    // (Opcional, pero recomendado si usas Kotlin estándar)
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 }

@@ -3,24 +3,32 @@ import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:kine_app/features/auth/services/notification_tokens.dart'; // 👈 Import del servicio de notificaciones
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
+  final PushTokenService _tokenService =
+      PushTokenService(); // 👈 Instancia del servicio
 
   // ===========================================================
   // 1️⃣ LOGIN CON CORREO Y CONTRASEÑA
   // ===========================================================
   Future<UserCredential> signInWithEmail(String email, String password) async {
-    return await _auth.signInWithEmailAndPassword(
+    final userCred = await _auth.signInWithEmailAndPassword(
       email: email,
       password: password,
     );
+
+    // 👇 Registra el token FCM para el usuario logueado
+    await _tokenService.registerTokenForUser(userCred.user!.uid);
+
+    return userCred;
   }
 
   // ===========================================================
-  // 2️⃣ LOGIN CON GOOGLE (CORREGIDO)
+  // 2️⃣ LOGIN CON GOOGLE
   // ===========================================================
   Future<UserCredential> signInWithGoogle() async {
     try {
@@ -31,9 +39,7 @@ class AuthService {
         userCred = await _auth.signInWithPopup(googleProvider);
       } else {
         final googleUser = await _googleSignIn.signIn();
-        if (googleUser == null) {
-          throw Exception("Inicio de sesión cancelado por el usuario");
-        }
+        if (googleUser == null) throw Exception("Inicio de sesión cancelado");
         final googleAuth = await googleUser.authentication;
         final credential = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
@@ -55,13 +61,14 @@ class AuthService {
             'imagen_perfil': user.photoURL ?? '',
             'fecha_registro': FieldValue.serverTimestamp(),
             'provider': 'google',
-
-            // 🔥 ¡ESTA ES LA CORRECCIÓN!
-            // Ahora guarda una Referencia, igual que tu pantalla de registro.
             'tipo_usuario': _firestore.collection('tipo_usuario').doc('1'),
           });
         }
+
+        // 👇 Registra el token FCM
+        await _tokenService.registerTokenForUser(user.uid);
       }
+
       return userCred;
     } catch (e) {
       debugPrint("⚠️ Error en Google Sign-In: $e");
@@ -70,7 +77,7 @@ class AuthService {
   }
 
   // ===========================================================
-  // 3️⃣ LOGIN CON FACEBOOK (CORREGIDO)
+  // 3️⃣ LOGIN CON FACEBOOK
   // ===========================================================
   Future<UserCredential> signInWithFacebook() async {
     try {
@@ -88,9 +95,7 @@ class AuthService {
           );
           userCred = await _auth.signInWithCredential(credential);
         } else {
-          throw Exception(
-            result.message ?? 'Inicio de sesión con Facebook cancelado',
-          );
+          throw Exception(result.message ?? 'Inicio de sesión cancelado');
         }
       }
 
@@ -107,12 +112,14 @@ class AuthService {
             'imagen_perfil': user.photoURL ?? '',
             'fecha_registro': FieldValue.serverTimestamp(),
             'provider': 'facebook',
-
-            // 🔥 ¡ESTA ES LA CORRECCIÓN!
             'tipo_usuario': _firestore.collection('tipo_usuario').doc('1'),
           });
         }
+
+        // 👇 Registra el token FCM
+        await _tokenService.registerTokenForUser(user.uid);
       }
+
       return userCred;
     } catch (e) {
       debugPrint("⚠️ Error en Facebook Sign-In: $e");
@@ -128,28 +135,26 @@ class AuthService {
   }
 
   // ===========================================================
-  // 5️⃣ CERRAR SESIÓN (Versión "Forzada" contra caché)
+  // 5️⃣ CERRAR SESIÓN
   // ===========================================================
   Future<void> signOut() async {
     try {
-      if (!kIsWeb) {
-        // 1. Revisa si Google está conectado
-        final bool isGoogleSigned = await _googleSignIn.isSignedIn();
+      final user = _auth.currentUser;
+      if (user != null) {
+        // 👇 Elimina el token FCM del usuario al cerrar sesión
+        await _tokenService.removeTokenForUser(user.uid);
+      }
 
+      if (!kIsWeb) {
+        final bool isGoogleSigned = await _googleSignIn.isSignedIn();
         if (isGoogleSigned) {
-          // 2. Desconecta y revoca permisos PRIMERO
           await _googleSignIn.disconnect();
-          // 3. Cierra sesión en la app
           await _googleSignIn.signOut();
         }
-
-        // 4. Cierra sesión en Facebook
         await FacebookAuth.instance.logOut();
       }
 
-      // 5. Cierra sesión en Firebase (SIEMPRE al final)
       await _auth.signOut();
-
       debugPrint('✅ Sesión cerrada correctamente');
     } catch (e) {
       debugPrint('⚠️ Error al cerrar sesión: $e');
@@ -157,7 +162,7 @@ class AuthService {
   }
 
   // ===========================================================
-  // 6️⃣ OBTENER USUARIO ACTUAL
+  // 6️⃣ USUARIO ACTUAL
   // ===========================================================
   User? get currentUser => _auth.currentUser;
 }
