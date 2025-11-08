@@ -81,7 +81,7 @@ class _IndexState extends State<Index> {
     _reloadPlans();
 
     // timer para cambiar tip
-    _tipTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    _tipTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       if (!mounted) return;
       setState(() {
         _currentTipIndex = _getNextRandomIndex(_currentTipIndex);
@@ -154,7 +154,7 @@ class _IndexState extends State<Index> {
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 18, 16, 6),
                 child: Text(
-                  'Tips kinesiológicos',
+                  'Tips Kinesiológicos',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -385,7 +385,7 @@ class _HealthGuideSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Tu guía de kinesiología',
+            'Tu Guía de Kinesiología',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
