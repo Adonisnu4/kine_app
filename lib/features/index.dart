@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:kine_app/features/ejercicios/models/plan_tomado.dart';
 import 'package:kine_app/features/ejercicios/screens/sesion_ejercicio_screen.dart';
 import 'package:kine_app/features/ejercicios/service/plan_service.dart'; // Servicio para las sesiones
 
@@ -135,15 +136,9 @@ class _IndexState extends State<Index> {
                               const SizedBox(height: 20),
                               ElevatedButton.icon(
                                 onPressed: () {
-                                  final TabController? controller =
+                                  final TabController controller =
                                       DefaultTabController.of(context);
-                                  if (controller != null) {
-                                    controller.animateTo(1);
-                                  } else {
-                                    print(
-                                      'Error: TabController no encontrado.',
-                                    );
-                                  }
+                                  controller.animateTo(1);
                                 },
                                 icon: const Icon(
                                   Icons.add_circle_outline,

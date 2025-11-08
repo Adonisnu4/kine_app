@@ -124,10 +124,10 @@ class AppointmentService {
             'subject': 'Nueva Solicitud de Cita Recibida',
             'html':
                 '''
-              <p>Hola ${kineNombre},</p>
+              <p>Hola $kineNombre,</p>
               <p>Has recibido una nueva solicitud de cita:</p>
               <p>
-                <b>Paciente:</b> ${pacienteNombre} (${pacienteEmail ?? 'email no disponible'})<br>
+                <b>Paciente:</b> $pacienteNombre (${pacienteEmail ?? 'email no disponible'})<br>
                 <b>Fecha Solicitada:</b> $fechaFormateada<br>
                 <b>Hora Solicitada:</b> $horaFormateada hrs.
               </p>

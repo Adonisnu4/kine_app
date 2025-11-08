@@ -35,8 +35,8 @@ class _PlanEjercicioDetalleScreenState
       return;
     }
 
-    final String? planId = widget.planId;
-    if (planId == null || planId.isEmpty) {
+    final String planId = widget.planId;
+    if (planId.isEmpty) {
       print('⚠️ Error: planId no válido.');
       return;
     }

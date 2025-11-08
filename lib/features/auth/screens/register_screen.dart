@@ -49,13 +49,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   // =======================
-  // 2) Helpers
-  // =======================
-
-  // (La función _showSnackBar ya no es necesaria)
-
-  // =======================
   // 3) Lógica de registro (💡 MODIFICADA)
+  // =======================
   // =======================
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
@@ -71,9 +66,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (user != null) {
         await user.sendEmailVerification(); // <- Async Gap
 
-        final tipoUsuarioRef = _firestore
-            .collection('tipo_usuario')
-            .doc('1'); // Paciente por defecto
+        // 🚨 LÍNEA BORRADA (Ya no creamos la referencia)
+        // final tipoUsuarioRef = _firestore
+        //     .collection('tipo_usuario')
+        //     .doc('1');
 
         final userData = {
           'nombre_completo': _nameController.text.trim(),
@@ -81,7 +77,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'email': _emailController.text.trim(),
           'edad': int.tryParse(_ageController.text.trim()),
           'sexo': _selectedGender,
-          'tipo_usuario': tipoUsuarioRef,
+
+          // 🔥 ¡ESTA ES LA CORRECCIÓN!
+          // Ahora guardamos el NÚMERO 1, igual que en el login con Google/FB.
+          'tipo_usuario': 1,
+
           'fecha_registro': FieldValue.serverTimestamp(),
           'plan': 'estandar',
           'perfilDestacado': false,
@@ -115,7 +115,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
       }
     } on FirebaseAuthException catch (e) {
-      // 💡 --- SECCIÓN DE ERROR MODIFICADA ---
+      // ... (Tu manejo de errores está perfecto, no se toca) ...
+
       String title;
       String message;
       IconData icon;
@@ -151,8 +152,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       return;
-
-      // 💡 --- FIN DE LA MODIFICACIÓN ---
     } finally {
       if (mounted && _isLoading) {
         setState(() => _isLoading = false);
@@ -169,7 +168,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     const inputRadius = 28.0;
     const fieldHeight = 56.0;
 
-    InputBorder _border([Color c = const Color(0xFFDDDDDD)]) =>
+    InputBorder border([Color c = const Color(0xFFDDDDDD)]) =>
         OutlineInputBorder(
           borderRadius: BorderRadius.circular(inputRadius),
           borderSide: BorderSide(color: c, width: 1.4),
@@ -223,7 +222,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       validator: (v) => (v == null || v.trim().isEmpty)
                           ? 'El nombre es obligatorio.'
                           : null,
-                      borderBuilder: _border,
+                      borderBuilder: border,
                     ),
                     const SizedBox(height: 14),
 
@@ -241,7 +240,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         }
                         return null;
                       },
-                      borderBuilder: _border,
+                      borderBuilder: border,
                     ),
                     const SizedBox(height: 14),
 
@@ -258,7 +257,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         }
                         return null;
                       },
-                      borderBuilder: _border,
+                      borderBuilder: border,
                     ),
                     const SizedBox(height: 14),
 
@@ -280,7 +279,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       validator: (v) => (v == null || v.length < 6)
                           ? 'Mínimo 6 caracteres.'
                           : null,
-                      borderBuilder: _border,
+                      borderBuilder: border,
                     ),
                     const SizedBox(height: 14),
 
@@ -297,14 +296,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         }
                         return null;
                       },
-                      borderBuilder: _border,
+                      borderBuilder: border,
                     ),
                     const SizedBox(height: 14),
 
                     // Dropdown estilizado (campo)
                     DropdownButtonFormField<String>(
                       isExpanded: true,
-                      value: _selectedGender,
+                      initialValue: _selectedGender,
                       onChanged: (v) => setState(() => _selectedGender = v),
                       validator: (v) =>
                           v == null ? 'El sexo es obligatorio.' : null,
@@ -339,10 +338,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           horizontal: 18,
                           vertical: 18,
                         ),
-                        enabledBorder: _border(),
-                        focusedBorder: _border(Colors.black),
-                        errorBorder: _border(Colors.redAccent),
-                        focusedErrorBorder: _border(Colors.redAccent),
+                        enabledBorder: border(),
+                        focusedBorder: border(Colors.black),
+                        errorBorder: border(Colors.redAccent),
+                        focusedErrorBorder: border(Colors.redAccent),
                       ),
                     ),
                     const SizedBox(height: 24),

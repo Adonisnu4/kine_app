@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:kine_app/features/Patients_and_Kine/services/kine_service.dart';
 import 'package:kine_app/features/Chat/screens/chat_screen.dart';
 import 'package:kine_app/features/Patients_and_Kine/screens/patient_appointment_history_screen.dart';
 import 'package:kine_app/features/Stripe/services/stripe_service.dart';
@@ -320,12 +319,12 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
           ),
           const SizedBox(height: 10),
           ElevatedButton(
-            child: const Text('Actualizar a Kine Pro'),
             onPressed: _navigateToSubscriptions,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange.shade700,
               foregroundColor: Colors.white,
             ),
+            child: const Text('Actualizar a Kine Pro'),
           ),
         ],
       ),

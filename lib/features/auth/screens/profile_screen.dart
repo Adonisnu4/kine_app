@@ -3,16 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 // 💡 AÑADIDOS NECESARIOS PARA LA SUBIDA Y FIREBASE
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:file_picker/file_picker.dart';
-import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 // 💡 FIN AÑADIDOS
 import 'package:kine_app/features/Patients_and_Kine/screens/kine_directory_screen.dart';
 import 'package:kine_app/features/auth/services/get_user_data.dart';
 import 'package:kine_app/features/auth/screens/login_screen.dart';
 import '../../Patients_and_Kine/models/edit_presentation_modal.dart';
-import '../../Patients_and_Kine/models/edit_presentation_modal.dart'
-    show PresentationData;
 import 'package:kine_app/features/auth/services/user_service.dart';
 import '../../Appointments/screens/my_appointments_screen.dart'; // Para Pacientes
 import '../../Appointments/screens/manage_availability_screen.dart'; // Para Kinesiólogos
