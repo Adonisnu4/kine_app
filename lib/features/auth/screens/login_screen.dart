@@ -6,6 +6,13 @@ import 'register_screen.dart';
 import '../../home_screen.dart';
 import 'package:kine_app/shared/widgets/app_dialog.dart';
 
+class AppColors {
+  static const blue = Color(0xFF47A5D6);   // del logo
+  static const orange = Color(0xFFE28825); // del logo
+  static const greyText = Color(0xFF8A9397);
+  static const fieldBorder = Color(0xFFD9D9D9);
+}
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -14,11 +21,10 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // ===== Controladores / estado =====
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final AuthService _authService = AuthService(); // ✅ NUEVO
+  final AuthService _authService = AuthService();
   bool _isLoading = false;
   bool _showPassword = false;
 
@@ -29,7 +35,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // ===== Navegación =====
   void _navigateToHome() {
     if (!mounted) return;
     Navigator.pushReplacement(
@@ -38,7 +43,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ===== Login con correo =====
   Future<void> _login() async {
     setState(() => _isLoading = true);
     try {
@@ -61,9 +65,9 @@ class _LoginScreenState extends State<LoginScreen> {
           await showAppWarningDialog(
             context: context,
             icon: Icons.lock_outline_rounded,
-            title: 'Cuenta no Verificada',
+            title: 'Cuenta no verificada',
             content:
-                'Tu cuenta aún no ha sido verificada. Revisa tu correo (y la carpeta de spam) para encontrar el enlace de activación.',
+                'Revisa tu correo (y spam) para activar la cuenta.',
           );
           await user.sendEmailVerification();
         }
@@ -79,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await showAppErrorDialog(
         context: context,
         icon: Icons.error_outline_rounded,
-        title: 'Error de Inicio de Sesión',
+        title: 'Error de inicio de sesión',
         content: msg,
       );
     } finally {
@@ -87,7 +91,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ===== LOGIN CON GOOGLE =====
   Future<void> _loginWithGoogle() async {
     setState(() => _isLoading = true);
     try {
@@ -107,7 +110,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ===== LOGIN CON FACEBOOK =====
   Future<void> _loginWithFacebook() async {
     setState(() => _isLoading = true);
     try {
@@ -127,7 +129,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ===== RESET PASSWORD =====
   Future<void> _sendPasswordResetEmail(String email) async {
     if (email.isEmpty) return;
     setState(() => _isLoading = true);
@@ -138,9 +139,9 @@ class _LoginScreenState extends State<LoginScreen> {
       await showAppInfoDialog(
         context: context,
         icon: Icons.mark_email_read_rounded,
-        title: 'Correo Enviado',
+        title: 'Correo enviado',
         content:
-            'Enviamos un correo de recuperación a $email. Revisa tu bandeja de entrada y spam.',
+            'Enviamos un correo de recuperación a $email.',
       );
     } on FirebaseAuthException catch (e) {
       final msg = switch (e.code) {
@@ -152,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await showAppErrorDialog(
         context: context,
         icon: Icons.alternate_email_rounded,
-        title: 'Error de Recuperación',
+        title: 'Error de recuperación',
         content: msg,
       );
     } finally {
@@ -172,18 +173,14 @@ class _LoginScreenState extends State<LoginScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16.0),
             ),
-            icon: Icon(
+            icon: const Icon(
               Icons.lock_reset_rounded,
-              color: Colors.teal.shade700,
+              color: AppColors.blue,
               size: 48,
             ),
-            title: Text(
-              'Recuperar Contraseña',
+            title: const Text(
+              'Recuperar contraseña',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.teal.shade700,
-              ),
             ),
             content: Form(
               key: key,
@@ -191,7 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: ctrl,
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
-                  labelText: 'Ingresa tu correo electrónico',
+                  labelText: 'Correo electrónico',
                   hintText: 'ejemplo@correo.com',
                 ),
                 validator: (v) {
@@ -212,20 +209,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: () => Navigator.of(d).pop(),
                 child: const Text(
                   'Cancelar',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal.shade700,
+                  backgroundColor: AppColors.blue,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
                   ),
                 ),
                 onPressed: _isLoading
@@ -245,13 +238,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: Colors.white,
                         ),
                       )
-                    : const Text(
-                        'Enviar Enlace',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
+                    : const Text('Enviar enlace'),
               ),
             ],
           );
@@ -260,26 +247,23 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ===== DECORACIÓN INPUT =====
   InputDecoration _pillDecoration({required String hint, Widget? suffix}) {
-    const borderColor = Color(0xFFD9D9D9);
     final base = OutlineInputBorder(
       borderRadius: BorderRadius.circular(20),
-      borderSide: const BorderSide(color: borderColor, width: 1),
+      borderSide: const BorderSide(color: AppColors.fieldBorder, width: 1),
     );
     return InputDecoration(
       hintText: hint,
       hintStyle: const TextStyle(
-        color: Color(0xFF9E9E9E),
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
+        color: AppColors.greyText,
+        fontSize: 15,
       ),
       filled: true,
       fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       enabledBorder: base,
       focusedBorder: base.copyWith(
-        borderSide: const BorderSide(color: Colors.black, width: 1.3),
+        borderSide: const BorderSide(color: AppColors.blue, width: 1.4),
       ),
       floatingLabelBehavior: FloatingLabelBehavior.never,
       suffixIcon: suffix,
@@ -287,12 +271,9 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ===== UI =====
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    final width = size.width;
-    final height = size.height;
+    final width = MediaQuery.sizeOf(context).width;
     final logoH = (width * 0.16).clamp(48, 72).toDouble();
 
     return Scaffold(
@@ -307,7 +288,7 @@ class _LoginScreenState extends State<LoginScreen> {
         foregroundColor: Colors.black87,
         centerTitle: true,
         title: const Text(
-          'Iniciar Sesión',
+          'Iniciar sesión',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
@@ -320,26 +301,47 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 12),
               Center(
                 child: Image.asset(
-                  'assets/kinesiology.png',
+                  'assets/unkineamigo.png',
                   height: logoH,
                   fit: BoxFit.contain,
+                ),
+              ),
+              const SizedBox(height: 8),
+              // badge en naranja
+              const Center(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Color(0x1AE28825),
+                    borderRadius: BorderRadius.all(Radius.circular(999)),
+                  ),
+                  child: Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 14.0, vertical: 4.0),
+                    child: Text(
+                      'Un Kine Amigo',
+                      style: TextStyle(
+                        color: AppColors.orange,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               const Center(
                 child: Text(
-                  'Ingresa tus datos\npara iniciar\nsesión.',
+                  'Ingresa tus datos\npara iniciar sesión.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.black,
-                    fontSize: 28,
+                    fontSize: 26,
                     height: 1.15,
                     fontWeight: FontWeight.w600,
-                    letterSpacing: 0.2,
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -362,7 +364,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       size: 22,
                     ),
                     splashRadius: 20,
-                    tooltip: _showPassword ? 'Ocultar' : 'Ver contraseña',
                   ),
                 ),
               ),
@@ -371,10 +372,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: _isLoading ? null : _showResetPasswordDialog,
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 0),
+                  ),
                   child: const Text(
                     '¿Olvidaste la contraseña?',
                     style: TextStyle(
-                      color: Color(0xFF6D6D6D),
+                      color: AppColors.blue,
                       decoration: TextDecoration.underline,
                     ),
                   ),
@@ -387,7 +392,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _login,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
+                    backgroundColor: AppColors.blue,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(26),
@@ -416,7 +421,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: EdgeInsets.symmetric(horizontal: 10),
                     child: Text(
                       'O inicia sesión con',
-                      style: TextStyle(color: Color(0xFF6D6D6D)),
+                      style: TextStyle(color: AppColors.greyText),
                     ),
                   ),
                   Expanded(
@@ -442,11 +447,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(width: 18),
                   _SocialCircle(
                     onTap: _isLoading ? null : _loginWithFacebook,
-                    borderColor: const Color(0xFF1877F2),
+                    borderColor: AppColors.blue,
                     child: const Icon(
                       Icons.facebook,
                       size: 24,
-                      color: Color(0xFF1877F2),
+                      color: AppColors.blue,
                     ),
                   ),
                 ],
@@ -467,12 +472,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Text.rich(
                     TextSpan(
                       text: '¿No tienes una cuenta? ',
-                      style: const TextStyle(color: Color(0xFF6D6D6D)),
+                      style: const TextStyle(color: AppColors.greyText),
                       children: const [
                         TextSpan(
                           text: 'Regístrate aquí',
                           style: TextStyle(
-                            color: Colors.black87,
+                            color: AppColors.orange,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -490,7 +495,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// Botón social circular
 class _SocialCircle extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;

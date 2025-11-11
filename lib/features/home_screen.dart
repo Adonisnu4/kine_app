@@ -1,6 +1,7 @@
 // lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'package:kine_app/features/Patients_and_Kine/screens/kine_panel_screen.dart';
 import 'package:kine_app/features/auth/services/get_user_data.dart';
 import 'package:kine_app/features/chat/screens/contacts_screen.dart';
@@ -9,6 +10,18 @@ import 'package:kine_app/features/index.dart';
 import 'package:kine_app/features/auth/screens/profile_screen.dart';
 import 'package:kine_app/features/Patients_and_Kine/screens/kine_directory_screen.dart';
 import 'package:kine_app/features/Patients_and_Kine/screens/my_patients_screen.dart';
+
+// si ya tienes esta clase en otro lado, importa y borra esto
+class AppColors {
+  static const white = Color(0xFFFFFFFF);
+  static const background = Color(0xFFF5F5F5);
+
+  static const blue = Color(0xFF47A5D6);     // del logo
+  static const orange = Color(0xFFE28825);   // acento
+  static const text = Color(0xFF101010);
+  static const greyText = Color(0xFF6D6D6D);
+  static const border = Color(0xFFE3E6E8);
+}
 
 final GlobalKey<_HomeScreenState> homeScreenKey = GlobalKey<_HomeScreenState>();
 
@@ -90,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  // ---------- datos de los tabs para el footer custom ----------
+  // ---------- datos de los tabs para el footer ----------
   List<_BottomItem> _bottomItems() {
     if (_isKineVerified) {
       return const [
@@ -125,54 +138,78 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  // ---------- header ----------
+  // ---------- header PRO ----------
   PreferredSizeWidget _buildHeader() {
     final labels = _tabLabels();
-    final title = _isLoading ? 'Cargando...' : labels[_tabController.index];
+    final title = _isLoading ? 'Cargando…' : labels[_tabController.index];
 
     return PreferredSize(
-      preferredSize: const Size.fromHeight(56),
+      preferredSize: const Size.fromHeight(62),
       child: Container(
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: AppColors.white,
           boxShadow: [
             BoxShadow(
-              color: Color(0x1A000000),
+              color: Color(0x0D000000),
               offset: Offset(0, 1),
               blurRadius: 6,
             ),
           ],
           border: Border(
-            bottom: BorderSide(color: Color(0x14000000), width: 1),
+            bottom: BorderSide(color: Color(0x08000000), width: 1),
           ),
         ),
         child: SafeArea(
           bottom: false,
-          child: SizedBox(
-            height: 56,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14.0),
             child: Row(
               children: [
-                const SizedBox(width: 12),
-                IconButton(
-                  onPressed: _onProfileTap,
-                  icon: const Icon(
-                    Icons.person_outline,
-                    color: Colors.black87,
-                    size: 22,
+                // avatar botón
+                InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: _onProfileTap,
+                  child: Container(
+                    height: 34,
+                    width: 34,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F2F4),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.person_outline,
+                      color: AppColors.blue,
+                      size: 20,
+                    ),
                   ),
-                  tooltip: 'Mi perfil',
                 ),
-                const SizedBox(width: 14),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
                 const SizedBox(width: 12),
+                // titulo + subtitulo
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.text,
+                        letterSpacing: -0.12,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Tu espacio de kinesiología',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.greyText,
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -186,18 +223,18 @@ class _HomeScreenState extends State<HomeScreen>
     final items = _bottomItems();
     return Container(
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),  // <- puntas redondeadas arriba
+          topLeft: Radius.circular(20),
           topRight: Radius.circular(20),
         ),
         boxShadow: [
-            BoxShadow(
-              color: Color(0x22000000),
-              offset: Offset(0, -2),
-              blurRadius: 10,
-            ),
-          ],
+          BoxShadow(
+            color: Color(0x22000000),
+            offset: Offset(0, -2),
+            blurRadius: 10,
+          ),
+        ],
       ),
       height: 58,
       child: Row(
@@ -209,14 +246,15 @@ class _HomeScreenState extends State<HomeScreen>
             child: InkWell(
               onTap: () => _tabController.animateTo(index),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
+                duration: const Duration(milliseconds: 150),
                 curve: Curves.easeOut,
-                height: selected ? 56 : 50,
+                height: 54,
                 margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 decoration: BoxDecoration(
-                  // ahora el seleccionado es negro MUY suave
-                  color: selected ? Colors.black.withOpacity(0.06) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(14),
+                  color: selected
+                      ? AppColors.blue.withOpacity(0.08)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -224,16 +262,16 @@ class _HomeScreenState extends State<HomeScreen>
                     Icon(
                       item.icon,
                       size: selected ? 27 : 23,
-                      color: selected ? Colors.black : const Color(0xFF6B7280),
+                      color: selected ? AppColors.blue : AppColors.greyText,
                     ),
                     const SizedBox(height: 2),
                     Text(
                       item.label,
                       style: TextStyle(
-                        fontSize: selected ? 12 : 11,
+                        fontSize: 11.5,
                         fontWeight:
                             selected ? FontWeight.w700 : FontWeight.w500,
-                        color: selected ? Colors.black : const Color(0xFF6B7280),
+                        color: selected ? AppColors.blue : AppColors.greyText,
                       ),
                     ),
                   ],
@@ -266,6 +304,7 @@ class _HomeScreenState extends State<HomeScreen>
             children: views,
           ),
           bottomNavigationBar: _buildBottomBar(),
+          backgroundColor: AppColors.background,
         ),
       ),
     );
