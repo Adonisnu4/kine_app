@@ -1,3 +1,5 @@
+// lib/screens/kine_patient_progress_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -29,7 +31,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
   late Future<Map<String, dynamic>> _dashboardData;
   late AnimationController _animationController;
 
-  bool _mostrarTodosLosPlanes = false; // 👈 Nuevo estado para “Ver más”
+  bool _mostrarTodosLosPlanes = false;
 
   @override
   void initState() {
@@ -81,7 +83,6 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
           final metrics = snapshot.data!['metrics'] as PatientMetrics;
           final plans = snapshot.data!['plans'] as List<PlanTomado>;
 
-          // 👇 Limita la cantidad de planes mostrados
           final planesVisibles = _mostrarTodosLosPlanes
               ? plans
               : plans.take(5).toList();
@@ -102,10 +103,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-
-                // 👇 Lista de planes limitada
                 ...planesVisibles.map((plan) => _buildPlanCard(plan)).toList(),
-
                 if (plans.length > 5)
                   Padding(
                     padding: const EdgeInsets.only(top: 12.0),
@@ -308,8 +306,6 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
             const Divider(),
 
             // --- Adherencia ---
-            const SizedBox(height: 24),
-            const Divider(),
             const SizedBox(height: 12),
             const Text(
               'Adherencia Total',
@@ -367,36 +363,18 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.circle, color: Colors.teal, size: 12),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${metrics.totalEjerciciosCompletados} Completados',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                    _AdherenceStat(
+                      // Usa el widget
+                      color: Colors.teal,
+                      label: 'Completados',
+                      value: metrics.totalEjerciciosCompletados,
                     ),
                     const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.circle,
-                          color: Colors.grey.shade500,
-                          size: 12,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${metrics.totalEjerciciosAsignados} Asignados',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                    _AdherenceStat(
+                      // Usa el widget
+                      color: Colors.grey.shade500,
+                      label: 'Asignados',
+                      value: metrics.totalEjerciciosAsignados,
                     ),
                   ],
                 ),
@@ -414,6 +392,11 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
   // ==============================================
   Widget _buildPlanCard(PlanTomado plan) {
     final bool isInProgress = plan.estado == 'en_progreso';
+    final String statusText = isInProgress
+        ? 'EN PROGRESO'
+        : plan.estado.toUpperCase();
+    final Color statusColor = isInProgress ? Colors.blue : Colors.grey;
+
     return Card(
       elevation: 1,
       color: const Color(0xFFF9F9FC),
@@ -428,20 +411,20 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
           style: TextStyle(color: Colors.grey.shade700),
         ),
         trailing: Chip(
-          avatar: const Icon(
-            Icons.directions_run_rounded,
+          avatar: Icon(
+            isInProgress ? Icons.directions_run_rounded : Icons.check_circle,
             size: 16,
-            color: Colors.blue,
+            color: statusColor,
           ),
           label: Text(
-            isInProgress ? 'EN PROGRESO' : plan.estado.toUpperCase(),
-            style: const TextStyle(
+            statusText,
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 12,
-              color: Colors.blue,
+              color: statusColor,
             ),
           ),
-          backgroundColor: Colors.blue.shade50,
+          backgroundColor: statusColor.withOpacity(0.1),
         ),
       ),
     );
@@ -451,6 +434,8 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
 // ==============================================
 // 🔹 COMPONENTES REUTILIZABLES
 // ==============================================
+
+// 🚀 --- CÓDIGO RESTAURADO ---
 class _MetricBox extends StatelessWidget {
   final String value;
   final String label;
@@ -486,7 +471,9 @@ class _MetricBox extends StatelessWidget {
     );
   }
 }
+// 🚀 --- FIN CÓDIGO RESTAURADO ---
 
+// 🚀 --- CÓDIGO RESTAURADO ---
 class _AdherenceStat extends StatelessWidget {
   final Color color;
   final String label;
@@ -512,3 +499,4 @@ class _AdherenceStat extends StatelessWidget {
     );
   }
 }
+// 🚀 --- FIN CÓDIGO RESTAURADO ---

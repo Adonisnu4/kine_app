@@ -1,15 +1,13 @@
 // lib/screens/patient_appointment_history_screen.dart
 import 'package:flutter/material.dart';
-import 'package:kine_app/features/Appointments/models/appointment.dart'; // Importa el modelo de cita
-import 'package:kine_app/features/Appointments/services/appointment_service.dart'; // Importa el servicio de citas
-import 'package:firebase_auth/firebase_auth.dart'; // Para obtener el ID del Kine
-import 'package:intl/intl.dart'; // Para formatear fechas
+import 'package:kine_app/features/Appointments/models/appointment.dart';
+import 'package:kine_app/features/Appointments/services/appointment_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
-/// Pantalla que muestra el historial de citas entre el Kine logueado
-/// y un paciente específico.
 class PatientAppointmentHistoryScreen extends StatefulWidget {
-  final String patientId; // ID del paciente cuyos datos se mostrarán
-  final String patientName; // Nombre del paciente para mostrar en el título
+  final String patientId;
+  final String patientName;
 
   const PatientAppointmentHistoryScreen({
     super.key,
@@ -25,75 +23,68 @@ class PatientAppointmentHistoryScreen extends StatefulWidget {
 class _PatientAppointmentHistoryScreenState
     extends State<PatientAppointmentHistoryScreen> {
   final AppointmentService _appointmentService = AppointmentService();
-  final String _currentKineId =
-      FirebaseAuth.instance.currentUser!.uid; // ID del Kine logueado
-  late Stream<List<Appointment>>
-  _historyStream; // Stream para escuchar las citas
+  final String _currentKineId = FirebaseAuth.instance.currentUser!.uid;
+  late Stream<List<Appointment>> _historyStream;
 
   @override
   void initState() {
     super.initState();
-    // Inicia la escucha del historial de citas al crear la pantalla
     _historyStream = _appointmentService.getAppointmentHistory(
-      _currentKineId, // ID del Kine actual
-      widget.patientId, // ID del paciente seleccionado
+      _currentKineId,
+      widget.patientId,
     );
   }
 
   /// Devuelve un mapa con el ícono y color correspondiente a un estado de cita.
   Map<String, dynamic> _getStatusStyle(String status) {
+    // 🚀 --- CORRECCIÓN A MAYÚSCULAS (Switch) ---
     switch (status) {
-      case 'confirmada':
+      case 'CONFIRMADA':
         return {
           'icon': Icons.check_circle_outline,
           'color': Colors.green.shade700,
         };
-      case 'completada':
+      case 'COMPLETADA':
         return {'icon': Icons.check_box_outlined, 'color': Colors.blueGrey};
-      case 'denegada':
+      case 'DENEGADA':
         return {
           'icon': Icons.cancel_outlined,
           'color': Colors.red.shade700,
-          'text': 'RECHAZADA',
+          'text': 'RECHAZADA', // O DENEGADA
         };
-      case 'pendiente':
+      case 'CANCELADA':
+        return {'icon': Icons.close, 'color': Colors.red.shade700};
+      case 'PENDIENTE':
         return {
           'icon': Icons.hourglass_empty_outlined,
           'color': Colors.orange.shade800,
         };
       default:
-        return {
-          'icon': Icons.help_outline,
-          'color': Colors.grey.shade600,
-        }; // Estado desconocido
+        return {'icon': Icons.help_outline, 'color': Colors.grey.shade600};
     }
+    // 🚀 --- FIN DE CORRECCIÓN ---
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Historial de ${widget.patientName}',
-        ), // Título con nombre del paciente
+        title: Text('Historial de ${widget.patientName}'),
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
       ),
       body: StreamBuilder<List<Appointment>>(
-        stream: _historyStream, // Escucha el stream de citas
+        stream: _historyStream,
         builder: (context, snapshot) {
-          // Muestra indicador mientras carga
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          // Muestra mensaje de error si falla
           if (snapshot.hasError) {
             print("Error en StreamBuilder de Historial: ${snapshot.error}");
             return Center(
               child: Text('Error al cargar historial: ${snapshot.error}'),
             );
           }
-          // Muestra mensaje si no hay citas encontradas
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
               child: Padding(
@@ -107,7 +98,6 @@ class _PatientAppointmentHistoryScreenState
             );
           }
 
-          // Si hay datos, muestra la lista
           final appointments = snapshot.data!;
           return ListView.separated(
             padding: const EdgeInsets.symmetric(
@@ -115,27 +105,21 @@ class _PatientAppointmentHistoryScreenState
               horizontal: 8.0,
             ),
             itemCount: appointments.length,
-            // Añade un divisor entre cada cita
             separatorBuilder: (context, index) =>
                 const Divider(height: 1, indent: 16, endIndent: 16),
             itemBuilder: (context, index) {
               final appointment = appointments[index];
-              final statusStyle = _getStatusStyle(
-                appointment.estado,
-              ); // Obtiene estilo del estado
+              final statusStyle = _getStatusStyle(appointment.estado);
               final statusText =
-                  statusStyle['text'] ??
-                  appointment.estado.toUpperCase(); // Obtiene texto del estado
+                  statusStyle['text'] ?? appointment.estado.toUpperCase();
 
-              // Construye un ListTile para cada cita
               return ListTile(
                 leading: Icon(
                   statusStyle['icon'],
                   color: statusStyle['color'],
                   size: 28,
-                ), // Ícono de estado
+                ),
                 title: Text(
-                  // Fecha y Hora de la cita
                   '${DateFormat('EEEE dd MMM yyyy - HH:mm', 'es_ES').format(appointment.fechaCitaDT)} hrs',
                   style: const TextStyle(
                     fontWeight: FontWeight.w500,
@@ -143,15 +127,12 @@ class _PatientAppointmentHistoryScreenState
                   ),
                 ),
                 subtitle: Text(
-                  // Muestra el estado
                   'Estado: $statusText',
                   style: TextStyle(
                     color: statusStyle['color'],
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                // Podrías añadir onTap para ver más detalles si fuera necesario
-                // onTap: () { /* Navegar a detalles de la cita */ },
               );
             },
           );

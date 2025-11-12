@@ -52,6 +52,10 @@ class _BookingScreenState extends State<BookingScreen> {
   // Lista de horarios disponibles (TimeOfDay) para el día seleccionado
   List<TimeOfDay> _availableSlotsForDay = [];
 
+  // 🚀 --- NUEVO ESTADO PARA SLOTS OCUPADOS ---
+  // Almacena los slots ocupados (ej: "09:00", "10:00") para O(1) lookup
+  Set<String> _takenSlots = {};
+
   @override
   void initState() {
     super.initState();
@@ -62,8 +66,6 @@ class _BookingScreenState extends State<BookingScreen> {
     // Carga los horarios del día hábil inicial
     _loadSlotsForSelectedDay();
   }
-
-  // 💡 --- NUEVOS HELPERS DE POPUP (para errores) ---
 
   /// Muestra un Popup de ERROR (rojo)
   Future<void> _showErrorPopup(String title, String content) async {
@@ -76,28 +78,41 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  // 💡 --- FIN DE HELPERS ---
-
-  /// Carga los horarios disponibles desde Firestore para la fecha actual.
+  // 🚀 --- FUNCIÓN DE CARGA MODIFICADA (MÁS EFICIENTE) ---
+  /// Carga los horarios disponibles Y los ocupados para la fecha actual.
   Future<void> _loadSlotsForSelectedDay() async {
     if (!mounted) return; // 🛡️ Protección de estado
     setState(() {
       _isLoadingSlots = true; // Activa el indicador de carga
       _selectedTimeSlot = null; // Reinicia el slot seleccionado
       _availableSlotsForDay = []; // Limpia los slots anteriores
+      _takenSlots = {}; // Limpia los slots ocupados
     });
+
     try {
-      final slots = await _availabilityService.getAvailableSlotsForDay(
-        widget.kineId,
-        _selectedDate,
-      );
+      // Usamos Future.wait para cargar ambas cosas en paralelo
+      final results = await Future.wait([
+        // 1. Carga los horarios que el Kine DEFINIÓ (ej: 8:00, 9:00, 10:00)
+        _availabilityService.getAvailableSlotsForDay(
+          widget.kineId,
+          _selectedDate,
+        ),
+        // 2. Carga los horarios que ya están OCUPADOS (ej: "09:00")
+        _appointmentService.getTakenSlotsForDay(widget.kineId, _selectedDate),
+      ]);
+
       if (!mounted) return; // 🛡️ Doble verificación
+
+      // Asigna los resultados
+      final slots = results[0] as List<TimeOfDay>;
+      final taken = results[1] as Set<String>;
+
       setState(() {
         _availableSlotsForDay = slots;
+        _takenSlots = taken; // Guarda los slots ocupados
       });
     } catch (e) {
       if (!mounted) return; // 🛡️ Protección de estado
-      // 💡 USA POPUP DE ERROR
       _showErrorPopup(
         'Error al Cargar',
         'No se pudieron cargar los horarios: ${e.toString()}',
@@ -110,21 +125,18 @@ class _BookingScreenState extends State<BookingScreen> {
       }
     }
   }
+  // 🚀 --- FIN DE LA FUNCIÓN MODIFICADA ---
 
-  /// Calcula el próximo día hábil, saltando fines de semana y el día actual si ya
-  /// pasó la hora de corte (16:00).
+  /// Calcula el próximo día hábil
   DateTime _findNextAvailableWorkDay(DateTime date) {
     DateTime tempDate = date;
-    // Si ya pasó la hora de corte (16:00), empieza la búsqueda desde mañana
     if (date.isAfter(DateTime(date.year, date.month, date.day, 16, 0))) {
       tempDate = tempDate.add(const Duration(days: 1));
     }
-    // Salta fines de semana
     while (tempDate.weekday == DateTime.saturday ||
         tempDate.weekday == DateTime.sunday) {
       tempDate = tempDate.add(const Duration(days: 1));
     }
-    // Asegura que la hora se ponga a medianoche para evitar problemas de zona horaria
     return DateTime(tempDate.year, tempDate.month, tempDate.day);
   }
 
@@ -135,14 +147,11 @@ class _BookingScreenState extends State<BookingScreen> {
       _isCheckingPending = true;
     });
     try {
-      // Verifica ambos estados en paralelo para mayor eficiencia
       final results = await Future.wait([
-        // 1. Verificar si hay cita PENDIENTE
         _appointmentService.hasPendingAppointment(
           _currentUserId,
           widget.kineId,
         ),
-        // 2. Verificar si hay cita CONFIRMADA FUTURA
         _appointmentService.hasConfirmedAppointmentWithKine(
           _currentUserId,
           widget.kineId,
@@ -150,18 +159,16 @@ class _BookingScreenState extends State<BookingScreen> {
       ]);
       if (!mounted) return; // 🛡️ Doble verificación
       setState(() {
-        _hasPending = results[0]; // Actualiza el estado de pendiente
-        _hasConfirmed = results[1]; // Actualiza el estado de confirmada
+        _hasPending = results[0];
+        _hasConfirmed = results[1];
       });
     } catch (e) {
-      // Manejo de error, usualmente por falta de un índice compuesto en Firestore
       print('Error al verificar citas existentes: $e');
       if (!mounted) return; // 🛡️ Protección de estado
       setState(() {
-        _hasPending = false; // Asume que no hay cita si hay error
-        _hasConfirmed = false; // Asume que no hay cita si hay error
+        _hasPending = false;
+        _hasConfirmed = false;
       });
-      // 💡 USA POPUP DE ERROR
       _showErrorPopup(
         'Error de Verificación',
         'Error al verificar historial: ${e.toString()}',
@@ -181,15 +188,12 @@ class _BookingScreenState extends State<BookingScreen> {
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(
-        const Duration(days: 90),
-      ), // Agendar hasta 90 días
-      // Predicado: Solo días de Lunes a Viernes
+      lastDate: DateTime.now().add(const Duration(days: 90)),
       selectableDayPredicate: (DateTime day) =>
           day.weekday != DateTime.saturday && day.weekday != DateTime.sunday,
     );
     if (picked != null && picked != _selectedDate) {
-      if (!mounted) return; // 🛡️ Protección después del await del DatePicker
+      if (!mounted) return; // 🛡️ Protección después del await
       setState(() {
         _selectedDate = picked;
       });
@@ -199,11 +203,11 @@ class _BookingScreenState extends State<BookingScreen> {
 
   /// Procesa la solicitud de cita al profesional.
   void _handleBooking() async {
-    if (_selectedTimeSlot == null) return; // No hay hora seleccionada
-    if (!mounted) return; // 🛡️ Protección de estado
+    if (_selectedTimeSlot == null) return;
+    if (!mounted) return;
 
     setState(() {
-      _isBooking = true; // Inicia el proceso de reserva
+      _isBooking = true;
     });
 
     try {
@@ -230,9 +234,8 @@ class _BookingScreenState extends State<BookingScreen> {
       final hasPendingNow = results[0];
       final hasConfirmedNow = results[1];
 
-      if (!mounted) return; // 🛡️ Doble verificación después del await
+      if (!mounted) return;
 
-      // Actualiza estados y lanza error si aplica
       setState(() {
         _hasPending = hasPendingNow;
         _hasConfirmed = hasConfirmedNow;
@@ -246,14 +249,10 @@ class _BookingScreenState extends State<BookingScreen> {
           'Ya tienes una cita confirmada activa con este kinesiólogo.',
         );
       }
-      // --- Fin Re-verificación ---
 
-      // Doble check final para ver si alguien más tomó el slot justo ahora
-      final isTaken = await _appointmentService.isSlotTaken(
-        widget.kineId,
-        fullDateTime,
-      );
-      if (isTaken) {
+      // Doble check final (ya no usa la DB, usa el estado local)
+      final slotString = DateFormat('HH:mm').format(fullDateTime);
+      if (_takenSlots.contains(slotString)) {
         _loadSlotsForSelectedDay(); // Recarga los slots para reflejar el cambio
         throw Exception(
           'Este horario acaba de ser reservado por otra persona.',
@@ -267,11 +266,8 @@ class _BookingScreenState extends State<BookingScreen> {
         fechaCita: fullDateTime,
       );
 
-      // 💡 --- CÓDIGO MODIFICADO ---
-      // Muestra éxito y cierra la pantalla
-      if (!mounted) return; // 🛡️ Doble verificación
+      if (!mounted) return;
 
-      // 1. Muestra el POPUP de éxito
       await showAppInfoDialog(
         context: context,
         icon: Icons.check_circle_outline_rounded,
@@ -280,21 +276,16 @@ class _BookingScreenState extends State<BookingScreen> {
             'Tu solicitud fue enviada con éxito. Espera la confirmación del profesional.',
       );
 
-      // 2. Cierra la pantalla DESPUÉS de que el usuario presione "Entendido"
       if (mounted) {
         Navigator.pop(context);
       }
-      // 💡 --- FIN DE LA MODIFICACIÓN ---
     } catch (e) {
-      // Muestra error
-      if (!mounted) return; // 🛡️ Protección de estado
-      // 💡 USA POPUP DE ERROR
+      if (!mounted) return;
       _showErrorPopup(
         'Error al Solicitar',
         'No se pudo agendar la cita: ${e.toString()}',
       );
     } finally {
-      // Siempre desactiva la carga
       if (mounted) {
         setState(() {
           _isBooking = false;
@@ -305,8 +296,6 @@ class _BookingScreenState extends State<BookingScreen> {
 
   /// Navega al chat con el kinesiólogo (AHORA IMPLEMENTADO).
   void _navigateToChat() {
-    // 🚀 IMPLEMENTACIÓN REAL DE NAVEGACIÓN A CHAT
-    // Se utiliza MaterialPageRoute, ya que se asume que no hay rutas nombradas AppRoutes.
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -328,7 +317,6 @@ class _BookingScreenState extends State<BookingScreen> {
     }
 
     // --- 2. Bloques de Restricción ---
-    // Muestra un mensaje si ya tiene una cita PENDIENTE
     if (_hasPending) {
       return _buildRestrictionScreen(
         icon: Icons.info_outline,
@@ -338,7 +326,6 @@ class _BookingScreenState extends State<BookingScreen> {
             'Espera a que esta solicitud sea confirmada o rechazada antes de agendar una nueva con el/la mismo(a) profesional.',
       );
     }
-    // Muestra un mensaje si ya tiene una cita CONFIRMADA (Futura)
     if (_hasConfirmed) {
       return _buildRestrictionScreen(
         icon: Icons.check_circle_outline,
@@ -373,7 +360,6 @@ class _BookingScreenState extends State<BookingScreen> {
             Row(
               children: [
                 Text(
-                  // Formatea la fecha seleccionada (ej: Jue, 30 Octubre 2025)
                   DateFormat(
                     'EEE, dd MMMM yyyy',
                     'es_ES',
@@ -423,12 +409,12 @@ class _BookingScreenState extends State<BookingScreen> {
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.teal.shade700,
                 ),
-                onPressed: _navigateToChat, // Llama a la función corregida
+                onPressed: _navigateToChat,
               ),
             ),
             const SizedBox(height: 25),
 
-            // Botón Solicitar Cita (Deshabilitado si no hay slot o está reservando)
+            // Botón Solicitar Cita
             ElevatedButton.icon(
               icon: _isBooking
                   ? const SizedBox(
@@ -442,7 +428,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   : const Icon(Icons.check_circle_outline),
               label: Text(_isBooking ? 'Solicitando...' : 'Solicitar Cita'),
               onPressed: (_selectedTimeSlot == null || _isBooking)
-                  ? null // Deshabilita si no hay slot seleccionado o está en proceso
+                  ? null // Deshabilita
                   : _handleBooking,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blueAccent.shade700,
@@ -460,7 +446,7 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  /// Widget de utilidad para mostrar las pantallas de restricción (pendiente/confirmada).
+  /// Widget de utilidad para mostrar las pantallas de restricción
   Widget _buildRestrictionScreen({
     required IconData icon,
     required Color iconColor,
@@ -502,6 +488,7 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
+  // 🚀 --- GRILLA DE HORARIOS MODIFICADA (SIN FUTUREBUILDER) ---
   /// Widget que construye la grilla de horarios disponibles (ChoiceChip).
   Widget _buildTimeSlotGrid() {
     // Mensaje si no hay horarios
@@ -545,7 +532,7 @@ class _BookingScreenState extends State<BookingScreen> {
           slot.minute,
         );
 
-        // Bloquea slots pasados
+        // Bloquea slots pasados (Esta lógica está bien)
         if (fullDateTime.isBefore(DateTime.now())) {
           return ChoiceChip(
             label: Text(slot.format(context)),
@@ -563,52 +550,45 @@ class _BookingScreenState extends State<BookingScreen> {
           );
         }
 
-        // FutureBuilder para verificar en tiempo real si el slot está ocupado por otro usuario
-        return FutureBuilder<bool>(
-          future: _appointmentService.isSlotTaken(widget.kineId, fullDateTime),
-          builder: (context, snapshot) {
-            final isTaken = snapshot.data == true;
-            final isLoading =
-                snapshot.connectionState == ConnectionState.waiting;
+        // --- INICIO DE LA MODIFICACIÓN (ELIMINAMOS FUTUREBUILDER) ---
 
-            // Muestra el chip del horario
-            return ChoiceChip(
-              label: Text(slot.format(context)),
-              selected: isSelected,
-              backgroundColor: isLoading
-                  ? Colors.grey.shade200
-                  : (isTaken ? Colors.red.shade100 : Colors.white),
-              selectedColor: Colors.blue.shade700,
-              labelStyle: TextStyle(
-                color: isSelected
-                    ? Colors.white
-                    : (isTaken || isLoading
-                          ? Colors.grey.shade500
-                          : Colors.black87),
-                decoration: (isTaken && !isLoading)
-                    ? TextDecoration.lineThrough
-                    : null,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-              onSelected: (isTaken || isLoading)
-                  ? null // No seleccionable si está tomado o cargando
-                  : (selected) {
-                      setState(() {
-                        _selectedTimeSlot = selected ? index : null;
-                      });
-                    },
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(
-                  color: isSelected
-                      ? Colors.blue.shade700
-                      : (isTaken ? Colors.red.shade200 : Colors.grey.shade300),
-                ),
-              ),
-              showCheckmark: false, // Oculta el checkmark predeterminado
-            );
-          },
+        // Formatea el slot actual a "HH:mm" para comparar
+        final slotString = DateFormat('HH:mm').format(fullDateTime);
+
+        // Comprueba contra el Set que ya cargamos (búsqueda O(1))
+        final isTaken = _takenSlots.contains(slotString);
+
+        // Muestra el chip del horario
+        return ChoiceChip(
+          label: Text(slot.format(context)),
+          selected: isSelected,
+          backgroundColor: isTaken ? Colors.red.shade100 : Colors.white,
+          selectedColor: Colors.blue.shade700,
+          labelStyle: TextStyle(
+            color: isSelected
+                ? Colors.white
+                : (isTaken ? Colors.grey.shade500 : Colors.black87),
+            decoration: isTaken ? TextDecoration.lineThrough : null,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+          onSelected: isTaken
+              ? null // No seleccionable si está tomado
+              : (selected) {
+                  setState(() {
+                    _selectedTimeSlot = selected ? index : null;
+                  });
+                },
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+              color: isSelected
+                  ? Colors.blue.shade700
+                  : (isTaken ? Colors.red.shade200 : Colors.grey.shade300),
+            ),
+          ),
+          showCheckmark: false, // Oculta el checkmark predeterminado
         );
+        // --- FIN DE LA MODIFICACIÓN ---
       },
     );
   }
