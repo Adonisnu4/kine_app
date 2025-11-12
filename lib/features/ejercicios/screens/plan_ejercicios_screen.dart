@@ -3,6 +3,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'plan_ejercicio_detalle_screen.dart';
 
+/// si ya tienes esta clase en otro archivo, usa esa y borra esto
+class AppColors {
+  static const background = Color(0xFFF4F4F4);
+  static const white = Color(0xFFFFFFFF);
+  static const blue = Color(0xFF47A5D6);     // del logo
+  static const orange = Color(0xFFE28825);   // acento
+  static const text = Color(0xFF101010);
+  static const textMuted = Color(0xFF6D6D6D);
+  static const border = Color(0x11000000);
+}
+
 class PlanEjercicioScreen extends StatefulWidget {
   const PlanEjercicioScreen({super.key});
 
@@ -111,23 +122,53 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F6),
-      // sin AppBar: usamos un header tipo iOS
+      // el header lo pone el HomeScreen, acá solo cuerpo
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 14, 16, 4),
+            // bloque de título como los otros
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+              child: Row(
+                children: [
+                  const Text(
+                    'Planes disponibles',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.text,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
               child: Text(
-                'Planes disponibles',
+                'Elige un plan y añádelo a tu progreso.',
                 style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
+                  fontSize: 12.5,
+                  color: AppColors.textMuted,
                 ),
               ),
             ),
+            // línea/acento sutil
+            Padding(
+              padding: const EdgeInsets.only(left: 16, bottom: 8),
+              child: Container(
+                height: 3.5,
+                width: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.orange,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+
+            // LISTA
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: _firestore.collection('plan').snapshots(),
@@ -193,7 +234,8 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
                       final DocumentSnapshot document = docs[index];
-                      final data = document.data() as Map<String, dynamic>;
+                      final data =
+                          document.data() as Map<String, dynamic>;
                       final String planName =
                           data['nombre'] ?? 'Plan sin título';
                       final String planId = document.id;
@@ -202,11 +244,16 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: const Color(0x11000000),
-                          ),
+                          color: AppColors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.border),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x05000000),
+                              offset: Offset(0, 2),
+                              blurRadius: 4,
+                            ),
+                          ],
                         ),
                         child: ListTile(
                           contentPadding: const EdgeInsets.symmetric(
@@ -217,12 +264,12 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                             height: 42,
                             width: 42,
                             decoration: BoxDecoration(
-                              color: const Color(0x0D000000),
+                              color: AppColors.blue.withOpacity(0.10),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(
                               Icons.fitness_center_rounded,
-                              color: Colors.black87,
+                              color: AppColors.blue,
                               size: 22,
                             ),
                           ),
@@ -231,7 +278,7 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 15.5,
-                              color: Colors.black,
+                              color: AppColors.text,
                             ),
                           ),
                           subtitle: descripcion != null && descripcion.isNotEmpty
@@ -241,9 +288,9 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                                     descripcion,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 12.5,
-                                      color: Colors.grey.shade600,
+                                      color: AppColors.textMuted,
                                       height: 1.25,
                                     ),
                                   ),
@@ -253,7 +300,8 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => PlanEjercicioDetalleScreen(
+                                builder: (context) =>
+                                    PlanEjercicioDetalleScreen(
                                   planId: planId,
                                   planName: planName,
                                 ),
@@ -268,7 +316,7 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                             ),
                             icon: const Icon(
                               Icons.add_circle_outline,
-                              color: Colors.black87,
+                              color: AppColors.text,
                             ),
                           ),
                         ),

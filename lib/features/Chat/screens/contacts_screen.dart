@@ -15,7 +15,11 @@ class _ContactsScreenState extends State<ContactsScreen> {
   final ChatService _chatService = ChatService();
   String? _currentUserTypeId;
 
-  static const Color _primary = Color(0xFF111111); // negro suave
+  // paleta
+  static const Color _blue = Color(0xFF47A5D6);
+  static const Color _orange = Color(0xFFE28825);
+  static const Color _bg = Color(0xFFF3F3F3);
+  static const Color _text = Color(0xFF111111);
 
   @override
   void initState() {
@@ -32,43 +36,42 @@ class _ContactsScreenState extends State<ContactsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // mientras no sé quién soy, muestro loader pero con el mismo fondo
     if (_currentUserTypeId == null || _currentUserTypeId == '0') {
       return const Scaffold(
-        backgroundColor: Color(0xFFF3F3F3),
+        backgroundColor: _bg,
         body: SafeArea(
           child: Center(
-            child: CircularProgressIndicator(color: Colors.black87),
+            child: CircularProgressIndicator(color: _blue),
           ),
         ),
       );
     }
 
-    // si soy kine (3) veo pacientes, si soy paciente veo kines
     final String title =
         _currentUserTypeId == '3' ? 'Pacientes' : 'Kinesiólogos';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F3F3),
+      backgroundColor: _bg,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Text(
                 'Chat con $title',
                 style: const TextStyle(
-                  fontSize: 22,
+                  fontSize: 19,
                   fontWeight: FontWeight.w700,
-                  color: _primary,
+                  color: _text,
+                  letterSpacing: -.1,
                 ),
               ),
             ),
-            const SizedBox(height: 6),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
               child: Text(
                 'Selecciona un contacto para continuar.',
                 style: TextStyle(
@@ -77,8 +80,16 @@ class _ContactsScreenState extends State<ContactsScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-
+            // barra más pegadita
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 0, 10),
+              width: 48,
+              height: 3.5,
+              decoration: BoxDecoration(
+                color: _orange,
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
             // LISTA
             Expanded(child: _buildContactsList()),
           ],
@@ -106,7 +117,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
 
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
-            child: CircularProgressIndicator(color: Colors.black87),
+            child: CircularProgressIndicator(color: _blue),
           );
         }
 
@@ -149,8 +160,15 @@ class _ContactsScreenState extends State<ContactsScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0x0F000000)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.015),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: ListTile(
         onTap: () {
@@ -164,16 +182,17 @@ class _ContactsScreenState extends State<ContactsScreen> {
             ),
           );
         },
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         leading: CircleAvatar(
-          radius: 26,
-          backgroundColor: Colors.black.withOpacity(0.08),
+          radius: 25,
+          backgroundColor: _blue.withOpacity(.12),
           child: Text(
             initial,
             style: const TextStyle(
               fontWeight: FontWeight.w700,
-              fontSize: 18,
-              color: _primary,
+              fontSize: 17,
+              color: _text,
             ),
           ),
         ),
@@ -182,7 +201,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
           style: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 15.5,
-            color: _primary,
+            color: _text,
           ),
         ),
         subtitle: receiverUser.isNotEmpty
@@ -196,7 +215,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
             : null,
         trailing: const Icon(
           Icons.chevron_right_rounded,
-          color: Colors.black54,
+          color: Colors.black45,
           size: 20,
         ),
       ),

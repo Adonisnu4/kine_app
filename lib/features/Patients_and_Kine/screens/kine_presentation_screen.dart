@@ -12,6 +12,11 @@ class KinePresentationScreen extends StatelessWidget {
     required this.kineData,
   });
 
+  // paleta centralizada
+  static const Color _blue = Color(0xFF47A5D6);
+  static const Color _orange = Color(0xFFE28825);
+  static const Color _bg = Color(0xFFF4F4F5);
+
   void _navigateToBooking(BuildContext context) {
     Navigator.push(
       context,
@@ -42,46 +47,65 @@ class KinePresentationScreen extends StatelessWidget {
     final String kineTitle = kineData['specialization'] ?? 'Especialista';
     final String kinePhotoUrl = kineData['photoUrl'] ?? '';
     final String kinePresentation =
-        kineData['presentation'] ?? 'Este profesional aún no agrega una presentación.';
+        kineData['presentation'] ??
+            'Este profesional aún no agrega una presentación.';
     final String kineExperience = kineData['experience'] ?? '—';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F4F5), // gris muy claro
+      backgroundColor: _bg,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black87,
         title: const Text(
           'Perfil Profesional',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // CARD PRINCIPAL
+            // acento
+            Container(
+              width: 46,
+              height: 3.5,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: _orange,
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+
+            // CARD de perfil
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0x0F000000)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               padding: const EdgeInsets.all(16),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // avatar
                   CircleAvatar(
-                    radius: 40,
-                    backgroundColor: const Color(0xFFE5E7EB),
+                    radius: 38,
+                    backgroundColor: _blue.withOpacity(.12),
                     backgroundImage:
                         kinePhotoUrl.isNotEmpty ? NetworkImage(kinePhotoUrl) : null,
                     child: kinePhotoUrl.isEmpty
-                        ? const Icon(Icons.person, size: 32, color: Colors.white)
+                        ? Icon(
+                            Icons.person,
+                            size: 34,
+                            color: _blue.withOpacity(.9),
+                          )
                         : null,
                   ),
                   const SizedBox(width: 16),
@@ -92,34 +116,50 @@ class KinePresentationScreen extends StatelessWidget {
                         Text(
                           kineName,
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 17,
                             fontWeight: FontWeight.w700,
                             color: Colors.black,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         Text(
                           kineTitle,
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 13.5,
                             color: Colors.black54,
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            const Icon(Icons.work_outline,
-                                size: 16, color: Colors.black38),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$kineExperience años de experiencia',
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                color: Colors.black45,
+                        const SizedBox(height: 10),
+                        // chip de experiencia
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _blue.withOpacity(.07),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.badge_outlined,
+                                size: 14,
+                                color: _blue,
                               ),
-                            ),
-                          ],
-                        ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$kineExperience años de experiencia',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: _blue.withOpacity(.9),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
                       ],
                     ),
                   ),
@@ -127,7 +167,7 @@ class KinePresentationScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 22),
 
             const Text(
               'Presentación profesional',
@@ -139,13 +179,13 @@ class KinePresentationScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
 
-            // card de presentación
+            // card de presentación (no textfield)
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: const Color(0xFFF9FAFB),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0x10A1A1AA)),
+                border: Border.all(color: const Color(0x0FA1A1AA)),
               ),
               padding: const EdgeInsets.all(14),
               child: Text(
@@ -158,37 +198,46 @@ class KinePresentationScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 22),
+            const SizedBox(height: 26),
 
             // BOTONES
             Row(
               children: [
+                // mensaje
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _navigateToChat(context),
-                    icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                    label: const Text('Mensaje'),
+                    icon: Icon(
+                      Icons.chat_bubble_outline,
+                      size: 18,
+                      color: _blue,
+                    ),
+                    label: Text(
+                      'Mensaje',
+                      style: TextStyle(
+                        color: _blue,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.black87,
-                      side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      side: BorderSide(color: _blue.withOpacity(.35)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      textStyle: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      backgroundColor: Colors.white,
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
+                // agendar
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () => _navigateToBooking(context),
                     icon: const Icon(Icons.calendar_today_rounded, size: 18),
                     label: const Text('Agendar'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: _orange,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
