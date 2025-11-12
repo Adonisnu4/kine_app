@@ -1,4 +1,3 @@
-// lib/features/ejercicios/service/plan_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async'; // Necesario para Future
@@ -117,6 +116,8 @@ class PlanService {
             (dataTomado['fecha_inicio'] as Timestamp?)?.toDate() ??
             DateTime.now(),
         sesionActual: dataTomado['sesion_actual'] as int? ?? 0,
+        // --- 👇 LÍNEA AÑADIDA ---
+        sesiones: dataTomado['sesiones'] as List<dynamic>? ?? [],
       );
     }
 
@@ -131,6 +132,8 @@ class PlanService {
           (dataTomado['fecha_inicio'] as Timestamp?)?.toDate() ??
           DateTime.now(),
       sesionActual: dataTomado['sesion_actual'] as int? ?? 0,
+      // --- 👇 LÍNEA AÑADIDA ---
+      sesiones: dataTomado['sesiones'] as List<dynamic>? ?? [],
     );
   }
 }

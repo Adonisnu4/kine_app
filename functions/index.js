@@ -1,70 +1,217 @@
-// --- Importaciones modernas (Functions v2 + Admin SDK) ---
-const { initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+/**
+ * ============================================================
+ * 🔔 CLOUD FUNCTIONS - UN KINE AMIGO
+ * Compatible con Firebase Functions v2
+ * ============================================================
+ */
 
-// --- Inicializar Firebase ---
-initializeApp();
-const db = getFirestore();
+const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { logger } = require("firebase-functions");
+const admin = require("firebase-admin");
 
-// --- Función principal ---
+// Inicializar Firebase Admin SDK
+admin.initializeApp();
+const db = admin.firestore();
+
+// === CONFIGURACIÓN GENERAL ===
+const REGION = "northamerica-northeast1"; // nam5 // 
+const TIMEZONE = "America/Santiago"; // 🇨🇱 Zona horaria de Chile
+
+/**
+ * ============================================================
+ * 📬 HELPER: Enviar notificaciones a múltiples tokens
+ * ============================================================
+ */
+async function sendToTokens(tokens, notification, data = {}) {
+  const valid = (tokens || []).filter(Boolean);
+  if (!valid.length) {
+    logger.warn("⚠️ No hay tokens válidos para enviar notificación.");
+    return;
+  }
+
+  const payload = {
+    tokens: valid,
+    notification,
+    data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
+  };
+
+  try {
+    const response = await admin.messaging().sendEachForMulticast(payload);
+    logger.info(`📤 Notificación enviada a ${response.successCount} dispositivos`);
+  } catch (err) {
+    logger.error("❌ Error al enviar notificación FCM:", err);
+  }
+}
+
+/**
+ * ============================================================
+ * 🩺 1️⃣ NUEVA CITA → Notifica al kinesiólogo
+ * ============================================================
+ */
+exports.notifyNewAppointment = onDocumentCreated(
+  { region: REGION, document: "citas/{citaId}" },
+  async (event) => {
+    const cita = event.data.data();
+    if (!cita || !cita.kineId) return;
+
+    const kineDoc = await db.collection("usuarios").doc(cita.kineId).get();
+    const tokens = kineDoc.data()?.deviceTokens || [];
+
+    await sendToTokens(
+      tokens,
+      {
+        title: "📅 Nueva solicitud de cita",
+        body: `${cita.pacienteNombre || "Un paciente"} ha solicitado una cita.`,
+      },
+      {
+        type: "cita",
+        citaId: event.params.citaId,
+        pacienteId: cita.pacienteId || "",
+      }
+    );
+
+    logger.info(`📢 Nueva cita notificada al kinesiólogo ${cita.kineId}`);
+  }
+);
+
+/**
+ * ============================================================
+ * 💬 2️⃣ NUEVO MENSAJE → Notifica al receptor
+ * ============================================================
+ */
+exports.notifyNewMessage = onDocumentCreated(
+  { region: REGION, document: "chats/{chatId}/messages/{messageId}" },
+  async (event) => {
+    const msg = event.data.data();
+    if (!msg || !msg.receiverId) {
+      logger.warn("⚠️ Mensaje sin receiverId, se omite.");
+      return;
+    }
+
+    try {
+      const receptorDoc = await db.collection("usuarios").doc(msg.receiverId).get();
+      const tokens = receptorDoc.data()?.deviceTokens || [];
+
+      if (!tokens.length) {
+        logger.warn(`⚠️ Usuario ${msg.receiverId} sin tokens registrados.`);
+        return;
+      }
+
+      const texto = (msg.content || msg.texto || "").toString();
+      const preview = texto.slice(0, 60);
+
+      await sendToTokens(
+        tokens,
+        {
+          title: "💬 Nuevo mensaje",
+          body: `${msg.senderName || "Alguien"}: ${preview}${texto.length > 60 ? "..." : ""}`,
+        },
+        {
+          type: "mensaje",
+          chatWith: msg.senderId || "",
+          chatId: event.params.chatId,
+        }
+      );
+
+      logger.info(`📨 Notificación enviada a ${msg.receiverId}`);
+    } catch (err) {
+      logger.error("❌ Error enviando notificación de mensaje:", err);
+    }
+  }
+);
+
+/**
+ * ============================================================
+ * ✅❌ 3️⃣ CAMBIO DE ESTADO DE CITA → Notifica al paciente
+ * ============================================================
+ */
+exports.notifyCitaStatusChange = onDocumentUpdated(
+  { region: REGION, document: "citas/{citaId}" },
+  async (event) => {
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+
+    if (!before || !after || before.estado === after.estado) return;
+
+    const pacienteId = after.pacienteId;
+    const kineNombre = after.kineNombre || "tu kinesiólogo";
+    const nuevoEstado = after.estado;
+
+    let mensaje = "";
+    if (nuevoEstado === "aceptada") {
+      mensaje = `Tu cita con ${kineNombre} fue aceptada ✅`;
+    } else if (nuevoEstado === "rechazada") {
+      mensaje = `Tu cita con ${kineNombre} fue rechazada ❌`;
+    } else {
+      return;
+    }
+
+    try {
+      const pacienteDoc = await db.collection("usuarios").doc(pacienteId).get();
+      const tokens = pacienteDoc.data()?.deviceTokens || [];
+
+      await sendToTokens(
+        tokens,
+        {
+          title: "📅 Estado de tu cita",
+          body: mensaje,
+        },
+        {
+          type: "cita_estado",
+          citaId: event.params.citaId,
+          estado: nuevoEstado,
+        }
+      );
+
+      logger.info(`📢 Notificación enviada al paciente ${pacienteId}`);
+    } catch (err) {
+      logger.error("❌ Error enviando notificación de cita:", err);
+    }
+  }
+);
+
+/**
+ * ============================================================
+ * 💳 4️⃣ STRIPE - Actualiza plan de usuario
+ * ============================================================
+ */
 exports.updateUserPlanOnSubscription = onDocumentWritten(
-  {
-    document: "customers/{userId}/subscriptions/{subscriptionId}",
-    region: "us-central1", // Cambia si tu proyecto usa otra región
-  },
+  { region: "us-central1", document: "customers/{userId}/subscriptions/{subscriptionId}" },
   async (event) => {
     try {
       const afterData = event.data.after?.data();
       const beforeData = event.data.before?.data();
 
-      // ⚠️ Si el documento fue eliminado, salimos.
       if (!afterData) {
-        console.log("🗑️ Suscripción eliminada, no se actualiza el plan.");
-        return null;
+        logger.info("🗑️ Suscripción eliminada, sin acción.");
+        return;
       }
 
       const userId = event.params.userId;
       const status = afterData.status;
       const userRef = db.collection("usuarios").doc(userId);
 
-      // Evita ejecutar si no hay cambios en el estado.
-      if (beforeData && beforeData.status === afterData.status) {
-        console.log(`⏸️ Estado sin cambios para ${userId}: ${status}`);
-        return null;
-      }
+      if (beforeData && beforeData.status === afterData.status) return;
 
-      console.log(`🔄 Cambio detectado para usuario ${userId} → Estado: ${status}`);
-
-      // === CASO 1: Suscripción activa o en prueba ===
       if (status === "active" || status === "trialing") {
-        const premiumData = {
+        await userRef.update({
           plan: "pro",
           isPro: true,
           perfilDestacado: true,
           limitePacientes: 9999,
-        };
-
-        await userRef.update(premiumData);
-        console.log(`✅ Usuario ${userId} actualizado a plan PRO.`);
-
-      // === CASO 2: Suscripción cancelada o vencida ===
+        });
+        logger.info(`✅ Usuario ${userId} actualizado a plan PRO.`);
       } else if (["canceled", "unpaid", "incomplete_expired"].includes(status)) {
-        const standardData = {
+        await userRef.update({
           plan: "estandar",
           isPro: false,
           perfilDestacado: false,
           limitePacientes: 50,
-        };
-
-        await userRef.update(standardData);
-        console.log(`⚠️ Usuario ${userId} revertido a plan ESTÁNDAR.`);
+        });
+        logger.info(`⚠️ Usuario ${userId} revertido a plan ESTÁNDAR.`);
       }
-
-      return null;
     } catch (error) {
-      console.error("❌ Error en updateUserPlanOnSubscription:", error);
-      return null;
+      logger.error("❌ Error en updateUserPlanOnSubscription:", error);
     }
   }
 );

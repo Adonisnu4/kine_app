@@ -10,6 +10,10 @@ class PlanTomado {
   fechaInicio; // Viene de la colección 'plan_tomados_por_usuarios'
   final int sesionActual; // Viene de la colección 'plan_tomados_por_usuarios'
 
+  // --- 👇 CAMPO NUEVO Y VITAL ---
+  // Debe ser poblado desde 'plan_tomados_por_usuarios'
+  final List<dynamic> sesiones;
+
   PlanTomado({
     required this.id,
     required this.nombre,
@@ -17,5 +21,6 @@ class PlanTomado {
     required this.estado,
     required this.fechaInicio,
     required this.sesionActual,
+    this.sesiones = const [], // 👈 Añadido
   });
 }
