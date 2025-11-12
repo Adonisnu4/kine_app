@@ -3,6 +3,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kine_app/features/ejercicios/screens/sesion_ejercicio_screen.dart';
 
+/// Si ya tienes esta clase en otro archivo, usa esa y borra esta.
+class AppColors {
+  static const background = Color(0xFFF4F4F4);
+  static const white = Color(0xFFFFFFFF);
+  static const blue = Color(0xFF47A5D6);     // azul del logo
+  static const orange = Color(0xFFE28825);   // acento
+  static const text = Color(0xFF101010);
+  static const textMuted = Color(0xFF6D6D6D);
+  static const border = Color(0x11000000);
+}
+
 class PlanEjercicioDetalleScreen extends StatefulWidget {
   final String planId;
   final String planName;
@@ -24,41 +35,36 @@ class _PlanEjercicioDetalleScreenState
 
   // ----------------------- COMENZAR PLAN -----------------------
   void _comenzarPlan(List<dynamic> sesionesMaestras) async {
-    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final firestore = FirebaseFirestore.instance;
     final userId = FirebaseAuth.instance.currentUser?.uid;
 
     if (userId == null) {
-      // en tu proyecto puedes mostrar snackbar aquí
+      // aquí puedes mostrar un snackbar
       throw Exception("Usuario no autenticado.");
     }
 
     if (sesionesMaestras.isEmpty) {
-      debugPrint('⚠️ Error: El plan no tiene sesiones definidas.');
+      debugPrint('⚠️ El plan no tiene sesiones definidas.');
       return;
     }
 
-    final String planId = widget.planId;
+    final planId = widget.planId;
     if (planId.isEmpty) {
-      debugPrint('⚠️ Error: planId no válido.');
+      debugPrint('⚠️ planId no válido.');
       return;
     }
 
-    final DocumentReference planRef = firestore.collection('plan').doc(planId);
-    final DocumentReference userRef =
-        firestore.collection('usuarios').doc(userId);
+    final planRef = firestore.collection('plan').doc(planId);
+    final userRef = firestore.collection('usuarios').doc(userId);
 
-    // clonamos las sesiones para guardarlas en el progreso
-    final List<Map<String, dynamic>> sesionesProgreso =
-        sesionesMaestras.map((s) {
+    final sesionesProgreso = sesionesMaestras.map((s) {
       final sessionMap = Map<String, dynamic>.from(s);
       sessionMap['completada'] = sessionMap['completada'] ?? false;
       return sessionMap;
     }).toList();
 
-    final CollectionReference ejecucionCollection =
-        firestore.collection('plan_tomados_por_usuarios');
-
-    final DocumentReference ejecucionRef = await ejecucionCollection.add({
+    final ejecucionRef =
+        await firestore.collection('plan_tomados_por_usuarios').add({
       'usuario': userRef,
       'plan': planRef,
       'estado': 'en_progreso',
@@ -67,12 +73,11 @@ class _PlanEjercicioDetalleScreenState
       'sesiones': sesionesProgreso,
     });
 
-    debugPrint('✅ Nuevo plan iniciado: ${ejecucionRef.id}');
-
-    // ir directo a la primera sesión
+    // ir a la sesión
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => SesionEjercicioScreen(
+        builder: (_) => SesionEjercicioScreen(
           ejecucionId: ejecucionRef.id,
         ),
       ),
@@ -83,9 +88,9 @@ class _PlanEjercicioDetalleScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F6),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.white,
         elevation: 0,
         foregroundColor: Colors.black,
         title: Text(
@@ -114,12 +119,12 @@ class _PlanEjercicioDetalleScreenState
             return const Center(child: Text('No se encontró el plan.'));
           }
 
-          final Map<String, dynamic> planData =
+          final planData =
               snapshot.data!.data() as Map<String, dynamic>;
-          final List<dynamic> sesiones = planData['sesiones'] ?? [];
-          final String descripcion =
+          final sesiones = planData['sesiones'] as List<dynamic>? ?? [];
+          final descripcion =
               planData['descripcion'] ?? 'No hay descripción disponible.';
-          final int duracionSemanas = planData['duracion_semanas'] ?? 0;
+          final duracionSemanas = planData['duracion_semanas'] ?? 0;
 
           if (sesiones.isEmpty) {
             return const Center(
@@ -129,16 +134,11 @@ class _PlanEjercicioDetalleScreenState
 
           return Column(
             children: [
-              _buildPlanInfoCard(
-                context,
-                descripcion,
-                duracionSemanas,
-              ),
-              // lista de sesiones
+              _buildPlanInfoCard(descripcion, duracionSemanas),
               Expanded(child: _buildSesionesList(sesiones)),
-              // botón fijo
+              // botón fijo abajo
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                 child: ElevatedButton.icon(
                   onPressed: () => _comenzarPlan(sesiones),
                   icon: const Icon(Icons.play_arrow_rounded, size: 26),
@@ -154,9 +154,9 @@ class _PlanEjercicioDetalleScreenState
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
+                    backgroundColor: Color(0xFFE28825),
                     foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 48),
+                    minimumSize: const Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -172,22 +172,24 @@ class _PlanEjercicioDetalleScreenState
   }
 
   // ----------------------- UI HELPERS -----------------------
-
-  Widget _buildPlanInfoCard(
-    BuildContext context,
-    String descripcion,
-    int duracionSemanas,
-  ) {
-    final String duracionText =
+  Widget _buildPlanInfoCard(String descripcion, int duracionSemanas) {
+    final duracionText =
         duracionSemanas > 0 ? '$duracionSemanas semanas' : 'No especificada';
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 14, 16, 4),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0x11000000)),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x05000000),
+            offset: Offset(0, 2),
+            blurRadius: 4,
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,25 +197,25 @@ class _PlanEjercicioDetalleScreenState
           Row(
             children: [
               Container(
-                height: 34,
-                width: 34,
+                height: 36,
+                width: 36,
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(.035),
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.blue.withOpacity(.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
-                  Icons.calendar_today_rounded,
-                  size: 16,
-                  color: Colors.black,
+                  Icons.calendar_month_rounded,
+                  size: 18,
+                  color: AppColors.blue,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Text(
                 'Duración total: $duracionText',
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black,
+                  color: AppColors.text,
                 ),
               ),
             ],
@@ -225,16 +227,26 @@ class _PlanEjercicioDetalleScreenState
             'Descripción del plan',
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: Colors.black,
+              color: AppColors.text,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             descripcion,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 13.5,
-              color: Colors.grey.shade700,
-              height: 1.3,
+              color: AppColors.textMuted,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // acento naranja chiquito
+          Container(
+            width: 40,
+            height: 3,
+            decoration: BoxDecoration(
+              color: AppColors.orange,
+              borderRadius: BorderRadius.circular(99),
             ),
           ),
         ],
@@ -247,11 +259,10 @@ class _PlanEjercicioDetalleScreenState
       padding: const EdgeInsets.only(top: 10, bottom: 12),
       itemCount: sesiones.length,
       itemBuilder: (context, index) {
-        final Map<String, dynamic> sesionActual =
-            sesiones[index] as Map<String, dynamic>;
-        final int numeroSesion = sesionActual['numero_sesion'] ?? (index + 1);
-        final dynamic ejerciciosData = sesionActual['ejercicios'];
-        final bool sesionCompletada = sesionActual['completada'] == true;
+        final sesionActual = sesiones[index] as Map<String, dynamic>;
+        final numeroSesion = sesionActual['numero_sesion'] ?? (index + 1);
+        final ejerciciosData = sesionActual['ejercicios'];
+        final sesionCompletada = sesionActual['completada'] == true;
 
         int totalEjerciciosSesion = 0;
         if (ejerciciosData is Map) {
@@ -263,44 +274,54 @@ class _PlanEjercicioDetalleScreenState
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.white,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0x11000000)),
+            border: Border.all(color: AppColors.border),
           ),
           child: Theme(
-            // para que el ExpansionTile no cambie el color
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
             child: ExpansionTile(
               tilePadding:
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
               childrenPadding: const EdgeInsets.only(bottom: 10),
-              leading: Icon(
-                sesionCompletada
-                    ? Icons.check_circle_rounded
-                    : Icons.schedule_rounded,
-                color: sesionCompletada ? Colors.green : Colors.black,
-                size: 26,
+              leading: Container(
+                height: 32,
+                width: 32,
+                decoration: BoxDecoration(
+                  color: sesionCompletada
+                      ? Colors.green.withOpacity(.12)
+                      : AppColors.blue.withOpacity(.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  sesionCompletada
+                      ? Icons.check_rounded
+                      : Icons.access_time_rounded,
+                  color: sesionCompletada ? Colors.green : AppColors.blue,
+                  size: 18,
+                ),
               ),
               title: Text(
                 'Sesión $numeroSesion',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 16,
-                  color:
-                      sesionCompletada ? Colors.grey.shade700 : Colors.black87,
+                  color: sesionCompletada
+                      ? AppColors.textMuted
+                      : AppColors.text,
                   decoration:
                       sesionCompletada ? TextDecoration.lineThrough : null,
                 ),
               ),
               subtitle: Text(
                 '$totalEjerciciosSesion ejercicios',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12.5,
-                  color: Colors.grey.shade600,
+                  color: AppColors.textMuted,
                 ),
               ),
-              iconColor: Colors.black,
-              collapsedIconColor: Colors.black54,
+              iconColor: AppColors.text,
+              collapsedIconColor: AppColors.textMuted,
               children: _buildEjerciciosList(ejerciciosData),
             ),
           ),
@@ -323,11 +344,10 @@ class _PlanEjercicioDetalleScreenState
 
     if (ejerciciosData is Map<String, dynamic>) {
       return ejerciciosData.entries.map<Widget>((entry) {
-        final Map<String, dynamic> item = entry.value as Map<String, dynamic>;
-        final bool completado = item['completado'] ?? false;
-        final int tiempoSesion = item['tiempo_segundos'] ?? 0;
-        final DocumentReference? ejercicioRef =
-            item['ejercicio'] as DocumentReference?;
+        final item = entry.value as Map<String, dynamic>;
+        final completado = item['completado'] ?? false;
+        final tiempoSesion = item['tiempo_segundos'] ?? 0;
+        final ejercicioRef = item['ejercicio'] as DocumentReference?;
 
         if (ejercicioRef == null) {
           return const ListTile(
@@ -354,7 +374,7 @@ class _PlanEjercicioDetalleScreenState
     bool completado,
     int tiempoSesion,
   ) {
-    final DocumentReference ejercicioRef =
+    final ejercicioRef =
         _firestore.collection('ejercicios').doc(ejercicioId);
 
     return StreamBuilder<DocumentSnapshot>(
@@ -380,11 +400,9 @@ class _PlanEjercicioDetalleScreenState
           );
         }
 
-        final Map<String, dynamic> ejercicioData =
+        final ejercicioData =
             snapshot.data!.data() as Map<String, dynamic>;
-
-        final String nombre =
-            ejercicioData['nombre'] ?? 'Ejercicio sin nombre';
+        final nombre = ejercicioData['nombre'] ?? 'Ejercicio sin nombre';
 
         return _buildEjercicioTile(
           nombreEjercicio: nombre,
@@ -401,23 +419,26 @@ class _PlanEjercicioDetalleScreenState
     required bool completado,
   }) {
     return ListTile(
-      contentPadding: const EdgeInsets.only(left: 58, right: 16),
+      contentPadding: const EdgeInsets.only(left: 60, right: 16),
       leading: Icon(
         completado ? Icons.check_circle : Icons.directions_run_rounded,
-        color: completado ? Colors.green : Colors.black,
+        color: completado ? Colors.green : AppColors.text,
       ),
       title: Text(
         nombreEjercicio,
         style: TextStyle(
           fontWeight: FontWeight.w500,
-          color: completado ? Colors.grey.shade700 : Colors.black87,
+          color: completado ? AppColors.textMuted : AppColors.text,
           decoration: completado ? TextDecoration.lineThrough : null,
         ),
       ),
       trailing: tiempoSegundos > 0
           ? Text(
               'Duración: $tiempoSegundos seg',
-              style: const TextStyle(fontSize: 12.5, color: Colors.black54),
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.textMuted,
+              ),
             )
           : null,
     );

@@ -1,10 +1,15 @@
-// lib/screens/register_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// 💡 IMPORTAMOS AMBOS TIPOS DE POPUP
 import 'package:kine_app/shared/widgets/app_dialog.dart';
+
+/// misma paleta que splash/login
+class AppColors {
+  static const blue = Color(0xFF47A5D6);
+  static const orange = Color(0xFFE28825);
+  static const greyText = Color(0xFF8A9397);
+  static const border = Color(0xFFDDDDDD);
+}
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -14,9 +19,6 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  // =======================
-  // 1) Estado / controladores
-  // =======================
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -28,8 +30,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   bool _isLoading = false;
-  String? _selectedGender;
   bool _showPassword = false;
+  String? _selectedGender;
 
   final List<String> _genders = const [
     'Masculino',
@@ -48,10 +50,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // =======================
-  // 3) Lógica de registro (💡 MODIFICADA)
-  // =======================
-  // =======================
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -64,12 +62,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       final user = cred.user;
       if (user != null) {
-        await user.sendEmailVerification(); // <- Async Gap
-
-        // 🚨 LÍNEA BORRADA (Ya no creamos la referencia)
-        // final tipoUsuarioRef = _firestore
-        //     .collection('tipo_usuario')
-        //     .doc('1');
+        await user.sendEmailVerification();
 
         final userData = {
           'nombre_completo': _nameController.text.trim(),
@@ -77,81 +70,58 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'email': _emailController.text.trim(),
           'edad': int.tryParse(_ageController.text.trim()),
           'sexo': _selectedGender,
-
-          // 🔥 ¡ESTA ES LA CORRECCIÓN!
-          // Ahora guardamos el NÚMERO 1, igual que en el login con Google/FB.
           'tipo_usuario': 1,
-
           'fecha_registro': FieldValue.serverTimestamp(),
           'plan': 'estandar',
           'perfilDestacado': false,
           'limitePacientes': 50,
         };
 
-        await _firestore
-            .collection('usuarios')
-            .doc(user.uid)
-            .set(userData); // <- Async Gap
+        await _firestore.collection('usuarios').doc(user.uid).set(userData);
+        await _auth.signOut();
 
-        await _auth.signOut(); // <- Async Gap
-
-        // 💡 --- CORRECCIÓN ASYNC GAP ---
         if (!mounted) return;
-
-        // 1. Muestra el popup de éxito
         await showAppInfoDialog(
           context: context,
           icon: Icons.mark_email_read_rounded,
-          title: '¡Registro Exitoso!',
+          title: '¡Registro exitoso!',
           content:
-              'Te enviamos un correo de verificación. Por favor, revisa tu bandeja de entrada y spam.',
-          confirmText: 'Entendido',
+              'Te enviamos un correo de verificación. Revísalo antes de iniciar sesión.',
+          confirmText: 'Ok',
         );
-
-        // 2. Vuelve al login
-        if (mounted) {
-          // 💡 Doble chequeo por si acaso
-          Navigator.pop(context);
-        }
+        if (mounted) Navigator.pop(context);
       }
     } on FirebaseAuthException catch (e) {
-      // ... (Tu manejo de errores está perfecto, no se toca) ...
-
       String title;
       String message;
       IconData icon;
 
       if (e.code == 'weak-password') {
-        title = 'Contraseña Débil';
-        message = 'La contraseña es demasiado débil (mínimo 6 caracteres).';
+        title = 'Contraseña débil';
+        message = 'La contraseña es demasiado corta (mínimo 6).';
         icon = Icons.lock_clock_rounded;
       } else if (e.code == 'email-already-in-use') {
-        title = 'Correo ya Existe';
-        message = 'Ya existe una cuenta registrada con este correo.';
+        title = 'Correo ya registrado';
+        message = 'Ya existe una cuenta con este correo.';
         icon = Icons.alternate_email_rounded;
       } else if (e.code == 'invalid-email') {
-        title = 'Correo Inválido';
-        message = 'El formato del correo electrónico es inválido.';
+        title = 'Correo inválido';
+        message = 'Revisa el formato del correo.';
         icon = Icons.email_outlined;
       } else {
-        title = 'Error Desconocido';
-        message = 'Ocurrió un error inesperado. Por favor, inténtalo de nuevo.';
+        title = 'Error';
+        message = e.message ?? 'Ocurrió un error inesperado.';
         icon = Icons.error_outline_rounded;
       }
 
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
 
-      // Muestra el POPUP de error
       await showAppErrorDialog(
         context: context,
-        icon: icon, // 💡 Icono añadido
+        icon: icon,
         title: title,
         content: message,
       );
-
-      return;
     } finally {
       if (mounted && _isLoading) {
         setState(() => _isLoading = false);
@@ -159,22 +129,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // =======================
-  // 4) UI (Sin cambios)
-  // =======================
   @override
   Widget build(BuildContext context) {
-    // Paleta base del login
     const inputRadius = 28.0;
     const fieldHeight = 56.0;
 
-    InputBorder border([Color c = const Color(0xFFDDDDDD)]) =>
-        OutlineInputBorder(
+    InputBorder border([Color c = AppColors.border]) => OutlineInputBorder(
           borderRadius: BorderRadius.circular(inputRadius),
-          borderSide: BorderSide(color: c, width: 1.4),
+          borderSide: BorderSide(color: c, width: 1.3),
         );
 
     return Scaffold(
+      backgroundColor: const Color(0xFFFDFDFD),
       appBar: AppBar(
         leading: IconButton(
           onPressed: _isLoading ? null : () => Navigator.pop(context),
@@ -194,14 +160,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 520,
-              ), // columna estrecha
+              constraints: const BoxConstraints(maxWidth: 520),
               child: Form(
                 key: _formKey,
                 child: Column(
                   children: [
-                    const SizedBox(height: 8),
+                    // acento naranja
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        width: 46,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.orange,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                     const Text(
                       'Ingresa tus datos\npara registrarte.',
                       textAlign: TextAlign.center,
@@ -211,9 +187,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Completa los campos para crear tu perfil.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.greyText,
+                        fontSize: 13.5,
+                      ),
+                    ),
+                    const SizedBox(height: 26),
 
-                    // ---- Campos ----
                     _LabeledField(
                       height: fieldHeight,
                       controller: _nameController,
@@ -225,7 +209,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderBuilder: border,
                     ),
                     const SizedBox(height: 14),
-
                     _LabeledField(
                       height: fieldHeight,
                       controller: _usernameController,
@@ -243,7 +226,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderBuilder: border,
                     ),
                     const SizedBox(height: 14),
-
                     _LabeledField(
                       height: fieldHeight,
                       controller: _emailController,
@@ -260,7 +242,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderBuilder: border,
                     ),
                     const SizedBox(height: 14),
-
                     _LabeledField(
                       height: fieldHeight,
                       controller: _passwordController,
@@ -274,6 +255,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           _showPassword
                               ? Icons.visibility_off
                               : Icons.visibility,
+                          color: Colors.black54,
                         ),
                       ),
                       validator: (v) => (v == null || v.length < 6)
@@ -282,7 +264,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderBuilder: border,
                     ),
                     const SizedBox(height: 14),
-
                     _LabeledField(
                       height: fieldHeight,
                       controller: _ageController,
@@ -300,38 +281,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Dropdown estilizado (campo)
+                    // 🔥 dropdown sin iconos en cada opción
                     DropdownButtonFormField<String>(
                       isExpanded: true,
-                      initialValue: _selectedGender,
+                      value: _selectedGender,
                       onChanged: (v) => setState(() => _selectedGender = v),
                       validator: (v) =>
                           v == null ? 'El sexo es obligatorio.' : null,
                       items: _genders.map((g) {
                         return DropdownMenuItem<String>(
                           value: g,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.wc, size: 18),
-                                const SizedBox(width: 10),
-                                Text(g),
-                              ],
-                            ),
-                          ),
+                          child: Text(g), // <- solo texto
                         );
                       }).toList(),
                       icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                      menuMaxHeight: 360,
-                      dropdownColor: Colors.white, // fondo del menú
-                      borderRadius: BorderRadius.circular(
-                        20,
-                      ), // esquinas del menú
-                      style: const TextStyle(fontSize: 16),
+                      borderRadius: BorderRadius.circular(20),
+                      dropdownColor: Colors.white,
                       decoration: InputDecoration(
                         hintText: 'Selecciona tu sexo*',
-                        prefixIcon: const Icon(Icons.wc),
+                        prefixIcon: const Icon(Icons.wc), // <- aquí el único icono
                         filled: true,
                         fillColor: Colors.white,
                         contentPadding: const EdgeInsets.symmetric(
@@ -339,28 +307,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           vertical: 18,
                         ),
                         enabledBorder: border(),
-                        focusedBorder: border(Colors.black),
+                        focusedBorder: border(AppColors.blue),
                         errorBorder: border(Colors.redAccent),
                         focusedErrorBorder: border(Colors.redAccent),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 26),
 
-                    // Botón negro full width
                     SizedBox(
                       width: double.infinity,
                       height: 52,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _register,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
+                          backgroundColor: AppColors.blue,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(28),
-                          ),
-                          textStyle: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
                           ),
                           elevation: 0,
                         ),
@@ -373,16 +336,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   strokeWidth: 3,
                                 ),
                               )
-                            : const Text('Registrarme'),
+                            : const Text(
+                                'Registrarme',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(height: 14),
-
-                    // Link sutil como en login
                     TextButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () => Navigator.pop(context),
+                      onPressed:
+                          _isLoading ? null : () => Navigator.pop(context),
                       child: Text.rich(
                         TextSpan(
                           text: '¿Ya tienes una cuenta? ',
@@ -391,14 +357,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             TextSpan(
                               text: 'Inicia sesión',
                               style: TextStyle(
-                                color: Colors.black,
+                                color: AppColors.blue,
                                 fontWeight: FontWeight.w700,
-                                decoration: TextDecoration.underline,
-                              ), // negrita
+                              ),
                             ),
                           ],
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -409,14 +373,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
       ),
-      backgroundColor: const Color(0xFFFDFDFD),
     );
   }
 }
 
-/*--------------------------
-  Campo reutilizable estilizado
----------------------------*/
 class _LabeledField extends StatelessWidget {
   const _LabeledField({
     required this.controller,
@@ -460,7 +420,7 @@ class _LabeledField extends StatelessWidget {
             vertical: 18,
           ),
           enabledBorder: borderBuilder(),
-          focusedBorder: borderBuilder(Colors.black),
+          focusedBorder: borderBuilder(AppColors.blue),
           errorBorder: borderBuilder(Colors.redAccent),
           focusedErrorBorder: borderBuilder(Colors.redAccent),
         ),

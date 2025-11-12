@@ -6,6 +6,17 @@ import 'package:kine_app/features/ejercicios/models/plan_tomado.dart';
 import 'package:kine_app/features/ejercicios/screens/sesion_ejercicio_screen.dart';
 import 'package:kine_app/features/ejercicios/service/plan_service.dart';
 
+/// misma paleta que splash/login
+class AppColors {
+  static const white = Color(0xFFFFFFFF);
+  static const background = Color(0xFFF6F6F6);
+
+  static const blue = Color(0xFF47A5D6);    // primario
+  static const orange = Color(0xFFE28825);  // acento
+  static const greyText = Color(0xFF8A9397);
+  static const lightBorder = Color(0x11000000);
+}
+
 class Index extends StatefulWidget {
   const Index({super.key});
 
@@ -14,11 +25,9 @@ class Index extends StatefulWidget {
 }
 
 class _IndexState extends State<Index> {
-  // servicio
   final PlanService _planService = PlanService();
   late Future<List<PlanTomado>> _plansFuture;
 
-  // tips auto
   late Timer _tipTimer;
   final Random _rnd = Random();
   late List<String> _allTips;
@@ -28,7 +37,6 @@ class _IndexState extends State<Index> {
   void initState() {
     super.initState();
 
-    // lista de tips
     _allTips = const [
       'Muévete cada 45 min si trabajas sentado.',
       'Calienta antes de hacer fuerza.',
@@ -74,13 +82,11 @@ class _IndexState extends State<Index> {
       'Celebra pequeños avances de movilidad.',
     ];
 
-    // tip inicial random
     _currentTipIndex = _rnd.nextInt(_allTips.length);
 
-    // cargar planes
     _reloadPlans();
 
-    // timer para cambiar tip
+    // cada 10s cambia de tip
     _tipTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       if (!mounted) return;
       setState(() {
@@ -98,7 +104,6 @@ class _IndexState extends State<Index> {
   int _getNextRandomIndex(int current) {
     if (_allTips.length <= 1) return current;
     int next = current;
-    // evitar repetir el mismo seguido
     while (next == current) {
       next = _rnd.nextInt(_allTips.length);
     }
@@ -128,14 +133,14 @@ class _IndexState extends State<Index> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF6F6F6),
+        backgroundColor: AppColors.background,
         body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // título
+              // header tipo splash (título + barrita naranja)
               const Padding(
-                padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
+                padding: EdgeInsets.fromLTRB(16, 20, 16, 4),
                 child: Text(
                   'KineApp | Guías',
                   style: TextStyle(
@@ -146,8 +151,19 @@ class _IndexState extends State<Index> {
                   ),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.only(left: 16, bottom: 10),
+                child: Container(
+                  width: 48,
+                  height: 3.5,
+                  decoration: BoxDecoration(
+                    color: AppColors.orange,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
 
-              // guía kinesiología
+              // bloque guía
               const _HealthGuideSection(),
 
               // título tips
@@ -173,12 +189,12 @@ class _IndexState extends State<Index> {
                 ),
               ),
 
-              // separador fino
+              // separador
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 18, 16, 4),
                 child: Divider(
                   height: 0,
-                  thickness: 0.4,
+                  thickness: 0.35,
                   color: Color(0x22000000),
                 ),
               ),
@@ -245,7 +261,7 @@ class _IndexState extends State<Index> {
                               icon: const Icon(Icons.add, size: 18),
                               label: const Text('Comenzar ahora'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.black,
+                                backgroundColor: AppColors.blue,
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 padding: const EdgeInsets.symmetric(
@@ -253,7 +269,7 @@ class _IndexState extends State<Index> {
                                   vertical: 12,
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
                               ),
                             ),
@@ -264,8 +280,7 @@ class _IndexState extends State<Index> {
 
                     final plans = snapshot.data!;
                     return ListView.builder(
-                      padding:
-                          const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                       itemCount: plans.length,
                       itemBuilder: (context, index) {
                         final plan = plans[index];
@@ -319,22 +334,23 @@ class _TipChangingCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(14.0),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: const Color(0x11000000),
+            color: AppColors.lightBorder,
           ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // numerito
+            // numerito con borde azul
             Container(
               height: 32,
               width: 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0x11000000),
+                border: Border.all(color: AppColors.orange.withOpacity(.65)),
+                color: AppColors.white,
                 shape: BoxShape.circle,
               ),
               child: Text(
@@ -346,7 +362,6 @@ class _TipChangingCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            // texto
             Expanded(
               child: Text(
                 tip,
@@ -375,10 +390,10 @@ class _HealthGuideSection extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: const Color(0x11000000),
+          color: AppColors.lightBorder,
         ),
       ),
       child: Column(
@@ -405,20 +420,20 @@ class _HealthGuideSection extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0x0F000000),
+              color: AppColors.blue.withOpacity(.08),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: const [
-                Icon(Icons.timelapse, size: 16, color: Colors.black87),
+                Icon(Icons.timelapse, size: 16, color: AppColors.blue),
                 SizedBox(width: 6),
                 Text(
                   'Estado: en progreso',
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black87,
+                    color: AppColors.blue,
                   ),
                 ),
               ],
@@ -451,7 +466,7 @@ class _PlanCard extends StatelessWidget {
         break;
       case 'en_progreso':
         estadoDisplay = 'En progreso';
-        estadoColor = Colors.orange.shade700;
+        estadoColor = AppColors.orange;
         break;
       case 'pendiente':
         estadoDisplay = 'Pendiente';
@@ -465,13 +480,13 @@ class _PlanCard extends StatelessWidget {
 
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: AppColors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       margin: const EdgeInsets.only(bottom: 14.0),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0x11000000)),
+          border: Border.all(color: AppColors.lightBorder),
         ),
         child: Padding(
           padding: const EdgeInsets.all(14.0),
@@ -537,7 +552,7 @@ class _PlanCard extends StatelessWidget {
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: Color(0xFF47A5D6),
                       foregroundColor: Colors.white,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 11),
