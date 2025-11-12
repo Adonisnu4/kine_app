@@ -307,12 +307,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   color: AppColors.text,
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.person_outline,
-                                color: AppColors.blue,
-                                size: 22,
-                              ),
                               const SizedBox(width: 8),
                               const Column(
                                 mainAxisAlignment: MainAxisAlignment.center,

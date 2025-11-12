@@ -1,11 +1,11 @@
+// lib/screens/my_patients_screen.dart
 import 'package:flutter/material.dart';
 import 'package:kine_app/features/Chat/screens/chat_screen.dart';
 import 'package:kine_app/features/Patients_and_Kine/screens/patient_appointment_history_screen.dart';
 import 'package:kine_app/features/Stripe/services/stripe_service.dart';
 import 'package:kine_app/features/Stripe/screens/subscription_screen.dart';
 import 'package:kine_app/features/auth/services/user_service.dart';
-
-// 💡 --- IMPORTAMOS LA NUEVA PANTALLA DE PROGRESO ---
+// progreso de ejercicios
 import 'package:kine_app/features/Patients_and_Kine/screens/kine_patient_progress_screen.dart';
 
 class MyPatientsScreen extends StatefulWidget {
@@ -16,6 +16,12 @@ class MyPatientsScreen extends StatefulWidget {
 }
 
 class _MyPatientsScreenState extends State<MyPatientsScreen> {
+  // Paleta centralizada (coincide con el resto de pantallas)
+  static const _bg = Color(0xFFF3F3F3);
+  static const _blue = Color(0xFF47A5D6);
+  static const _orange = Color(0xFFE28825);
+  static const _border = Color(0x11000000);
+
   final StripeService _stripeService = StripeService();
   late Future<List<Map<String, dynamic>>> _patientsFuture;
 
@@ -31,42 +37,32 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
 
   Future<void> _checkPlanAndLoadPatients() async {
     if (!mounted) return;
-    setState(() {
-      _isLoadingProStatus = true;
-    });
+    setState(() => _isLoadingProStatus = true);
 
     Map<String, dynamic> planStatus;
     try {
       planStatus = await _stripeService.getUserPlanStatus();
     } catch (e) {
-      print("Error al comprobar estado Pro: $e");
       planStatus = {'isPro': false, 'limit': 50};
     }
 
-    if (mounted) {
-      setState(() {
-        _isPro = planStatus['isPro'] as bool;
-        _patientLimit = planStatus['limit'] as int;
-        _isLoadingProStatus = false;
-        // Esta función 'getKinePatients' debe existir en tu kine_service.dart
-        _patientsFuture = getKinePatients();
-      });
-    }
-  }
-
-  void _refreshData() {
+    if (!mounted) return;
     setState(() {
-      _isLoadingProStatus = true;
+      _isPro = planStatus['isPro'] as bool;
+      _patientLimit = planStatus['limit'] as int;
+      _isLoadingProStatus = false;
+      _patientsFuture = getKinePatients();
     });
-    _checkPlanAndLoadPatients();
   }
 
-  // Navegación a Historial de Citas
+  void _refreshData() => _checkPlanAndLoadPatients();
+
+  // Navegaciones
   void _navigateToHistory(String patientId, String patientName) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PatientAppointmentHistoryScreen(
+        builder: (_) => PatientAppointmentHistoryScreen(
           patientId: patientId,
           patientName: patientName,
         ),
@@ -74,24 +70,23 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     );
   }
 
-  // Navegación a Chat
   void _navigateToChat(String patientId, String patientName) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            ChatScreen(receiverId: patientId, receiverName: patientName),
+        builder: (_) => ChatScreen(
+          receiverId: patientId,
+          receiverName: patientName,
+        ),
       ),
     );
   }
 
-  /// 💡 --- NUEVA FUNCIÓN DE NAVEGACIÓN ---
-  /// Abre la pantalla de progreso de planes de ejercicio
   void _navigateToProgress(String patientId, String patientName) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => KinePatientProgressScreen(
+        builder: (_) => KinePatientProgressScreen(
           patientId: patientId,
           patientName: patientName,
         ),
@@ -99,56 +94,222 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     );
   }
 
-  void _navigateToSubscriptions() async {
+  Future<void> _navigateToSubscriptions() async {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (ctx) => const SubscriptionScreen(userType: "kine"),
+        builder: (_) => const SubscriptionScreen(userType: "kine"),
       ),
     );
     _checkPlanAndLoadPatients();
   }
 
+  // ---------- diálogos elegantes tipo iOS ----------
+  Future<bool?> _showConfirmDialog({
+    required IconData icon,
+    required String title,
+    required String message,
+    String confirmText = 'Aceptar',
+    String cancelText = 'Cancelar',
+    Color? accent,
+  }) {
+    final color = accent ?? _orange;
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 44,
+                width: 44,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -.1,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  color: Colors.black87,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: const Text(
+                        'Cancelar',
+                        style: TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: color,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        minimumSize: const Size(0, 42),
+                      ),
+                      child: Text(
+                        confirmText,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showInfoDialog({
+    required IconData icon,
+    required String title,
+    required String message,
+    Color? accent,
+  }) async {
+    final color = accent ?? _blue;
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 44,
+                width: 44,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -.1,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  color: Colors.black87,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: color,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    minimumSize: const Size(0, 42),
+                  ),
+                  child: const Text(
+                    'Entendido',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  // ---------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _bg,
       appBar: AppBar(
-        title: const Text('Mis Pacientes'),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black87,
+        title: const Text(
+          'Mis pacientes',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Recargar lista',
+            tooltip: 'Recargar',
             onPressed: _refreshData,
+            icon: const Icon(Icons.refresh_rounded, color: _blue),
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: _isLoadingProStatus
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: _blue))
           : FutureBuilder<List<Map<String, dynamic>>>(
               future: _patientsFuture,
               builder: (context, snapshot) {
-                // ... (Manejo de estados loading, error y vacío) ...
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text('Error al cargar pacientes: ${snapshot.error}'),
-                  );
-                }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(25.0),
-                      child: Text(
-                        'Aún no tienes pacientes asignados.\nLos pacientes aparecerán aquí automáticamente después de que confirmes su primera cita.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                    ),
+                    child: CircularProgressIndicator(color: _blue),
                   );
+                }
+
+                if (snapshot.hasError) {
+                  return _buildErrorState(snapshot.error.toString());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return _buildEmptyState();
                 }
 
                 final allPatients = snapshot.data!;
@@ -163,125 +324,44 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                 }
 
                 return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // barrita naranja
+                    Container(
+                      width: 48,
+                      height: 3.5,
+                      margin: const EdgeInsets.fromLTRB(16, 10, 0, 12),
+                      decoration: BoxDecoration(
+                        color: _orange,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
                     if (limitReached) _buildPaywallBanner(),
                     Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        itemCount: patientsToShow.length,
-                        itemBuilder: (context, index) {
-                          final patientData = patientsToShow[index];
-                          final patientId =
-                              patientData['id'] ?? 'ID_Desconocido';
-                          final name =
-                              patientData['nombre_completo'] ??
-                              'Nombre Desconocido';
-                          final age = patientData['edad']?.toString() ?? '?';
-                          final sex = patientData['sexo'] ?? 'N/E';
-                          final photoUrl = patientData['imagen_perfil'];
+                      child: RefreshIndicator(
+                        color: _blue,
+                        onRefresh: () async => _refreshData(),
+                        child: ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                          itemCount: patientsToShow.length,
+                          itemBuilder: (context, index) {
+                            final data = patientsToShow[index];
+                            final id = data['id'] ?? 'ID_Desconocido';
+                            final name =
+                                data['nombre_completo'] ?? 'Nombre desconocido';
+                            final age = data['edad']?.toString() ?? '?';
+                            final sex = data['sexo'] ?? 'N/E';
+                            final photoUrl = data['imagen_perfil'];
 
-                          return Card(
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                radius: 28,
-                                backgroundColor: Colors.teal.shade100,
-                                backgroundImage:
-                                    (photoUrl != null &&
-                                        photoUrl.isNotEmpty &&
-                                        Uri.tryParse(
-                                              photoUrl,
-                                            )?.hasAbsolutePath ==
-                                            true &&
-                                        !photoUrl.contains(
-                                          'via.placeholder.com',
-                                        ))
-                                    ? NetworkImage(photoUrl)
-                                    : null,
-                                child:
-                                    (photoUrl == null ||
-                                        photoUrl.isEmpty ||
-                                        Uri.tryParse(
-                                              photoUrl,
-                                            )?.hasAbsolutePath !=
-                                            true ||
-                                        photoUrl.contains(
-                                          'via.placeholder.com',
-                                        ))
-                                    ? Text(
-                                        name.isNotEmpty
-                                            ? name[0].toUpperCase()
-                                            : '?',
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          color: Colors.teal,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      )
-                                    : null,
-                              ),
-                              title: Text(
-                                name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 17,
-                                ),
-                              ),
-                              subtitle: Text('Edad: $age, Sexo: $sex'),
-
-                              // 💡 --- TRAILING MODIFICADO ---
-                              // Se añade un Row para poner múltiples botones
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Botón para ver Progreso (NUEVO)
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.fitness_center_rounded,
-                                      color: Colors.blue.shade700,
-                                    ),
-                                    tooltip: 'Ver Progreso de Ejercicios',
-                                    onPressed: () =>
-                                        _navigateToProgress(patientId, name),
-                                  ),
-                                  // Botón para ver Historial de Citas
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.history_rounded,
-                                      color: Colors.teal.shade600,
-                                    ),
-                                    tooltip: 'Ver Historial de Citas',
-                                    onPressed: () =>
-                                        _navigateToHistory(patientId, name),
-                                  ),
-                                  // Botón de Chat
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.chat_bubble_outline,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                    tooltip: 'Enviar Mensaje a $name',
-                                    onPressed: () =>
-                                        _navigateToChat(patientId, name),
-                                  ),
-                                ],
-                              ),
-
-                              // 💡 --- FIN DE LA MODIFICACIÓN ---
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 8,
-                                horizontal: 16,
-                              ),
-                            ),
-                          );
-                        },
+                            return _patientCard(
+                              id: id,
+                              name: name,
+                              age: age,
+                              sex: sex,
+                              photoUrl: photoUrl,
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ],
@@ -291,40 +371,305 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     );
   }
 
-  // Banner de Límite de Pacientes (Paywall)
+  // ---------- states ----------
+  Widget _buildEmptyState() {
+    return Column(
+      children: [
+        // barrita naranja
+        Container(
+          width: 48,
+          height: 3.5,
+          margin: const EdgeInsets.fromLTRB(16, 10, 0, 12),
+          decoration: BoxDecoration(
+            color: _orange,
+            borderRadius: BorderRadius.circular(99),
+          ),
+        ),
+        Expanded(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    height: 56,
+                    width: 56,
+                    decoration: BoxDecoration(
+                      color: _blue.withOpacity(.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.groups_rounded, color: _blue, size: 28),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Aún no tienes pacientes asignados',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Los pacientes aparecerán aquí automáticamente después de que confirmes su primera cita.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.black54, height: 1.35),
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton(
+                    onPressed: _refreshData,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: _blue),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 10,
+                      ),
+                    ),
+                    child: const Text(
+                      'Recargar',
+                      style: TextStyle(
+                        color: _blue,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildErrorState(String error) {
+    return Column(
+      children: [
+        Container(
+          width: 48,
+          height: 3.5,
+          margin: const EdgeInsets.fromLTRB(16, 10, 0, 12),
+          decoration: BoxDecoration(
+            color: _orange,
+            borderRadius: BorderRadius.circular(99),
+          ),
+        ),
+        Expanded(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    height: 56,
+                    width: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(.10),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.error_outline_rounded,
+                        color: Colors.red.shade500, size: 28),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'No pudimos cargar tus pacientes',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    error,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.black54, height: 1.35),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _refreshData,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _blue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ---------- widgets ----------
+  Widget _patientCard({
+    required String id,
+    required String name,
+    required String age,
+    required String sex,
+    required String? photoUrl,
+  }) {
+    final hasImage = photoUrl != null &&
+        photoUrl.isNotEmpty &&
+        Uri.tryParse(photoUrl)?.hasAbsolutePath == true &&
+        !photoUrl.contains('via.placeholder.com');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.01),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        leading: CircleAvatar(
+          radius: 26,
+          backgroundColor: _blue.withOpacity(.12),
+          backgroundImage: hasImage ? NetworkImage(photoUrl!) : null,
+          child: !hasImage
+              ? Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                    color: Colors.black87,
+                  ),
+                )
+              : null,
+        ),
+        title: Text(
+          name,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15.5),
+        ),
+        subtitle: Text(
+          'Edad: $age   •   Sexo: $sex',
+          style: const TextStyle(fontSize: 12.5, color: Colors.black54),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: 'Ver progreso',
+              onPressed: () => _navigateToProgress(id, name),
+              icon: const Icon(Icons.fitness_center_rounded, color: _blue),
+            ),
+            IconButton(
+              tooltip: 'Historial de citas',
+              onPressed: () => _navigateToHistory(id, name),
+              icon: Icon(Icons.history_rounded, color: Colors.grey.shade700),
+            ),
+            IconButton(
+              tooltip: 'Enviar mensaje',
+              onPressed: () => _navigateToChat(id, name),
+              icon: const Icon(Icons.chat_bubble_outline_rounded, color: _orange),
+            ),
+          ],
+        ),
+        onTap: () async {
+          // ejemplo: diálogo suave con acciones rápidas
+          final ok = await _showConfirmDialog(
+            icon: Icons.person_rounded,
+            title: name,
+            message:
+                '¿Qué deseas hacer?',
+            confirmText: 'Abrir historial',
+            accent: _blue,
+          );
+          if (ok == true) _navigateToHistory(id, name);
+        },
+      ),
+    );
+  }
+
+  // Paywall / Límite de pacientes
   Widget _buildPaywallBanner() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12.0),
-      margin: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange.shade300),
+        color: _orange.withOpacity(.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _orange.withOpacity(.35)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Límite del Plan Básico alcanzado',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.orange.shade800,
-            ),
+          Row(
+            children: [
+              Container(
+                height: 28,
+                width: 28,
+                decoration: BoxDecoration(
+                  color: _orange.withOpacity(.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.star_rounded, color: _orange, size: 18),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Límite del Plan Básico alcanzado',
+                style: TextStyle(
+                  color: Colors.orange.shade800,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 6),
           Text(
             'Estás viendo los primeros $_patientLimit pacientes. Actualiza a Kine Pro para ver pacientes ilimitados.',
-            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13.5, height: 1.3),
           ),
-          const SizedBox(height: 10),
-          ElevatedButton(
-            onPressed: _navigateToSubscriptions,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade700,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Actualizar a Kine Pro'),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              OutlinedButton(
+                onPressed: _refreshData,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: _orange.withOpacity(.6)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                child: const Text(
+                  'Actualizar lista',
+                  style: TextStyle(color: _orange, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: _navigateToSubscriptions,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _orange,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Pasar a Kine Pro'),
+              ),
+            ],
           ),
         ],
       ),

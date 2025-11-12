@@ -1,11 +1,9 @@
 // lib/screens/manage_availability_screen.dart
 import 'package:flutter/material.dart';
-import 'package:kine_app/features/Appointments/services/availability_service.dart'; // Importa el servicio
+import 'package:kine_app/features/Appointments/services/availability_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:table_calendar/table_calendar.dart'; // Necesitas este paquete
-
-// 💡 IMPORTAMOS LOS DIÁLOGOS
+import 'package:table_calendar/table_calendar.dart';
 import 'package:kine_app/shared/widgets/app_dialog.dart';
 
 class ManageAvailabilityScreen extends StatefulWidget {
@@ -17,6 +15,12 @@ class ManageAvailabilityScreen extends StatefulWidget {
 }
 
 class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
+  // ====== PALETA CENTRAL ======
+  static const _bg = Color(0xFFF3F3F3);
+  static const _blue = Color(0xFF47A5D6);
+  static const _orange = Color(0xFFE28825);
+  static const _border = Color(0x11000000);
+
   final AvailabilityService _availabilityService = AvailabilityService();
   final String _currentKineId = FirebaseAuth.instance.currentUser!.uid;
 
@@ -24,17 +28,16 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
   DateTime _selectedDay = DateTime.now();
 
   final List<TimeOfDay> _baseTimeSlots = [
-    const TimeOfDay(hour: 8, minute: 0), // 8:00 AM
-    const TimeOfDay(hour: 9, minute: 0), // 9:00 AM
-    const TimeOfDay(hour: 10, minute: 0), // 10:00 AM
-    const TimeOfDay(hour: 11, minute: 0), // 11:00 AM
-    const TimeOfDay(hour: 12, minute: 0), // 12:00 PM (Añadido)
-    const TimeOfDay(hour: 13, minute: 0), // 1:00 PM (Añadido)
-    const TimeOfDay(hour: 14, minute: 0), // 2:00 PM
-    const TimeOfDay(hour: 15, minute: 0), // 3:00 PM
-    const TimeOfDay(hour: 16, minute: 0), // 4:00 PM
-    const TimeOfDay(hour: 17, minute: 0), // 5:00 PM
-    // (6:00 PM y 7:00 PM eliminados)
+    const TimeOfDay(hour: 8, minute: 0),
+    const TimeOfDay(hour: 9, minute: 0),
+    const TimeOfDay(hour: 10, minute: 0),
+    const TimeOfDay(hour: 11, minute: 0),
+    const TimeOfDay(hour: 12, minute: 0),
+    const TimeOfDay(hour: 13, minute: 0),
+    const TimeOfDay(hour: 14, minute: 0),
+    const TimeOfDay(hour: 15, minute: 0),
+    const TimeOfDay(hour: 16, minute: 0),
+    const TimeOfDay(hour: 17, minute: 0),
   ];
 
   Set<String> _selectedSlots = {};
@@ -50,7 +53,89 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
     _loadAvailabilityForSelectedDay();
   }
 
-  // (Funciones de SnackBar eliminadas, ya que todo usa popups)
+  // ---------- helper para dialog elegante ----------
+  Future<void> _showNiceInfoDialog({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String message,
+  }) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  height: 44,
+                  width: 44,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    color: color,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.1,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    color: Colors.black87,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: color,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 0,
+                      minimumSize: const Size(0, 42),
+                    ),
+                    child: const Text(
+                      'Entendido',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+  // --------------------------------------------------
 
   DateTime _findNextAvailableWorkDay(DateTime date) {
     DateTime tempDate = date;
@@ -79,13 +164,11 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
         _selectedSlots = Set.from(savedSlots);
       });
     } catch (e) {
-      print("Error cargando disponibilidad: $e");
       if (!mounted) return;
-
       await showAppErrorDialog(
         context: context,
         icon: Icons.cloud_off_rounded,
-        title: 'Error al Cargar',
+        title: 'Error al cargar',
         content: 'No se pudo cargar la disponibilidad: ${e.toString()}',
       );
     } finally {
@@ -97,7 +180,6 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
     }
   }
 
-  // 💡 --- FUNCIÓN MODIFICADA ---
   Future<void> _saveAvailabilityForSelectedDay() async {
     if (!mounted) return;
 
@@ -116,35 +198,29 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
 
       if (!mounted) return;
 
-      // 💡 --- INICIO DE LA LÓGICA MEJORADA ---
       if (slotsToSave.isEmpty) {
-        // Mensaje para cuando se guarda un DÍA VACÍO
-        await showAppInfoDialog(
-          context: context,
-          icon: Icons.event_busy_rounded, // Icono de "día no disponible"
-          title: 'Día No Disponible',
-          content:
-              'Has guardado este día sin horarios. Los pacientes no podrán agendar.',
+        await _showNiceInfoDialog(
+          icon: Icons.event_busy_rounded,
+          color: _orange,
+          title: 'Día no disponible',
+          message:
+              'Guardaste este día sin horarios. Los pacientes no podrán agendar.',
         );
       } else {
-        // Mensaje para cuando se guardan horarios
-        await showAppInfoDialog(
-          context: context,
+        await _showNiceInfoDialog(
           icon: Icons.check_circle_outline_rounded,
+          color: _blue,
           title: '¡Guardado!',
-          content:
+          message:
               'Disponibilidad guardada para este día. (${slotsToSave.length} horarios)',
         );
       }
-      // 💡 --- FIN DE LA LÓGICA MEJORADA ---
     } catch (e) {
-      print("Error guardando disponibilidad del día: $e");
       if (!mounted) return;
-
       await showAppErrorDialog(
         context: context,
         icon: Icons.error_outline_rounded,
-        title: 'Error al Guardar',
+        title: 'Error al guardar',
         content: 'No se pudo guardar la disponibilidad: ${e.toString()}',
       );
     } finally {
@@ -155,32 +231,119 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
       }
     }
   }
-  // 💡 --- FIN DE LA FUNCIÓN MODIFICADA ---
 
   Future<void> _saveAvailabilityForWeek() async {
     if (!mounted) return;
 
-    // 1. Verifica si hay horarios seleccionados
+    // 🔸 Aquí estaba el popup feo. Ahora usamos nuestro helper bonito:
     if (_selectedSlots.isEmpty) {
-      await showAppWarningDialog(
-        context: context,
+      await _showNiceInfoDialog(
         icon: Icons.warning_amber_rounded,
-        title: 'Sin Horarios',
-        content: 'Selecciona al menos un horario antes de aplicar a la semana.',
+        color: _orange,
+        title: 'Sin horarios',
+        message: 'Selecciona al menos un horario antes de aplicar a la semana.',
       );
       return;
     }
 
-    // 2. Pide confirmación al Kine
-    bool? confirm = await showAppConfirmationDialog(
+    final qty = _selectedSlots.length;
+
+    // popup de confirmación
+    final bool? confirm = await showDialog<bool>(
       context: context,
-      icon: Icons.event_repeat_rounded,
-      title: 'Aplicar a la Semana',
-      content:
-          'Esto aplicará los ${_selectedSlots.length} horarios seleccionados a todos los días de Lunes a Viernes de esta semana. ¿Deseas continuar?',
-      confirmText: 'Aplicar',
-      cancelText: 'Cancelar',
-      isDestructive: false,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  height: 44,
+                  width: 44,
+                  decoration: BoxDecoration(
+                    color: _orange.withOpacity(.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.event_repeat_rounded,
+                    color: _orange,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Aplicar a la semana',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.1,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Esto aplicará los $qty horarios seleccionados a lunes-viernes de esta semana. ¿Continuar?',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    color: Colors.black87,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: _orange, width: 1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          foregroundColor: _orange,
+                          minimumSize: const Size(0, 42),
+                        ),
+                        child: const Text(
+                          'Cancelar',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _orange,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          minimumSize: const Size(0, 42),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Aplicar',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
 
     if (confirm != true) return;
@@ -191,38 +354,35 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
     });
 
     try {
-      final List<String> slotsToSave = _selectedSlots.toList()..sort();
-      DateTime monday = _getMonday(_selectedDay);
+      final slotsToSave = _selectedSlots.toList()..sort();
+      final monday = _getMonday(_selectedDay);
 
-      List<Future> saveFutures = [];
+      final futures = <Future>[];
       for (int i = 0; i < 5; i++) {
-        DateTime currentWeekday = monday.add(Duration(days: i));
-        saveFutures.add(
+        final day = monday.add(Duration(days: i));
+        futures.add(
           _availabilityService.setAvailability(
             kineId: _currentKineId,
-            date: currentWeekday,
+            date: day,
             availableSlots: slotsToSave,
           ),
         );
       }
-      await Future.wait(saveFutures);
+      await Future.wait(futures);
 
       if (!mounted) return;
-
-      await showAppInfoDialog(
-        context: context,
+      await _showNiceInfoDialog(
         icon: Icons.check_circle_outline_rounded,
-        title: '¡Semana Actualizada!',
-        content: 'Disponibilidad aplicada a Lunes-Viernes de esta semana.',
+        color: _blue,
+        title: '¡Semana actualizada!',
+        message: 'Disponibilidad aplicada a L-V de esta semana.',
       );
     } catch (e) {
-      print("Error guardando disponibilidad semanal: $e");
       if (!mounted) return;
-
       await showAppErrorDialog(
         context: context,
         icon: Icons.error_outline_rounded,
-        title: 'Error al Guardar',
+        title: 'Error al guardar',
         content: 'No se pudo aplicar a la semana: ${e.toString()}',
       );
     } finally {
@@ -235,37 +395,67 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
   }
 
   DateTime _getMonday(DateTime date) {
-    int daysToSubtract = date.weekday - DateTime.monday;
+    final daysToSubtract = date.weekday - DateTime.monday;
     return date.subtract(Duration(days: daysToSubtract));
   }
 
   @override
   Widget build(BuildContext context) {
+    final dateLabel = DateFormat('EEEE, d MMMM yyyy', 'es_ES')
+        .format(_selectedDay)
+        .replaceFirstMapped(
+          RegExp(r'^[a-z]'),
+          (m) => m[0]!.toUpperCase(),
+        );
+
     return Scaffold(
+      backgroundColor: _bg,
       appBar: AppBar(
-        title: const Text('Gestionar Disponibilidad'),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black87,
+        title: const Text(
+          'Gestionar disponibilidad',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 17,
+            letterSpacing: -.1,
+          ),
+        ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: TextButton(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: OutlinedButton(
               onPressed: (_isLoading || _isSaving || _isSavingWeek)
                   ? null
                   : _saveAvailabilityForSelectedDay,
-              style: TextButton.styleFrom(foregroundColor: Colors.white),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: _blue, width: 1),
+                backgroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+                minimumSize: const Size(0, 32),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
               child: _isSaving
                   ? const SizedBox(
-                      width: 20,
-                      height: 20,
+                      width: 16,
+                      height: 16,
                       child: CircularProgressIndicator(
-                        color: Colors.white,
                         strokeWidth: 2,
+                        color: _blue,
                       ),
                     )
                   : const Text(
-                      'GUARDAR DÍA',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      'Guardar día',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: _blue,
+                      ),
                     ),
             ),
           ),
@@ -273,104 +463,162 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
       ),
       body: Column(
         children: [
-          TableCalendar(
-            locale: 'es_ES',
-            firstDay: DateTime.now().subtract(const Duration(days: 30)),
-            lastDay: DateTime.now().add(const Duration(days: 90)),
-            focusedDay: _focusedDay,
-            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-            calendarFormat: CalendarFormat.week,
-            startingDayOfWeek: StartingDayOfWeek.monday,
-            headerStyle: const HeaderStyle(
-              formatButtonVisible: false,
-              titleCentered: true,
-            ),
-            calendarStyle: const CalendarStyle(
-              todayDecoration: BoxDecoration(
-                color: Colors.tealAccent,
-                shape: BoxShape.circle,
-              ),
-              selectedDecoration: BoxDecoration(
-                color: Colors.teal,
-                shape: BoxShape.circle,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              width: 48,
+              height: 3.5,
+              margin: const EdgeInsets.fromLTRB(16, 10, 0, 12),
+              decoration: BoxDecoration(
+                color: _orange,
+                borderRadius: BorderRadius.circular(99),
               ),
             ),
-            enabledDayPredicate: (day) =>
-                day.weekday != DateTime.saturday &&
-                day.weekday != DateTime.sunday,
-            onDaySelected: (selectedDay, focusedDay) {
-              if (selectedDay.weekday == DateTime.saturday ||
-                  selectedDay.weekday == DateTime.sunday) {
-                return;
-              }
-
-              if (!isSameDay(_selectedDay, selectedDay)) {
-                setState(() {
-                  _selectedDay = selectedDay;
-                  _focusedDay = focusedDay;
-                });
-                _loadAvailabilityForSelectedDay();
-              }
-            },
-            onPageChanged: (focusedDay) {
-              _focusedDay = focusedDay;
-            },
           ),
-          const Divider(height: 1),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _border),
+            ),
+            child: TableCalendar(
+              locale: 'es_ES',
+              firstDay: DateTime.now().subtract(const Duration(days: 30)),
+              lastDay: DateTime.now().add(const Duration(days: 90)),
+              focusedDay: _focusedDay,
+              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+              calendarFormat: CalendarFormat.week,
+              startingDayOfWeek: StartingDayOfWeek.monday,
+              headerStyle: HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
+                leftChevronIcon: const Icon(Icons.chevron_left_rounded),
+                rightChevronIcon: const Icon(Icons.chevron_right_rounded),
+                titleTextStyle: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+              calendarStyle: CalendarStyle(
+                todayDecoration: BoxDecoration(
+                  color: _blue.withOpacity(.16),
+                  shape: BoxShape.circle,
+                ),
+                selectedDecoration: const BoxDecoration(
+                  color: _blue,
+                  shape: BoxShape.circle,
+                ),
+                weekendTextStyle: const TextStyle(color: Colors.grey),
+                outsideDaysVisible: false,
+              ),
+              enabledDayPredicate: (day) =>
+                  day.weekday != DateTime.saturday &&
+                  day.weekday != DateTime.sunday,
+              onDaySelected: (selectedDay, focusedDay) {
+                if (selectedDay.weekday == DateTime.saturday ||
+                    selectedDay.weekday == DateTime.sunday) return;
+                if (!isSameDay(_selectedDay, selectedDay)) {
+                  setState(() {
+                    _selectedDay = selectedDay;
+                    _focusedDay = focusedDay;
+                  });
+                  _loadAvailabilityForSelectedDay();
+                }
+              },
+              onPageChanged: (focusedDay) {
+                _focusedDay = focusedDay;
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
           Padding(
-            padding: const EdgeInsets.symmetric(
-              vertical: 12.0,
-              horizontal: 16.0,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
-              'Selecciona los horarios para:\n${DateFormat('EEEE, dd MMMM yyyy', 'es_ES').format(_selectedDay)}',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                height: 1.4,
+              'Selecciona los horarios para:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
               ),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
+            child: Text(
+              dateLabel,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 14.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
           Expanded(
             child: _isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(color: Colors.teal),
+                    child: CircularProgressIndicator(color: _blue),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
                     itemCount: _baseTimeSlots.length,
                     itemBuilder: (context, index) {
                       final timeSlot = _baseTimeSlots[index];
                       final slotString =
                           '${timeSlot.hour.toString().padLeft(2, '0')}:${timeSlot.minute.toString().padLeft(2, '0')}';
-                      final bool isSelected = _selectedSlots.contains(
-                        slotString,
-                      );
+                      final isSelected = _selectedSlots.contains(slotString);
 
-                      return CheckboxListTile(
-                        title: Text(
-                          timeSlot.format(context),
-                          style: const TextStyle(fontSize: 16),
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color:
+                                isSelected ? _blue.withOpacity(.25) : _border,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(.015),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        value: isSelected,
-                        onChanged: (bool? newValue) {
-                          setState(() {
-                            if (newValue == true) {
-                              _selectedSlots.add(slotString);
-                            } else {
-                              _selectedSlots.remove(slotString);
-                            }
-                          });
-                        },
-                        activeColor: Colors.teal,
+                        child: CheckboxListTile(
+                          value: isSelected,
+                          onChanged: (val) {
+                            setState(() {
+                              if (val == true) {
+                                _selectedSlots.add(slotString);
+                              } else {
+                                _selectedSlots.remove(slotString);
+                              }
+                            });
+                          },
+                          activeColor: _blue,
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 14),
+                          title: Text(
+                            timeSlot.format(context),
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          controlAffinity: ListTileControlAffinity.trailing,
+                        ),
                       );
                     },
                   ),
           ),
           if (!_isLoading)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
               child: ElevatedButton.icon(
+                onPressed: (_isLoading || _isSaving || _isSavingWeek)
+                    ? null
+                    : _saveAvailabilityForWeek,
                 icon: _isSavingWeek
                     ? const SizedBox(
                         width: 20,
@@ -380,26 +628,24 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.calendar_view_week, size: 20),
+                    : const Icon(Icons.event_available_rounded, size: 22),
                 label: Text(
                   _isSavingWeek
                       ? 'Aplicando...'
-                      : 'Aplicar Horarios a L-V de esta Semana',
+                      : 'Aplicar horarios a L-V de esta semana',
                 ),
-                onPressed: (_isLoading || _isSaving || _isSavingWeek)
-                    ? null
-                    : _saveAvailabilityForWeek,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange.shade700,
+                  backgroundColor: _orange,
                   foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 45),
-                  textStyle: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  minimumSize: const Size(double.infinity, 52),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(16),
                   ),
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -.05,
+                  ),
+                  elevation: 0,
                 ),
               ),
             ),
