@@ -103,7 +103,7 @@ class StripeService {
           .get();
 
       if (!userDoc.exists) {
-        print("⚠️ Documento del usuario no encontrado en 'usuarios/'.");
+        print("Documento del usuario no encontrado en 'usuarios/'.");
         return false;
       }
 
@@ -111,10 +111,10 @@ class StripeService {
       final bool isPro = data['isPro'] ?? false;
       final String plan = data['plan'] ?? 'estandar';
 
-      print("✅ Estado Firestore → isPro: $isPro | plan: $plan");
+      print("Estado Firestore → isPro: $isPro | plan: $plan");
       return isPro == true || plan.toLowerCase() == 'pro';
     } catch (e) {
-      print("❌ Error en checkProSubscriptionStatus (Firestore): $e");
+      print("Error en checkProSubscriptionStatus (Firestore): $e");
       return false;
     }
   }
@@ -127,7 +127,7 @@ class StripeService {
     if (user == null) return false;
 
     try {
-      // 🔑 Tu clave secreta de Stripe (MEJOR usar en Cloud Function)
+      // Tu clave secreta de Stripe (MEJOR usar en Cloud Function)
       const stripeSecretKey =
           'sk_test_51SNKboPMEZlnmK1ZIamV1fVfcuMH6r2d8sDgWlhbRgMH4ZWZITT7wNBdCVjGrW2kc2FEyX9yFyHmki9qQW92RmIj00eGqOyM1c';
 
@@ -139,7 +139,7 @@ class StripeService {
 
       final customerId = customerDoc.data()?['stripeId'];
       if (customerId == null) {
-        print("⚠️ Cliente sin 'stripeId' en Firestore.");
+        print("Cliente sin 'stripeId' en Firestore.");
         return false;
       }
 
@@ -163,12 +163,12 @@ class StripeService {
           final end = activeSub['current_period_end'];
           final endDate = DateTime.fromMillisecondsSinceEpoch(end * 1000);
           if (endDate.isAfter(DateTime.now())) {
-            print("✅ Verificado en Stripe: suscripción activa hasta $endDate");
+            print("Verificado en Stripe: suscripción activa hasta $endDate");
             return true;
           }
         }
       } else {
-        print("❌ Error Stripe API: ${response.statusCode} ${response.body}");
+        print("Error Stripe API: ${response.statusCode} ${response.body}");
       }
     } catch (e) {
       print("Error verificando con Stripe API: $e");
@@ -197,7 +197,7 @@ class StripeService {
       final bool isPro = data['isPro'] ?? false;
       final int limit = data['patientLimit'] ?? 50;
 
-      print("✅ getUserPlanStatus → isPro: $isPro, limit: $limit");
+      print("getUserPlanStatus → isPro: $isPro, limit: $limit");
       return {'isPro': isPro, 'limit': limit};
     } catch (e) {
       print("Error en getUserPlanStatus: $e");

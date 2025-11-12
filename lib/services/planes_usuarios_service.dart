@@ -30,7 +30,7 @@ Future<List<PlanTomado>> obtenerPlanesPorUsuario() async {
 
   if (user == null) {
     print(
-      '🔴 ERROR: No hay usuario autenticado. La consulta no puede continuar.',
+      'ERROR: No hay usuario autenticado. La consulta no puede continuar.',
     );
     return [];
   }
@@ -41,8 +41,8 @@ Future<List<PlanTomado>> obtenerPlanesPorUsuario() async {
   // Crea la DocumentReference del usuario para el filtro de la consulta inicial
   final DocumentReference usuarioRef = db.collection('usuarios').doc(userId);
 
-  print('✅ Usuario ID: $userId');
-  print('🔎 Buscando planes tomados con referencia: ${usuarioRef.path}');
+  print('Usuario ID: $userId');
+  print('Buscando planes tomados con referencia: ${usuarioRef.path}');
 
   try {
     // 1. CONSULTA INICIAL: Obtener los documentos de 'plan_tomados_por_usuarios'
@@ -57,7 +57,7 @@ Future<List<PlanTomado>> obtenerPlanesPorUsuario() async {
     }
 
     print(
-      '🎉 Documentos de planes tomados encontrados: ${querySnapshot.docs.length}',
+      'Documentos de planes tomados encontrados: ${querySnapshot.docs.length}',
     );
 
     // 2. Mapear y combinar los resultados (Fetching de la colección 'plan' en paralelo)
@@ -69,7 +69,7 @@ Future<List<PlanTomado>> obtenerPlanesPorUsuario() async {
 
       if (planRef == null) {
         print(
-          '⚠️ Advertencia: Documento ${planTomadoDoc.id} no tiene referencia de plan.',
+          'Advertencia: Documento ${planTomadoDoc.id} no tiene referencia de plan.',
         );
         return null; // Omitir este plan si la referencia es nula
       }
@@ -80,7 +80,7 @@ Future<List<PlanTomado>> obtenerPlanesPorUsuario() async {
       // 2c. Validar que el plan referenciado exista
       if (!planSnapshot.exists) {
         print(
-          '⚠️ Advertencia: El documento de plan referenciado (${planRef.path}) no existe.',
+          'Advertencia: El documento de plan referenciado (${planRef.path}) no existe.',
         );
         // Devolver un PlanTomado con datos de fallback
         return PlanTomado(
@@ -134,7 +134,7 @@ Future<List<PlanTomado>> obtenerPlanesPorUsuario() async {
     print('--- FIN DE CONSULTA MULTI-COLECCIÓN ---');
     return planes;
   } on FirebaseException catch (e) {
-    print('❌ ERROR de Firebase (código ${e.code}): ${e.message}');
+    print('ERROR de Firebase (código ${e.code}): ${e.message}');
     throw Exception('No se pudieron cargar los planes: ${e.message}');
   }
 }
@@ -146,7 +146,7 @@ Future<List<PlanTomado>> obtenerPlanesEnProgresoPorUsuario() async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {
     print(
-      '🔴 ERROR: No hay usuario autenticado. La consulta no puede continuar.',
+      'ERROR: No hay usuario autenticado. La consulta no puede continuar.',
     );
     return [];
   }
@@ -155,8 +155,8 @@ Future<List<PlanTomado>> obtenerPlanesEnProgresoPorUsuario() async {
   final userId = user.uid;
 
   final DocumentReference usuarioRef = db.collection('usuarios').doc(userId);
-  print('✅ Usuario ID: $userId');
-  print('🔎 Buscando planes tomados con estado: "en_progreso"');
+  print('Usuario ID: $userId');
+  print('Buscando planes tomados con estado: "en_progreso"');
 
   try {
     // 1. CONSULTA INICIAL: Obtener los documentos de 'plan_tomados_por_usuarios'
@@ -175,7 +175,7 @@ Future<List<PlanTomado>> obtenerPlanesEnProgresoPorUsuario() async {
     }
 
     print(
-      '🎉 Documentos de planes en progreso encontrados: ${querySnapshot.docs.length}',
+      'Documentos de planes en progreso encontrados: ${querySnapshot.docs.length}',
     );
 
     // 2. Mapear y combinar los resultados (Fetching de la colección 'plan' en paralelo)
@@ -187,7 +187,7 @@ Future<List<PlanTomado>> obtenerPlanesEnProgresoPorUsuario() async {
 
       if (planRef == null) {
         print(
-          '⚠️ Advertencia: Documento ${planTomadoDoc.id} no tiene referencia de plan.',
+          'Advertencia: Documento ${planTomadoDoc.id} no tiene referencia de plan.',
         );
         return null; // Omitir este plan si la referencia es nula
       }
@@ -198,7 +198,7 @@ Future<List<PlanTomado>> obtenerPlanesEnProgresoPorUsuario() async {
       // 2c. Validar que el plan referenciado exista
       if (!planSnapshot.exists) {
         print(
-          '⚠️ Advertencia: El documento de plan referenciado (${planRef.path}) no existe.',
+          'Advertencia: El documento de plan referenciado (${planRef.path}) no existe.',
         );
         // Devolver un PlanTomado con datos de fallback
         return PlanTomado(
@@ -252,7 +252,7 @@ Future<List<PlanTomado>> obtenerPlanesEnProgresoPorUsuario() async {
     print('--- FIN DE CONSULTA DE PLANES EN PROGRESO ---');
     return planes;
   } on FirebaseException catch (e) {
-    print('❌ ERROR de Firebase (código ${e.code}): ${e.message}');
+    print('ERROR de Firebase (código ${e.code}): ${e.message}');
     throw Exception(
       'No se pudieron cargar los planes en progreso: ${e.message}',
     );

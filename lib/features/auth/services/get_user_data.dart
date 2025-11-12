@@ -9,7 +9,7 @@ Future<Map<String, dynamic>?> getUserData() async {
   print('1. Current User ID: $userId');
 
   if (userId == null) {
-    print('❌ ERROR: Usuario no autenticado (UID es nulo). Saliendo.');
+    print('ERROR: Usuario no autenticado (UID es nulo). Saliendo.');
     return null;
   }
 
@@ -36,7 +36,7 @@ Future<Map<String, dynamic>?> getUserData() async {
       String finalTipoNombre = 'Desconocido';
 
       if (tipoUsuarioRef is DocumentReference) {
-        print('✅ Es una DocumentReference.');
+        print('Es una DocumentReference.');
         final String path = tipoUsuarioRef.path;
         final String docIdString = path.split('/').last;
         finalTipoId =
@@ -51,19 +51,19 @@ Future<Map<String, dynamic>?> getUserData() async {
           DocumentSnapshot tipoUsuarioDoc = await tipoUsuarioRef.get();
           if (tipoUsuarioDoc.exists) {
             final tipoData = tipoUsuarioDoc.data() as Map<String, dynamic>?;
-            print('✅ Documento de Rol encontrado.');
+            print('Documento de Rol encontrado.');
             finalTipoNombre = tipoData?['nombre'] ?? 'Nombre no encontrado';
           } else {
-            print('⚠️ Documento de Rol ($path) NO EXISTE en Firestore.');
+            print('Documento de Rol ($path) NO EXISTE en Firestore.');
             finalTipoNombre = 'Rol no existe';
           }
         } catch (e) {
-          print('❌ ERROR al leer el documento de Rol ($path): $e');
+          print('ERROR al leer el documento de Rol ($path): $e');
           finalTipoNombre = 'Error al leer rol';
         }
       } else {
         // Field is NOT a reference
-        print('❌ ERROR: El campo "tipo_usuario" NO es una DocumentReference.');
+        print('ERROR: El campo "tipo_usuario" NO es una DocumentReference.');
         finalTipoId = 1; // Explicitly set fallback ID
         finalTipoNombre = 'Tipo Incorrecto';
       }
@@ -72,18 +72,18 @@ Future<Map<String, dynamic>?> getUserData() async {
       userData['tipo_usuario_id'] = finalTipoId;
       userData['tipo_usuario_nombre'] = finalTipoNombre;
 
-      print('🏁 Preparando para devolver userData:');
+      print('Preparando para devolver userData:');
       print('   -> tipo_usuario_id a devolver: ${userData['tipo_usuario_id']}');
       print(
         '   -> tipo_usuario_nombre a devolver: ${userData['tipo_usuario_nombre']}',
       );
       return userData; // Return the modified map
     } else {
-      print('❌ ERROR: Documento del usuario usuarios/$userId NO existe.');
+      print('ERROR: Documento del usuario usuarios/$userId NO existe.');
       return null;
     }
   } catch (e) {
-    print('❌ ERROR GENERAL en getUserData: $e');
+    print('ERROR GENERAL en getUserData: $e');
     return null;
   } finally {
     print('--- FIN DEBUG getUserData (v2) ---');

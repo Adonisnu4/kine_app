@@ -31,13 +31,13 @@ class _PlanEjercicioDetalleScreenState
     }
 
     if (sesionesMaestras.isEmpty) {
-      print('⚠️ Error: El plan no tiene sesiones definidas.');
+      print('Error: El plan no tiene sesiones definidas.');
       return;
     }
 
     final String? planId = widget.planId;
     if (planId == null || planId.isEmpty) {
-      print('⚠️ Error: planId no válido.');
+      print('Error: planId no válido.');
       return;
     }
 
@@ -70,7 +70,7 @@ class _PlanEjercicioDetalleScreenState
       'sesiones': sesionesProgreso,
     });
 
-    print('✅ Nuevo plan iniciado con ID automático: ${ejecucionRef.id}');
+    print('Nuevo plan iniciado con ID automático: ${ejecucionRef.id}');
 
     // Obtenemos los datos de la primera sesión
     final Map<String, dynamic> sesionActualData = sesionesProgreso.first;
@@ -319,7 +319,7 @@ class _PlanEjercicioDetalleScreenState
         // Verificación de referencia
         if (ejercicioRef == null) {
           print(
-            '❌ Error: El ejercicio "$claveEjercicio" no tiene la clave "ejercicio" (DocumentReference).',
+            'Error: El ejercicio "$claveEjercicio" no tiene la clave "ejercicio" (DocumentReference).',
           );
           return ListTile(
             title: Text('$claveEjercicio - Error de referencia.'),
@@ -329,9 +329,9 @@ class _PlanEjercicioDetalleScreenState
           );
         }
 
-        // ✅ ¡TU PRINT DE DEPURACIÓN AHORA SE EJECUTARÁ AQUÍ!
+        //  ¡TU PRINT DE DEPURACIÓN AHORA SE EJECUTARÁ AQUÍ!
         print(
-          '🚀 Referencia a buscar para $claveEjercicio: ${ejercicioRef.id}. Tiempo: $tiempoSesion',
+          'Referencia a buscar para $claveEjercicio: ${ejercicioRef.id}. Tiempo: $tiempoSesion',
         );
 
         // Llamamos a la función de resolución con la ID, ya que _buildEjercicioTileFromRef la espera
@@ -345,7 +345,7 @@ class _PlanEjercicioDetalleScreenState
 
     // 3. Fallback final
     print(
-      '❌ Error: ejerciciosData tiene un tipo de dato inesperado: ${ejerciciosData.runtimeType}.',
+      'Error: ejerciciosData tiene un tipo de dato inesperado: ${ejerciciosData.runtimeType}.',
     );
     return [const ListTile(title: Text('Error de formato de ejercicios.'))];
   }
@@ -393,7 +393,7 @@ class _PlanEjercicioDetalleScreenState
           'completado': completado, // Estado de completado del plan
         };
         print(
-          '✅ Nombre obtenido para $ejercicioId: ${finalInfo['nombre_ejercicio']}',
+          'Nombre obtenido para $ejercicioId: ${finalInfo['nombre_ejercicio']}',
         ); // Print de confirmación de nombre
 
         return _buildEjercicioTile(finalInfo);

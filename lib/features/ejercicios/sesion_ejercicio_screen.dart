@@ -149,7 +149,7 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
       _videoController!.play();
       _startDurationTimer();
     } catch (e) {
-      debugPrint('❌ Error cargando ejercicio: $e');
+      debugPrint('Error cargando ejercicio: $e');
       setState(() {
         _isLoading = false;
         _nombre = 'Error al cargar ejercicio: ${e.toString()}';
@@ -237,7 +237,7 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
         _loadExercise();
       }
     } catch (e) {
-      debugPrint('❌ Error al completar ejercicio y avanzar: $e');
+      debugPrint('Error al completar ejercicio y avanzar: $e');
     }
   }
 
