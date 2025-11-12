@@ -21,7 +21,7 @@ class KineService {
       }
 
       final kineList = querySnapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
+        final data = doc.data();
         return {
           'id': doc.id,
           'name': (data['nombre_completo'] as String?) ?? 'Kinesiólogo(a)',

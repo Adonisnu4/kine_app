@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:kine_app/features/Patients_and_Kine/services/kine_service.dart';
 import 'package:kine_app/features/Chat/screens/chat_screen.dart';
 import 'package:kine_app/features/Patients_and_Kine/screens/patient_appointment_history_screen.dart';
 import 'package:kine_app/features/Stripe/services/stripe_service.dart';
 import 'package:kine_app/features/Stripe/screens/subscription_screen.dart';
 import 'package:kine_app/features/auth/services/user_service.dart';
+
+// 💡 --- IMPORTAMOS LA NUEVA PANTALLA DE PROGRESO ---
+import 'package:kine_app/features/Patients_and_Kine/screens/kine_patient_progress_screen.dart';
 
 class MyPatientsScreen extends StatefulWidget {
   const MyPatientsScreen({super.key});
@@ -46,6 +48,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
         _isPro = planStatus['isPro'] as bool;
         _patientLimit = planStatus['limit'] as int;
         _isLoadingProStatus = false;
+        // Esta función 'getKinePatients' debe existir en tu kine_service.dart
         _patientsFuture = getKinePatients();
       });
     }
@@ -58,6 +61,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     _checkPlanAndLoadPatients();
   }
 
+  // Navegación a Historial de Citas
   void _navigateToHistory(String patientId, String patientName) {
     Navigator.push(
       context,
@@ -70,12 +74,27 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     );
   }
 
+  // Navegación a Chat
   void _navigateToChat(String patientId, String patientName) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) =>
             ChatScreen(receiverId: patientId, receiverName: patientName),
+      ),
+    );
+  }
+
+  /// 💡 --- NUEVA FUNCIÓN DE NAVEGACIÓN ---
+  /// Abre la pantalla de progreso de planes de ejercicio
+  void _navigateToProgress(String patientId, String patientName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => KinePatientProgressScreen(
+          patientId: patientId,
+          patientName: patientName,
+        ),
       ),
     );
   }
@@ -110,6 +129,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
           : FutureBuilder<List<Map<String, dynamic>>>(
               future: _patientsFuture,
               builder: (context, snapshot) {
+                // ... (Manejo de estados loading, error y vacío) ...
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
@@ -215,16 +235,46 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                                 ),
                               ),
                               subtitle: Text('Edad: $age, Sexo: $sex'),
-                              trailing: IconButton(
-                                icon: Icon(
-                                  Icons.chat_bubble_outline,
-                                  color: Colors.teal.shade600,
-                                ),
-                                tooltip: 'Enviar Mensaje a $name',
-                                onPressed: () =>
-                                    _navigateToChat(patientId, name),
+
+                              // 💡 --- TRAILING MODIFICADO ---
+                              // Se añade un Row para poner múltiples botones
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Botón para ver Progreso (NUEVO)
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.fitness_center_rounded,
+                                      color: Colors.blue.shade700,
+                                    ),
+                                    tooltip: 'Ver Progreso de Ejercicios',
+                                    onPressed: () =>
+                                        _navigateToProgress(patientId, name),
+                                  ),
+                                  // Botón para ver Historial de Citas
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.history_rounded,
+                                      color: Colors.teal.shade600,
+                                    ),
+                                    tooltip: 'Ver Historial de Citas',
+                                    onPressed: () =>
+                                        _navigateToHistory(patientId, name),
+                                  ),
+                                  // Botón de Chat
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.chat_bubble_outline,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                    tooltip: 'Enviar Mensaje a $name',
+                                    onPressed: () =>
+                                        _navigateToChat(patientId, name),
+                                  ),
+                                ],
                               ),
-                              onTap: () => _navigateToHistory(patientId, name),
+
+                              // 💡 --- FIN DE LA MODIFICACIÓN ---
                               contentPadding: const EdgeInsets.symmetric(
                                 vertical: 8,
                                 horizontal: 16,
@@ -241,6 +291,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     );
   }
 
+  // Banner de Límite de Pacientes (Paywall)
   Widget _buildPaywallBanner() {
     return Container(
       width: double.infinity,
@@ -268,12 +319,12 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
           ),
           const SizedBox(height: 10),
           ElevatedButton(
-            child: const Text('Actualizar a Kine Pro'),
             onPressed: _navigateToSubscriptions,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange.shade700,
               foregroundColor: Colors.white,
             ),
+            child: const Text('Actualizar a Kine Pro'),
           ),
         ],
       ),

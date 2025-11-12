@@ -1,215 +1,208 @@
-// lib/screens/kine_presentation_screen.dart
 import 'package:flutter/material.dart';
-import 'package:kine_app/features/Appointments/screens/booking_screen.dart'; // Importa pantalla de agendar
-
-import 'package:kine_app/features/Chat/screens/chat_screen.dart'; // Importa tu pantalla de chat
+import 'package:kine_app/features/Appointments/screens/booking_screen.dart';
+import 'package:kine_app/features/Chat/screens/chat_screen.dart';
 
 class KinePresentationScreen extends StatelessWidget {
   final String kineId;
-  final Map<String, String> kineData; // Datos ya cargados desde el directorio
+  final Map<String, String> kineData;
 
   const KinePresentationScreen({
     super.key,
     required this.kineId,
-    required this.kineData, // Es obligatorio
+    required this.kineData,
   });
 
-  // Navega a la pantalla de agendamiento
   void _navigateToBooking(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            BookingScreen(kineId: kineId, kineNombre: kineData['name']!),
+        builder: (context) => BookingScreen(
+          kineId: kineId,
+          kineNombre: kineData['name'] ?? 'Kinesiólogo',
+        ),
       ),
     );
   }
 
-  /// Navega a la pantalla de chat con este Kine
   void _navigateToChat(BuildContext context) {
-    // --- 👇 2. CÓDIGO DE NAVEGACIÓN REAL (DESCOMENTADO) 👇 ---
     Navigator.push(
       context,
       MaterialPageRoute(
-        // Asegúrate que tu ChatScreen reciba 'receiverId' y 'receiverName'
         builder: (context) => ChatScreen(
-          receiverId: kineId, // Usa el kineId de esta pantalla
-          receiverName: kineData['name']!, // Usa el nombre de kineData
+          receiverId: kineId,
+          receiverName: kineData['name'] ?? 'Kinesiólogo',
         ),
       ),
     );
-    // --- FIN CÓDIGO DE NAVEGACIÓN ---
-
-    /* // Comenta o elimina el placeholder
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Navegando al chat con ${kineData['name'] ?? 'Kine'}...')),
-    );
-    */
   }
 
   @override
   Widget build(BuildContext context) {
-    // Extrae los datos del mapa kineData para facilitar el acceso
     final String kineName = kineData['name'] ?? 'Kinesiólogo';
     final String kineTitle = kineData['specialization'] ?? 'Especialista';
-    final String kinePhotoUrl =
-        kineData['photoUrl'] ??
-        'https://via.placeholder.com/150'; // Placeholder
+    final String kinePhotoUrl = kineData['photoUrl'] ?? '';
     final String kinePresentation =
-        kineData['presentation'] ?? 'No hay presentación disponible.';
-    final String kineExperience = kineData['experience'] ?? '?';
+        kineData['presentation'] ?? 'Este profesional aún no agrega una presentación.';
+    final String kineExperience = kineData['experience'] ?? '—';
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F4F5), // gris muy claro
       appBar: AppBar(
-        title: const Text('Perfil Profesional'),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black87,
+        title: const Text(
+          'Perfil Profesional',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
       body: SingleChildScrollView(
-        // Permite scrollear si el contenido es largo
-        padding: const EdgeInsets.all(20), // Padding general
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start, // Alinea textos a la izquierda
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- Sección Superior: Foto, Nombre, Título, Experiencia ---
-            Row(
-              crossAxisAlignment:
-                  CrossAxisAlignment.center, // Centra verticalmente
-              children: [
-                CircleAvatar(
-                  // Foto del Kine
-                  radius: 45, // Tamaño de la foto
-                  backgroundImage: NetworkImage(kinePhotoUrl),
-                  backgroundColor: Colors.grey.shade200, // Fondo mientras carga
-                ),
-                const SizedBox(width: 20), // Espacio entre foto y texto
-                Expanded(
-                  // Para que el texto ocupe el espacio restante
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment
-                        .start, // Alinea textos a la izquierda
-                    children: [
-                      Text(
-                        // Nombre del Kine
-                        kineName,
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        // Título/Especialidad
-                        kineTitle,
-                        style: TextStyle(
-                          fontSize: 17,
-                          color: Colors.teal.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: 5), // Pequeño espacio
-                      Text(
-                        // Años de Experiencia
-                        '$kineExperience años de experiencia',
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 35), // Línea divisoria con espacio
-            // --- Carta de Presentación ---
-            Text(
-              'Presentación Profesional',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10), // Espacio antes del texto
+            // CARD PRINCIPAL
             Container(
-              // Contenedor para el texto de presentación
-              width: double.infinity, // Ocupa todo el ancho disponible
-              padding: const EdgeInsets.all(15), // Padding interno
               decoration: BoxDecoration(
-                // Estilo del contenedor
-                color: Colors.teal.shade50, // Fondo color teal muy claro
-                borderRadius: BorderRadius.circular(10), // Bordes redondeados
-                border: Border.all(color: Colors.teal.shade100), // Borde sutil
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0x0F000000)),
               ),
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // avatar
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: const Color(0xFFE5E7EB),
+                    backgroundImage:
+                        kinePhotoUrl.isNotEmpty ? NetworkImage(kinePhotoUrl) : null,
+                    child: kinePhotoUrl.isEmpty
+                        ? const Icon(Icons.person, size: 32, color: Colors.white)
+                        : null,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          kineName,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          kineTitle,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.work_outline,
+                                size: 16, color: Colors.black38),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$kineExperience años de experiencia',
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: Colors.black45,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            const Text(
+              'Presentación profesional',
+              style: TextStyle(
+                fontSize: 15.5,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // card de presentación
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0x10A1A1AA)),
+              ),
+              padding: const EdgeInsets.all(14),
               child: Text(
-                // Texto de la presentación
                 kinePresentation,
                 style: const TextStyle(
-                  fontSize: 16,
-                  height: 1.5,
+                  fontSize: 14,
                   color: Colors.black87,
-                ), // Estilo del texto
+                  height: 1.4,
+                ),
               ),
             ),
-            const SizedBox(height: 30), // Espacio antes de los botones
-            // --- Botones de Acción ---
-            Row(
-              // Coloca los botones uno al lado del otro
-              mainAxisAlignment: MainAxisAlignment
-                  .spaceEvenly, // Espacio equitativo entre botones
-              children: [
-                // --- Botón Enviar Mensaje ---
-                OutlinedButton.icon(
-                  // Botón con borde
-                  icon: const Icon(Icons.chat_bubble_outline, size: 20),
-                  label: const Text('Mensaje'), // Texto corto
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor:
-                        Colors.teal.shade700, // Color del texto e icono
-                    side: BorderSide(
-                      color: Colors.teal.shade300,
-                    ), // Color del borde
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 25,
-                      vertical: 12,
-                    ), // Padding interno
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ), // Estilo del texto
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ), // Bordes redondeados
-                  ),
-                  onPressed: () =>
-                      _navigateToChat(context), // Llama a la función de chat
-                ),
 
-                // --- Botón Agendar Cita ---
-                ElevatedButton.icon(
-                  // Botón con fondo
-                  onPressed: () => _navigateToBooking(
-                    context,
-                  ), // Llama a la función de agendar
-                  icon: const Icon(Icons.calendar_month, size: 20),
-                  label: const Text('Agendar'), // Texto corto
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        Colors.blueAccent.shade700, // Color de fondo
-                    foregroundColor: Colors.white, // Color del texto e icono
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 25,
-                      vertical: 12,
-                    ), // Padding interno
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ), // Estilo del texto
-                    elevation: 3, // Sombra
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ), // Bordes redondeados
+            const SizedBox(height: 22),
+
+            // BOTONES
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _navigateToChat(context),
+                    icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                    label: const Text('Mensaje'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.black87,
+                      side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _navigateToBooking(context),
+                    icon: const Icon(Icons.calendar_today_rounded, size: 18),
+                    label: const Text('Agendar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      elevation: 0,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20), // Espacio extra al final de la pantalla
           ],
         ),
       ),
