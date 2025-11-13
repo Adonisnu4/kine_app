@@ -14,6 +14,7 @@ import 'package:kine_app/features/Stripe/services/stripe_service.dart';
 import 'package:kine_app/features/Stripe/screens/subscription_screen.dart';
 import 'package:kine_app/features/Appointments/screens/my_appointments_screen.dart';
 import 'package:kine_app/features/Appointments/screens/manage_availability_screen.dart';
+// Puedes seguir usando tus otros diálogos en otras partes
 import 'package:kine_app/shared/widgets/app_dialog.dart';
 
 class AppColors {
@@ -207,8 +208,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: ListTile(
         onTap: onTap,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         leading: Container(
           width: 36,
           height: 36,
@@ -237,6 +237,107 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // ======= POPUP LOGOUT iOS-LIKE (con Cancelar outlined) =======
+  Future<bool?> _showLogoutDialog() {
+    final destructive = const Color(0xFFE11D48); // rojo elegante
+    final cancelColor = const Color(0xFF6B7280); // gris texto + borde
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ícono
+                Container(
+                  height: 46,
+                  width: 46,
+                  decoration: BoxDecoration(
+                    color: destructive.withOpacity(.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.logout_rounded,
+                      color: destructive, size: 24),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Cerrar sesión',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -.2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '¿Estás seguro de que quieres cerrar tu sesión?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    color: Colors.black87,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    // Cancelar outlined con el mismo color de texto/borde
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: cancelColor, width: 1.2),
+                          foregroundColor: cancelColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          minimumSize: const Size(0, 44),
+                          textStyle: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        child: const Text('Cancelar'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Confirmar destructivo
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: destructive,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          minimumSize: const Size(0, 44),
+                          textStyle: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        child: const Text('Sí, salir'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+  // =============================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -257,8 +358,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final userName = userData['nombre_completo'] ?? 'Usuario';
           final userEmail =
               FirebaseAuth.instance.currentUser?.email ?? 'Sin correo';
-          final userStatusName =
-              userData['tipo_usuario_nombre'] ?? 'normal';
+          final userStatusName = userData['tipo_usuario_nombre'] ?? 'normal';
           final userStatusId = userData['tipo_usuario_id'] ?? 1;
 
           final isKine = userStatusId == 3;
@@ -268,8 +368,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           final currentSpecialization = userData['specialization'] ?? '';
           final currentExperience = userData['experience']?.toString() ?? '';
-          final currentPresentation =
-              userData['carta_presentacion'] ?? '';
+          final currentPresentation = userData['carta_presentacion'] ?? '';
           final userImageUrl =
               userData['imagen_perfil'] ?? 'https://via.placeholder.com/120';
 
@@ -306,12 +405,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   size: 20,
                                   color: AppColors.text,
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.person_outline,
-                                color: AppColors.blue,
-                                size: 22,
                               ),
                               const SizedBox(width: 8),
                               const Column(
@@ -454,8 +547,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                             child: ListTile(
-                              onTap: () =>
-                                  _navigateToSubscriptions(userTypeString),
+                              onTap: () => _navigateToSubscriptions(userTypeString),
                               leading: Container(
                                 width: 34,
                                 height: 34,
@@ -508,8 +600,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 // lista de opciones
                 SliverPadding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       _menuCard(
@@ -576,8 +667,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             onTap: () {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text(
-                                      'Tu solicitud está siendo revisada.'),
+                                  content: Text('Tu solicitud está siendo revisada.'),
                                 ),
                               );
                             },
@@ -593,7 +683,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         iconColor: AppColors.blue,
                       ),
                       // cerrar sesión
-                      Container(
+                      Container
+                      (
                         margin: const EdgeInsets.only(top: 4, bottom: 28),
                         decoration: BoxDecoration(
                           color: AppColors.white,
@@ -602,17 +693,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         child: ListTile(
                           onTap: () async {
-                            final bool? confirm =
-                                await showAppConfirmationDialog(
-                              context: context,
-                              icon: Icons.logout_rounded,
-                              title: 'Cerrar sesión',
-                              content:
-                                  '¿Estás seguro de que quieres cerrar tu sesión?',
-                              confirmText: 'Sí, salir',
-                              cancelText: 'Cancelar',
-                              isDestructive: true,
-                            );
+                            final bool? confirm = await _showLogoutDialog();
                             if (confirm == true) {
                               await FirebaseAuth.instance.signOut();
                               if (context.mounted) {
