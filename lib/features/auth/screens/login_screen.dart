@@ -305,8 +305,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   fit: BoxFit.contain,
                 ),
               ),
-              // 🔸 más aire entre logo y título
-              const SizedBox(height: 100),
+              //mas espacio entre el titulo y el logo 
+              const SizedBox(height: 70),
               const Center(
                 child: Text(
                   'Ingresa tus datos\npara iniciar sesión.',

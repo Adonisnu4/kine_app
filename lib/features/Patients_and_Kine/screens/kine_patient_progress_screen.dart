@@ -23,13 +23,21 @@ class KinePatientProgressScreen extends StatefulWidget {
 
 class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
     with SingleTickerProviderStateMixin {
+  // 🎨 Paleta (solo visual)
+  static const _bg = Color(0xFFF6F7FB);
+  static const _blue = Color(0xFF47A5D6);
+  static const _orange = Color(0xFFE28825);
+  static const _muted = Color(0xFF6D6D6D);
+  static const _card = Colors.white;
+  static const _border = Color(0x11000000);
+
   final PlanService _planService = PlanService();
   final MetricsService _metricsService = MetricsService();
 
   late Future<Map<String, dynamic>> _dashboardData;
   late AnimationController _animationController;
 
-  bool _mostrarTodosLosPlanes = false; // 👈 Nuevo estado para “Ver más”
+  bool _mostrarTodosLosPlanes = false;
 
   @override
   void initState() {
@@ -59,17 +67,21 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: _bg,
       appBar: AppBar(
-        title: Text('Progreso de ${widget.patientName}'),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black87,
+        title: Text(
+          'Progreso de ${widget.patientName}',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
       ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: _dashboardData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: _blue));
           }
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
@@ -81,12 +93,11 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
           final metrics = snapshot.data!['metrics'] as PatientMetrics;
           final plans = snapshot.data!['plans'] as List<PlanTomado>;
 
-          // 👇 Limita la cantidad de planes mostrados
-          final planesVisibles = _mostrarTodosLosPlanes
-              ? plans
-              : plans.take(5).toList();
+          final planesVisibles =
+              _mostrarTodosLosPlanes ? plans : plans.take(5).toList();
 
           return RefreshIndicator(
+            color: _blue,
             onRefresh: () async {
               setState(() => _dashboardData = _loadDashboardData());
             },
@@ -95,7 +106,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
               children: [
                 _buildMetricsDashboard(metrics),
                 const SizedBox(height: 16),
-                const Divider(),
+                Container(height: 1, color: _border),
                 const SizedBox(height: 10),
                 const Text(
                   'Planes Asignados',
@@ -103,7 +114,6 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
                 ),
                 const SizedBox(height: 8),
 
-                // 👇 Lista de planes limitada
                 ...planesVisibles.map((plan) => _buildPlanCard(plan)).toList(),
 
                 if (plans.length > 5)
@@ -120,14 +130,14 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
                           _mostrarTodosLosPlanes
                               ? Icons.expand_less
                               : Icons.expand_more,
-                          color: Colors.teal,
+                          color: _blue,
                         ),
                         label: Text(
                           _mostrarTodosLosPlanes
                               ? 'Ver menos'
                               : 'Ver todos (${plans.length})',
                           style: const TextStyle(
-                            color: Colors.teal,
+                            color: _blue,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -142,14 +152,12 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
     );
   }
 
-  // ==============================================
-  // 🔹 PANEL DE MÉTRICAS
-  // ==============================================
+  // ======== PANEL DE MÉTRICAS (visual) ========
   Widget _buildMetricsDashboard(PatientMetrics metrics) {
     final double adherence = (metrics.totalEjerciciosAsignados > 0)
         ? (metrics.totalEjerciciosCompletados /
-                  metrics.totalEjerciciosAsignados) *
-              100
+                metrics.totalEjerciciosAsignados) *
+            100
         : 0.0;
 
     final screenWidth = MediaQuery.of(context).size.width;
@@ -159,13 +167,14 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _card,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
+          border: Border.all(color: _border),
+          boxShadow: const [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Color(0x08000000),
               blurRadius: 8,
-              offset: const Offset(0, 3),
+              offset: Offset(0, 3),
             ),
           ],
         ),
@@ -176,7 +185,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Colors.teal,
+                color: _blue,
               ),
             ),
             const SizedBox(height: 16),
@@ -199,14 +208,14 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
                   value: metrics.totalHorasCompletadas.toString(),
                   label: 'Horas Totales',
                   icon: Icons.timer_outlined,
-                  color: Colors.deepPurple,
+                  color: Colors.yellow,
                 ),
               ],
             ),
             const SizedBox(height: 20),
-            const Divider(),
+            Container(height: 1, color: _border),
 
-            // --- Gráfico 1 ---
+            const SizedBox(height: 12),
             const Text(
               'Comparativa de Días Activos e Inactivos',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -259,9 +268,9 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
             ),
 
             const SizedBox(height: 24),
-            const Divider(),
+            Container(height: 1, color: _border),
 
-            // --- Gráfico 2 ---
+            const SizedBox(height: 12),
             const Text(
               'Ejercicios por Día de la Semana',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -293,7 +302,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
                       barRods: [
                         BarChartRodData(
                           toY: metrics.ejerciciosPorDiaSemana[i].toDouble(),
-                          color: Colors.teal,
+                          color: _blue,
                           width: 10,
                           borderRadius: BorderRadius.circular(4),
                         ),
@@ -305,11 +314,8 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
             ),
 
             const SizedBox(height: 24),
-            const Divider(),
+            Container(height: 1, color: _border),
 
-            // --- Adherencia ---
-            const SizedBox(height: 24),
-            const Divider(),
             const SizedBox(height: 12),
             const Text(
               'Adherencia Total',
@@ -324,7 +330,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // 🔹 Indicador circular limpio y proporcionado
+                // Indicador circular
                 Stack(
                   alignment: Alignment.center,
                   children: [
@@ -362,7 +368,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
 
                 const SizedBox(width: 24),
 
-                // 🔹 Leyenda limpia y alineada verticalmente
+                // Leyenda
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -385,7 +391,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
                       children: [
                         Icon(
                           Icons.circle,
-                          color: Colors.grey.shade500,
+                          color: Colors.deepPurple,
                           size: 12,
                         ),
                         const SizedBox(width: 8),
@@ -409,48 +415,78 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
     );
   }
 
-  // ==============================================
-  // 🔹 TARJETA DE PLAN
-  // ==============================================
+  // ======== TARJETA DE PLAN (con color de ícono según estado) ========
   Widget _buildPlanCard(PlanTomado plan) {
     final bool isInProgress = plan.estado == 'en_progreso';
-    return Card(
-      elevation: 1,
-      color: const Color(0xFFF9F9FC),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    final bool isFinished = plan.estado == 'terminado';
+
+    final Color chipBg = isInProgress
+        ? _orange.withOpacity(.10)
+        : (isFinished ? Colors.green.withOpacity(.12) : Colors.grey.withOpacity(.12));
+
+    final Color chipText = isInProgress
+        ? _orange
+        : (isFinished ? Colors.green.shade700 : Colors.grey.shade700);
+
+    // 👉 color del ícono según estado
+    final Color chipIcon = isInProgress
+        ? _orange                 // en progreso → naranjo
+        : (isFinished ? Colors.green : _blue); // terminado → verde, otro → azul
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 6,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         title: Text(
           plan.nombre,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         subtitle: Text(
           plan.descripcion,
-          style: TextStyle(color: Colors.grey.shade700),
+          style: const TextStyle(color: _muted),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
-        trailing: Chip(
-          avatar: const Icon(
-            Icons.directions_run_rounded,
-            size: 16,
-            color: Colors.blue,
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: chipBg,
+            borderRadius: BorderRadius.circular(999),
           ),
-          label: Text(
-            isInProgress ? 'EN PROGRESO' : plan.estado.toUpperCase(),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-              color: Colors.blue,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.directions_run_rounded, size: 16, color: chipIcon),
+              const SizedBox(width: 6),
+              Text(
+                isInProgress ? 'EN PROGRESO' : plan.estado.toUpperCase(),
+                style: TextStyle(
+                  color: chipText,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
-          backgroundColor: Colors.blue.shade50,
         ),
       ),
     );
   }
 }
 
-// ==============================================
-// 🔹 COMPONENTES REUTILIZABLES
-// ==============================================
+// ======== COMPONENTES REUTILIZABLES (solo visual) ========
 class _MetricBox extends StatelessWidget {
   final String value;
   final String label;
@@ -480,33 +516,7 @@ class _MetricBox extends StatelessWidget {
         ),
         Text(
           label,
-          style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
-        ),
-      ],
-    );
-  }
-}
-
-class _AdherenceStat extends StatelessWidget {
-  final Color color;
-  final String label;
-  final int value;
-
-  const _AdherenceStat({
-    required this.color,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(Icons.circle, color: color, size: 14),
-        const SizedBox(width: 6),
-        Text(
-          '$value $label',
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          style: const TextStyle(color: _KinePatientProgressScreenState._muted, fontSize: 12),
         ),
       ],
     );
