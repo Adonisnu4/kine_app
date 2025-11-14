@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kine_app/features/auth/services/auth_service.dart';
 import 'register_screen.dart';
 import '../../home_screen.dart';
-import 'package:kine_app/shared/widgets/app_dialog.dart';
 
 class AppColors {
   static const blue = Color(0xFF47A5D6);   // del logo
@@ -43,6 +42,112 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // ---------- Pop-ups elegantes por marca ----------
+  Future<void> _showBrandErrorDialog({
+    required String brand, // "Google" | "Facebook"
+    required String rawError,
+  }) async {
+    // Colores/íconos de marca
+    final isGoogle = brand.toLowerCase() == 'google';
+    final Color accent = isGoogle ? const Color(0xFFDB4437) : const Color(0xFF1877F2);
+    final IconData icon = isGoogle ? Icons.g_mobiledata_rounded : Icons.facebook_rounded;
+
+    // Traducción simple a mensaje humano
+    String friendly = rawError;
+    final low = rawError.toLowerCase();
+
+    if (low.contains('popup-closed-by-user')) {
+      friendly =
+          'Cerraste la ventana de $brand antes de finalizar. Vuelve a intentarlo y, si no ves la ventana, habilita los pop-ups del navegador.';
+    } else if (low.contains('network-request-failed')) {
+      friendly =
+          'No pudimos conectar con $brand. Revisa tu conexión a internet e inténtalo nuevamente.';
+    } else if (low.contains('blocked-by')) {
+      friendly =
+          'El navegador bloqueó el inicio de sesión con $brand. Permite la ventana emergente o prueba en otra pestaña.';
+    } else if (low.contains('account-exists-with-different-credential')) {
+      friendly =
+          'Ya existe una cuenta con otro método de acceso para este correo. Inicia sesión con ese método y luego vincula $brand desde tu perfil.';
+    } else if (low.contains('user-cancelled') || low.contains('cancelled')) {
+      friendly = 'El inicio de sesión con $brand fue cancelado.';
+    } else if (low.contains('unauthorized-domain') || low.contains('domain')) {
+      friendly =
+          'El dominio de esta app no está autorizado para $brand. Contacta al administrador.';
+    } else if (low.isEmpty) {
+      friendly = 'Ocurrió un error desconocido al conectar con $brand.';
+    }
+
+    // Diálogo estilo iOS, limpio y centrado
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // círculo con icono de marca
+              Container(
+                height: 48,
+                width: 48,
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: accent, size: 26),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Error con $brand',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -.2,
+                  color: accent,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                friendly,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accent,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    minimumSize: const Size(0, 44),
+                  ),
+                  child: const Text(
+                    'Entendido',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  // --------------------------------------------------
+
   Future<void> _login() async {
     setState(() => _isLoading = true);
     try {
@@ -62,11 +167,10 @@ class _LoginScreenState extends State<LoginScreen> {
           await _auth.signOut();
           if (!mounted) return;
           setState(() => _isLoading = false);
-          await showAppWarningDialog(
-            context: context,
-            icon: Icons.lock_outline_rounded,
-            title: 'Cuenta no verificada',
-            content: 'Revisa tu correo (y spam) para activar la cuenta.',
+          await _showBrandErrorDialog(
+            brand: 'Correo',
+            rawError:
+                'Debes verificar tu correo antes de ingresar. Revisaste tu bandeja de entrada y el spam?',
           );
           await user.sendEmailVerification();
         }
@@ -79,12 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _ => 'Error de inicio de sesión: ${e.message}',
       };
       if (mounted) setState(() => _isLoading = false);
-      await showAppErrorDialog(
-        context: context,
-        icon: Icons.error_outline_rounded,
-        title: 'Error de inicio de sesión',
-        content: msg,
-      );
+      await _showBrandErrorDialog(brand: 'Correo', rawError: msg);
     } finally {
       if (mounted && _isLoading) setState(() => _isLoading = false);
     }
@@ -98,12 +197,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _navigateToHome();
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
-      await showAppErrorDialog(
-        context: context,
-        icon: Icons.g_mobiledata_rounded,
-        title: 'Error con Google',
-        content: e.toString(),
-      );
+      await _showBrandErrorDialog(brand: 'Google', rawError: e.toString());
     } finally {
       if (mounted && _isLoading) setState(() => _isLoading = false);
     }
@@ -117,12 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _navigateToHome();
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
-      await showAppErrorDialog(
-        context: context,
-        icon: Icons.facebook_rounded,
-        title: 'Error con Facebook',
-        content: e.toString(),
-      );
+      await _showBrandErrorDialog(brand: 'Facebook', rawError: e.toString());
     } finally {
       if (mounted && _isLoading) setState(() => _isLoading = false);
     }
@@ -135,11 +224,9 @@ class _LoginScreenState extends State<LoginScreen> {
       await _auth.sendPasswordResetEmail(email: email);
       if (!mounted) return;
       setState(() => _isLoading = false);
-      await showAppInfoDialog(
-        context: context,
-        icon: Icons.mark_email_read_rounded,
-        title: 'Correo enviado',
-        content: 'Enviamos un correo de recuperación a $email.',
+      await _showBrandErrorDialog(
+        brand: 'Correo',
+        rawError: 'Te enviamos un enlace de recuperación a $email.',
       );
     } on FirebaseAuthException catch (e) {
       final msg = switch (e.code) {
@@ -148,12 +235,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _ => 'Error al enviar recuperación: ${e.message}',
       };
       if (mounted) setState(() => _isLoading = false);
-      await showAppErrorDialog(
-        context: context,
-        icon: Icons.alternate_email_rounded,
-        title: 'Error de recuperación',
-        content: msg,
-      );
+      await _showBrandErrorDialog(brand: 'Correo', rawError: msg);
     } finally {
       if (mounted && _isLoading) setState(() => _isLoading = false);
     }
@@ -272,7 +354,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    // 🔸 logo más grande
     final logoH = (width * 0.26).clamp(70, 220).toDouble();
 
     return Scaffold(
@@ -305,7 +386,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   fit: BoxFit.contain,
                 ),
               ),
-              //mas espacio entre el titulo y el logo 
               const SizedBox(height: 70),
               const Center(
                 child: Text(
@@ -319,7 +399,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              // 🔸 bajamos todo lo demás
               const SizedBox(height: 24),
               TextField(
                 controller: _emailController,
@@ -420,17 +499,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
+                        color: Color(0xFFDB4437),
                       ),
                     ),
                   ),
                   const SizedBox(width: 18),
                   _SocialCircle(
                     onTap: _isLoading ? null : _loginWithFacebook,
-                    borderColor: AppColors.blue,
+                    borderColor: const Color(0xFF1877F2),
                     child: const Icon(
                       Icons.facebook,
                       size: 24,
-                      color: AppColors.blue,
+                      color: Color(0xFF1877F2),
                     ),
                   ),
                 ],
@@ -497,6 +577,13 @@ class _SocialCircle extends StatelessWidget {
           shape: BoxShape.circle,
           border: Border.all(color: borderColor, width: 1.6),
           color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(.05),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            )
+          ],
         ),
         child: child,
       ),
