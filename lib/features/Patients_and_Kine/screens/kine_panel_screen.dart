@@ -16,7 +16,6 @@ class KinePanelScreen extends StatefulWidget {
 }
 
 class _KinePanelScreenState extends State<KinePanelScreen> {
-  // Paleta centralizada
   static const _bg = Color(0xFFF3F3F3);
   static const _blue = Color(0xFF47A5D6);
   static const _orange = Color(0xFFE28825);
@@ -41,110 +40,6 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
     );
   }
 
-  // ===== Helpers de diálogos elegantes =====
-  Future<bool?> _showConfirmDialog({
-    required IconData icon,
-    required String title,
-    required String message,
-    bool destructive = false,
-    String confirmText = 'Aceptar',
-    String cancelText = 'Cancelar',
-    Color? accentColor,
-  }) {
-    final color = accentColor ?? (destructive ? Colors.red : _orange);
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) {
-        return Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 28),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  height: 44,
-                  width: 44,
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: color, size: 22),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -.1,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    color: Colors.black87,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    // Cancelar con borde naranjo
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(ctx).pop(false),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.red, width: 1.2),
-                          foregroundColor: Colors.red,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          minimumSize: const Size(0, 42),
-                        ),
-                        child: Text(
-                          cancelText,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.of(ctx).pop(true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: color,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          minimumSize: const Size(0, 42),
-                        ),
-                        child: Text(
-                          confirmText,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _showInfoDialog({
     required IconData icon,
     required String title,
@@ -154,25 +49,17 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
     final accent = color ?? _blue;
     await showDialog(
       context: context,
-      barrierDismissible: true,
       builder: (ctx) {
         return Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 28),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  height: 44,
-                  width: 44,
-                  decoration: BoxDecoration(
-                    color: accent.withOpacity(.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: accent, size: 22),
-                ),
+                Icon(icon, color: accent, size: 35),
                 const SizedBox(height: 14),
                 Text(
                   title,
@@ -180,38 +67,24 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: -.1,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   message,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    color: Colors.black87,
-                    height: 1.35,
-                  ),
+                  style: const TextStyle(fontSize: 13.5),
                 ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accent,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      minimumSize: const Size(0, 42),
-                    ),
-                    child: const Text(
-                      'Entendido',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                const SizedBox(height: 14),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
+                  child: const Text('Entendido'),
                 ),
               ],
             ),
@@ -219,327 +92,44 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
         );
       },
     );
-  }
-  // ================================================
-
-  List<Appointment> _getEventsForDay(DateTime day) {
-    return _allAppointments.where((appointment) {
-      if (appointment.estado == 'confirmada' ||
-          appointment.estado == 'pendiente') {
-        return isSameDay(appointment.fechaCitaDT, day);
-      }
-      return false;
-    }).toList();
   }
 
   Future<void> _handleUpdateStatus(
     Appointment appointment,
     String newStatus,
   ) async {
-    if (newStatus == 'confirmada') {
-      final ok = await _showConfirmDialog(
-        icon: Icons.check_circle_outline_rounded,
-        title: 'Confirmar cita',
-        message:
-            '¿Confirmas la cita con ${appointment.pacienteNombre} a las ${DateFormat('HH:mm').format(appointment.fechaCitaDT)}?',
-        confirmText: 'Confirmar',
-      );
-      if (ok != true) return;
-    }
-
-    if (newStatus == 'denegada') {
-      final ok = await _showConfirmDialog(
-        icon: Icons.block_rounded,
-        title: 'Rechazar cita',
-        message:
-            '¿Seguro que quieres rechazar la solicitud de ${appointment.pacienteNombre}?',
-        confirmText: 'Rechazar',
-        destructive: true,
-        accentColor: Colors.red.shade500,
-      );
-      if (ok != true) return;
-    }
-
-    if (newStatus == 'cancelada') {
-      final ok = await _showConfirmDialog(
-        icon: Icons.warning_amber_rounded,
-        title: 'Cancelar cita',
-        message:
-            'Esto notificará al paciente. ¿Deseas cancelar la cita confirmada?',
-        confirmText: 'Cancelar cita',
-        destructive: true,
-        accentColor: Colors.red.shade500,
-      );
-      if (ok != true) return;
-    }
-
     try {
       await _appointmentService.updateAppointmentStatus(appointment, newStatus);
 
-      if (!mounted) return;
-
-      if (newStatus == 'confirmada') {
-        await _showInfoDialog(
-          icon: Icons.check_circle_outline_rounded,
-          title: '¡Cita confirmada!',
-          message: 'El paciente será notificado.',
-          color: _blue,
-        );
-      } else if (newStatus == 'denegada') {
-        await _showInfoDialog(
-          icon: Icons.block_rounded,
-          title: 'Cita rechazada',
-          message: 'La solicitud ha sido rechazada.',
-          color: Colors.red.shade500,
-        );
-      } else if (newStatus == 'cancelada') {
-        await _showInfoDialog(
-          icon: Icons.cancel_outlined,
-          title: 'Cita cancelada',
-          message: 'La cita ha sido cancelada y el paciente fue informado.',
-          color: Colors.red.shade500,
-        );
-      }
+      await _showInfoDialog(
+        icon: Icons.check_circle_outline_rounded,
+        title: "Estado actualizado",
+        message: "La cita fue marcada como $newStatus",
+        color: _blue,
+      );
     } catch (e) {
-      if (!mounted) return;
       await _showInfoDialog(
         icon: Icons.error_outline_rounded,
-        title: 'Error',
-        message: 'No se pudo actualizar la cita: $e',
-        color: Colors.red.shade500,
+        title: "Error",
+        message: "Error actualizando la cita.",
+        color: Colors.red.shade600,
       );
     }
-  }
-
-  // ===== Estilo para “status pill” del pop-up =====
-  ({Color bg, Color fg, IconData icon, String label}) _estadoStyle(String estado) {
-    switch (estado) {
-      case 'confirmada':
-        return (bg: const Color(0xFFE6F7F0), fg: const Color(0xFF0F9D58), icon: Icons.check_circle, label: 'CONFIRMADA');
-      case 'denegada':
-        return (bg: const Color(0xFFFFEBEE), fg: const Color(0xFFD32F2F), icon: Icons.cancel, label: 'DENEGADA');
-      case 'cancelada':
-        return (bg: const Color(0xFFFFEBEE), fg: const Color(0xFFD32F2F), icon: Icons.close, label: 'CANCELADA');
-      case 'completada':
-        return (bg: const Color(0xFFE8F0FE), fg: const Color(0xFF1E88E5), icon: Icons.check_box, label: 'COMPLETADA');
-      default: // pendiente
-        return (bg: const Color(0xFFFFF7ED), fg: _orange, icon: Icons.hourglass_top_rounded, label: 'PENDIENTE');
-    }
-  }
-
-  // ===== Bottom-sheet (pegado abajo) con estética iOS =====
-  void _showPatientDetailsModal(BuildContext context, Appointment appointment) {
-    final estilo = _estadoStyle(appointment.estado);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      // pegado abajo: dejamos el background del sheet y redondeamos arriba
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 18,
-              top: 10,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Handle superior
-                Container(
-                  width: 44,
-                  height: 5,
-                  margin: const EdgeInsets.only(bottom: 14),
-                  decoration: BoxDecoration(
-                    color: Colors.black12,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                ),
-
-                // Header
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: _blue.withOpacity(.14),
-                      child: Text(
-                        (appointment.pacienteNombre.isNotEmpty
-                                ? appointment.pacienteNombre[0]
-                                : '?')
-                            .toUpperCase(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 18,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            appointment.pacienteNombre,
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -.2,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            appointment.pacienteEmail ?? 'Sin email',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Estado
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: estilo.bg,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: estilo.fg.withOpacity(.18)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(estilo.icon, size: 16, color: estilo.fg),
-                          const SizedBox(width: 6),
-                          Text(
-                            estilo.label,
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
-                              color: estilo.fg,
-                              letterSpacing: .3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 14),
-
-                // Tarjetas informativas
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0x11000000)),
-                  ),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        dense: true,
-                        leading: Icon(Icons.calendar_today_rounded, color: _blue),
-                        title: Text(
-                          DateFormat('EEEE d \'de\' MMMM, HH:mm', 'es_ES')
-                              .format(appointment.fechaCitaDT),
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: const Text('Fecha y hora de la cita'),
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        dense: true,
-                        leading: Icon(Icons.person_outline_rounded, color: Colors.black54),
-                        title: const Text('Paciente'),
-                        subtitle: Text(appointment.pacienteNombre),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Acciones
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close_rounded),
-                        label: const Text('Cerrar'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: _orange,
-                          side: const BorderSide(color: _orange, width: 1.2),
-                          minimumSize: const Size(0, 48),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ChatScreen(
-                                receiverId: appointment.pacienteId,
-                                receiverName: appointment.pacienteNombre,
-                              ),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.chat_bubble_outline_rounded),
-                        label: const Text('Enviar mensaje'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _blue,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          minimumSize: const Size(0, 48),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
-
       body: StreamBuilder<List<Appointment>>(
         stream: _appointmentsStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+
           _allAppointments = snapshot.data ?? [];
+
           return _buildCalendarAndList();
         },
       ),
@@ -548,15 +138,11 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
 
   Widget _buildCalendarAndList() {
     final selectedDayAppointments = _allAppointments.where((appointment) {
-      final citaDate = appointment.fechaCitaDT;
-      return isSameDay(citaDate, _selectedDay!);
-    }).toList()
-      ..sort((a, b) => a.fechaCita.compareTo(b.fechaCita));
+      return isSameDay(appointment.fechaCitaDT, _selectedDay!);
+    }).toList()..sort((a, b) => a.fechaCita.compareTo(b.fechaCita));
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // barrita naranja
         Container(
           width: 48,
           height: 3.5,
@@ -566,175 +152,63 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
             borderRadius: BorderRadius.circular(99),
           ),
         ),
-        // calendario en card
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 12),
-          padding: const EdgeInsets.only(top: 6, bottom: 6),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _border),
-          ),
-          child: TableCalendar<Appointment>(
-            locale: 'es_ES',
-            firstDay: DateTime.utc(2020, 1, 1),
-            lastDay: DateTime.utc(2030, 12, 31),
-            focusedDay: _focusedDay,
-            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-            calendarFormat: _calendarFormat,
-            eventLoader: _getEventsForDay,
-            startingDayOfWeek: StartingDayOfWeek.monday,
-            headerStyle: HeaderStyle(
-              formatButtonVisible: true,
-              formatButtonShowsNext: false,
-              formatButtonDecoration: BoxDecoration(
-                border: Border.all(color: Colors.black12),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              formatButtonTextStyle: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-              ),
-              titleCentered: true,
-            ),
-            calendarStyle: CalendarStyle(
-              todayDecoration: BoxDecoration(
-                color: _blue.withOpacity(.15),
-                shape: BoxShape.circle,
-              ),
-              selectedDecoration: const BoxDecoration(
-                color: _blue,
-                shape: BoxShape.circle,
-              ),
-              markerDecoration: const BoxDecoration(
-                color: Color(0xFF047857),
-                shape: BoxShape.circle,
-              ),
-              markersMaxCount: 3,
-              outsideDaysVisible: false,
-            ),
-            onDaySelected: (selectedDay, focusedDay) {
-              if (!isSameDay(_selectedDay, selectedDay)) {
-                setState(() {
-                  _selectedDay = selectedDay;
-                  _focusedDay = focusedDay;
-                });
-              }
-            },
-            onFormatChanged: (format) {
-              if (_calendarFormat != format) {
-                setState(() {
-                  _calendarFormat = format;
-                });
-              }
-            },
-            onPageChanged: (focusedDay) {
-              _focusedDay = focusedDay;
-            },
+        Expanded(
+          child: Column(
+            children: [
+              _calendar(),
+              Expanded(child: _appointmentList(selectedDayAppointments)),
+            ],
           ),
         ),
-        const SizedBox(height: 10),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(
-            'Citas para: ${DateFormat('EEE, dd MMMM', 'es_ES').format(_selectedDay!)}',
-            style: const TextStyle(
-              fontSize: 16.5,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Expanded(child: _buildAppointmentList(selectedDayAppointments)),
       ],
     );
   }
 
-  Widget _buildAppointmentList(List<Appointment> appointmentsForDay) {
-    if (_allAppointments.isEmpty) {
-      return const Center(
-        child: Text(
-          'Aún no tienes ninguna cita.',
-          style: TextStyle(color: Colors.black54),
-        ),
-      );
-    }
-    if (appointmentsForDay.isEmpty) {
-      return const Center(
-        child: Text(
-          'No hay citas programadas para este día.',
-          style: TextStyle(color: Colors.black54),
-        ),
-      );
-    }
+  Widget _calendar() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: TableCalendar(
+        locale: 'es_ES',
+        firstDay: DateTime.utc(2020, 1, 1),
+        lastDay: DateTime.utc(2030, 12, 31),
+        focusedDay: _focusedDay,
+        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+        onDaySelected: (selectedDay, focusedDay) {
+          setState(() {
+            _selectedDay = selectedDay;
+            _focusedDay = focusedDay;
+          });
+        },
+        calendarFormat: _calendarFormat,
+        onFormatChanged: (format) => setState(() {
+          _calendarFormat = format;
+        }),
+        onPageChanged: (day) => _focusedDay = day,
+      ),
+    );
+  }
 
-    final pendientes =
-        appointmentsForDay.where((a) => a.estado == 'pendiente').toList();
-    final otras =
-        appointmentsForDay.where((a) => a.estado != 'pendiente').toList();
+  Widget _appointmentList(List<Appointment> list) {
+    if (list.isEmpty) {
+      return const Center(child: Text("No hay citas para este día."));
+    }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-      children: [
-        if (pendientes.isNotEmpty) ...[
-          Text(
-            'Pendientes de confirmación',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: Colors.orange.shade800,
-            ),
-          ),
-          const SizedBox(height: 6),
-          ...pendientes.map(_buildAppointmentCard),
-          if (otras.isNotEmpty)
-            const SizedBox(height: 14),
-        ],
-        if (otras.isNotEmpty) ...[
-          Text(
-            'Citas programadas',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: Colors.grey.shade700,
-            ),
-          ),
-          const SizedBox(height: 6),
-          ...otras.map(_buildAppointmentCard),
-        ],
-      ],
+      padding: const EdgeInsets.all(12),
+      children: list.map((e) => _appointmentCard(e)).toList(),
     );
   }
 
-  Widget _buildAppointmentCard(Appointment appointment) {
-    final hora = DateFormat('HH:mm').format(appointment.fechaCitaDT);
-    final bool isPastAppointment =
-        appointment.fechaCitaDT.isBefore(DateTime.now());
+  Widget _appointmentCard(Appointment a) {
+    final isPast = a.fechaCitaDT.isBefore(DateTime.now());
 
-    // colores por estado
-    Color estadoColor;
-    IconData estadoIcon;
-    switch (appointment.estado) {
-      case 'confirmada':
-        estadoColor = Colors.green;
-        estadoIcon = Icons.check_circle;
-        break;
-      case 'denegada':
-        estadoColor = Colors.red.shade500;
-        estadoIcon = Icons.cancel;
-        break;
-      case 'cancelada':
-        estadoColor = Colors.red.shade500;
-        estadoIcon = Icons.close;
-        break;
-      case 'completada':
-        estadoColor = Colors.blueGrey;
-        estadoIcon = Icons.check_box;
-        break;
-      case 'pendiente':
-      default:
-        estadoColor = Colors.orange.shade800;
-        estadoIcon = Icons.hourglass_top_rounded;
+    // 🔥 AUTO-CANCELAR en Firebase
+    if (a.estado == 'pendiente' && isPast) {
+      _appointmentService.updateAppointmentStatus(a, 'cancelada');
     }
 
     return Container(
@@ -742,140 +216,47 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.01),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         children: [
           ListTile(
-            onTap: () => _showPatientDetailsModal(context, appointment),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            leading: Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: _blue.withOpacity(.12),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                hora,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13.5,
-                  height: 1.05,
-                ),
-              ),
+            leading: CircleAvatar(
+              backgroundColor: _blue.withOpacity(.15),
+              child: Text(DateFormat("HH:mm").format(a.fechaCitaDT)),
             ),
-            title: Text(
-              appointment.pacienteNombre,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
-              ),
-            ),
-            subtitle: Row(
-              children: [
-                Icon(estadoIcon, color: estadoColor, size: 17),
-                const SizedBox(width: 4),
-                Text(
-                  appointment.estado.toUpperCase(),
-                  style: TextStyle(
-                    color: estadoColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12.5,
-                  ),
-                ),
-              ],
-            ),
-            trailing: Icon(Icons.info_outline, color: _blue.withOpacity(.9)),
+            title: Text(a.pacienteNombre),
+            subtitle: Text(a.estado.toUpperCase()),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-            child: Row(
+
+          // 🔥 Mostrar mensaje si ya pasó
+          if (a.estado == 'pendiente' && isPast)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                "Cita expirada",
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+
+          // 🔥 Mostrar botones SOLO si la cita NO ha pasado
+          if (a.estado == 'pendiente' && !isPast)
+            Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (appointment.estado == 'pendiente') ...[
-                  // Denegar mantiene rojo, con borde rojo para consistencia
-                  OutlinedButton.icon(
-                    onPressed: () =>
-                        _handleUpdateStatus(appointment, 'denegada'),
-                    icon: const Icon(Icons.close, color: Colors.red),
-                    label: const Text('Denegar',
-                        style: TextStyle(color: Colors.red)),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.red.shade400, width: 1.2),
-                      foregroundColor: Colors.red,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  ElevatedButton.icon(
-                    onPressed: () =>
-                        _handleUpdateStatus(appointment, 'confirmada'),
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Aceptar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _blue,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                    ),
-                  ),
-                ],
-
-                // “Cancelar cita” (acción destructiva) ahora con borde rojo
-                if (appointment.estado == 'confirmada' && !isPastAppointment)
-                  OutlinedButton.icon(
-                    onPressed: () =>
-                        _handleUpdateStatus(appointment, 'cancelada'),
-                    icon: const Icon(Icons.cancel, color: Colors.red),
-                    label: const Text('Cancelar cita',
-                        style: TextStyle(color: Colors.red)),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.red.shade400, width: 1.2),
-                      foregroundColor: Colors.red,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                    ),
-                  ),
-
-                if (appointment.estado == 'confirmada' && isPastAppointment)
-                  Text(
-                    'Cita finalizada',
-                    style: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
+                OutlinedButton(
+                  onPressed: () => _handleUpdateStatus(a, 'denegada'),
+                  child: const Text("Denegar"),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () => _handleUpdateStatus(a, 'confirmada'),
+                  child: const Text("Aceptar"),
+                ),
               ],
             ),
-          ),
         ],
       ),
     );

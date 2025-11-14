@@ -1,25 +1,31 @@
 /**
  * ============================================================
- * 🔔 CLOUD FUNCTIONS - UN KINE AMIGO
+ * CLOUD FUNCTIONS - UN KINE AMIGO
  * Compatible con Firebase Functions v2
  * ============================================================
  */
 
-const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/firestore");
+// IMPORTANTE: ESTA LÍNEA FALTABA
+const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { 
+  onDocumentCreated, 
+  onDocumentUpdated, 
+  onDocumentWritten 
+} = require("firebase-functions/v2/firestore");
+
 const { logger } = require("firebase-functions");
 const admin = require("firebase-admin");
 
 // Inicializar Firebase Admin SDK
 admin.initializeApp();
 const db = admin.firestore();
-
 // === CONFIGURACIÓN GENERAL ===
-const REGION = "northamerica-northeast1"; // nam5 // 
-const TIMEZONE = "America/Santiago"; // 🇨🇱 Zona horaria de Chile
+const REGION = "northamerica-northeast1"; 
+const TIMEZONE = "America/Santiago"; 
 
 /**
  * ============================================================
- * 📬 HELPER: Enviar notificaciones a múltiples tokens
+ * HELPER: Enviar notificaciones a múltiples tokens
  * ============================================================
  */
 async function sendToTokens(tokens, notification, data = {}) {
@@ -32,7 +38,9 @@ async function sendToTokens(tokens, notification, data = {}) {
   const payload = {
     tokens: valid,
     notification,
-    data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
+    data: Object.fromEntries(
+      Object.entries(data).map(([k, v]) => [k, String(v)])
+    ),
   };
 
   try {
@@ -45,7 +53,7 @@ async function sendToTokens(tokens, notification, data = {}) {
 
 /**
  * ============================================================
- * 🩺 1️⃣ NUEVA CITA → Notifica al kinesiólogo
+ *  NUEVA CITA → Notifica al kinesiólogo
  * ============================================================
  */
 exports.notifyNewAppointment = onDocumentCreated(
@@ -69,33 +77,25 @@ exports.notifyNewAppointment = onDocumentCreated(
         pacienteId: cita.pacienteId || "",
       }
     );
-
-    logger.info(`📢 Nueva cita notificada al kinesiólogo ${cita.kineId}`);
   }
 );
 
 /**
  * ============================================================
- * 💬 2️⃣ NUEVO MENSAJE → Notifica al receptor
+ * NUEVO MENSAJE → Notifica al receptor
  * ============================================================
  */
 exports.notifyNewMessage = onDocumentCreated(
   { region: REGION, document: "chats/{chatId}/messages/{messageId}" },
   async (event) => {
     const msg = event.data.data();
-    if (!msg || !msg.receiverId) {
-      logger.warn("⚠️ Mensaje sin receiverId, se omite.");
-      return;
-    }
+    if (!msg || !msg.receiverId) return;
 
     try {
       const receptorDoc = await db.collection("usuarios").doc(msg.receiverId).get();
       const tokens = receptorDoc.data()?.deviceTokens || [];
 
-      if (!tokens.length) {
-        logger.warn(`⚠️ Usuario ${msg.receiverId} sin tokens registrados.`);
-        return;
-      }
+      if (!tokens.length) return;
 
       const texto = (msg.content || msg.texto || "").toString();
       const preview = texto.slice(0, 60);
@@ -112,8 +112,6 @@ exports.notifyNewMessage = onDocumentCreated(
           chatId: event.params.chatId,
         }
       );
-
-      logger.info(`📨 Notificación enviada a ${msg.receiverId}`);
     } catch (err) {
       logger.error("❌ Error enviando notificación de mensaje:", err);
     }
@@ -122,7 +120,7 @@ exports.notifyNewMessage = onDocumentCreated(
 
 /**
  * ============================================================
- * ✅❌ 3️⃣ CAMBIO DE ESTADO DE CITA → Notifica al paciente
+ * CAMBIO DE ESTADO DE CITA → Notifica al paciente
  * ============================================================
  */
 exports.notifyCitaStatusChange = onDocumentUpdated(
@@ -162,8 +160,6 @@ exports.notifyCitaStatusChange = onDocumentUpdated(
           estado: nuevoEstado,
         }
       );
-
-      logger.info(`📢 Notificación enviada al paciente ${pacienteId}`);
     } catch (err) {
       logger.error("❌ Error enviando notificación de cita:", err);
     }
@@ -172,7 +168,7 @@ exports.notifyCitaStatusChange = onDocumentUpdated(
 
 /**
  * ============================================================
- * 💳 4️⃣ STRIPE - Actualiza plan de usuario
+ * STRIPE - Actualiza plan del usuario
  * ============================================================
  */
 exports.updateUserPlanOnSubscription = onDocumentWritten(
@@ -182,10 +178,7 @@ exports.updateUserPlanOnSubscription = onDocumentWritten(
       const afterData = event.data.after?.data();
       const beforeData = event.data.before?.data();
 
-      if (!afterData) {
-        logger.info("🗑️ Suscripción eliminada, sin acción.");
-        return;
-      }
+      if (!afterData) return;
 
       const userId = event.params.userId;
       const status = afterData.status;
@@ -200,18 +193,53 @@ exports.updateUserPlanOnSubscription = onDocumentWritten(
           perfilDestacado: true,
           limitePacientes: 9999,
         });
-        logger.info(`✅ Usuario ${userId} actualizado a plan PRO.`);
-      } else if (["canceled", "unpaid", "incomplete_expired"].includes(status)) {
+      } else {
         await userRef.update({
           plan: "estandar",
           isPro: false,
           perfilDestacado: false,
           limitePacientes: 50,
         });
-        logger.info(`⚠️ Usuario ${userId} revertido a plan ESTÁNDAR.`);
       }
     } catch (error) {
       logger.error("❌ Error en updateUserPlanOnSubscription:", error);
     }
+  }
+);
+
+/**
+ * ============================================================
+ * CANCELAR AUTOMÁTICAMENTE CITAS VENCIDAS
+ * ============================================================
+ */
+exports.autoCancelOldAppointments = onSchedule(
+  {
+    schedule: "every 1 minutes",
+    timeZone: "America/Santiago",
+    region: REGION,
+  },
+  async () => {
+    const now = new Date();
+
+    const snapshot = await db
+      .collection("citas")
+      .where("estado", "==", "pendiente")
+      .get();
+
+    const batch = db.batch();
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      const fechaCita = data.fechaCita?.toDate();
+
+      if (fechaCita && fechaCita < now) {
+        console.log(`Cancelando cita vencida: ${doc.id}`);
+        batch.update(doc.ref, { estado: "cancelada" });
+      }
+    });
+
+    await batch.commit();
+    console.log("✔ Citas vencidas actualizadas automáticamente");
+    return null;
   }
 );

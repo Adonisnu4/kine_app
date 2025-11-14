@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kine_app/shared/widgets/app_dialog.dart';
+import 'package:kine_app/features/auth/services/push_token_service.dart';
 
 /// misma paleta que splash/login
 class AppColors {
@@ -70,7 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'email': _emailController.text.trim(),
           'edad': int.tryParse(_ageController.text.trim()),
           'sexo': _selectedGender,
-          'tipo_usuario': 1,
+          'tipo_usuario': _firestore.collection('tipo_usuario').doc('1'),
           'fecha_registro': FieldValue.serverTimestamp(),
           'plan': 'estandar',
           'perfilDestacado': false,
@@ -78,6 +79,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         };
 
         await _firestore.collection('usuarios').doc(user.uid).set(userData);
+        await PushTokenService().registerTokenForUser(user.uid);
         await _auth.signOut();
 
         if (!mounted) return;
@@ -135,9 +137,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     const fieldHeight = 56.0;
 
     InputBorder border([Color c = AppColors.border]) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(inputRadius),
-          borderSide: BorderSide(color: c, width: 1.3),
-        );
+      borderRadius: BorderRadius.circular(inputRadius),
+      borderSide: BorderSide(color: c, width: 1.3),
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFFDFDFD),
@@ -299,7 +301,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       dropdownColor: Colors.white,
                       decoration: InputDecoration(
                         hintText: 'Selecciona tu sexo*',
-                        prefixIcon: const Icon(Icons.wc), // <- aquí el único icono
+                        prefixIcon: const Icon(
+                          Icons.wc,
+                        ), // <- aquí el único icono
                         filled: true,
                         fillColor: Colors.white,
                         contentPadding: const EdgeInsets.symmetric(
@@ -347,8 +351,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 14),
                     TextButton(
-                      onPressed:
-                          _isLoading ? null : () => Navigator.pop(context),
+                      onPressed: _isLoading
+                          ? null
+                          : () => Navigator.pop(context),
                       child: Text.rich(
                         TextSpan(
                           text: '¿Ya tienes una cuenta? ',
