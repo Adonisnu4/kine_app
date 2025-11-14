@@ -66,8 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
             context: context,
             icon: Icons.lock_outline_rounded,
             title: 'Cuenta no verificada',
-            content:
-                'Revisa tu correo (y spam) para activar la cuenta.',
+            content: 'Revisa tu correo (y spam) para activar la cuenta.',
           );
           await user.sendEmailVerification();
         }
@@ -140,8 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
         context: context,
         icon: Icons.mark_email_read_rounded,
         title: 'Correo enviado',
-        content:
-            'Enviamos un correo de recuperación a $email.',
+        content: 'Enviamos un correo de recuperación a $email.',
       );
     } on FirebaseAuthException catch (e) {
       final msg = switch (e.code) {
@@ -274,7 +272,8 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    final logoH = (width * 0.16).clamp(48, 72).toDouble();
+    // 🔸 logo más grande
+    final logoH = (width * 0.26).clamp(70, 220).toDouble();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -298,50 +297,30 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               Center(
                 child: Image.asset(
-                  'assets/unkineamigo.png',
+                  'assets/kine-naranjo.png',
                   height: logoH,
                   fit: BoxFit.contain,
                 ),
               ),
-              const SizedBox(height: 8),
-              // badge en naranja
-              const Center(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Color(0x1AE28825),
-                    borderRadius: BorderRadius.all(Radius.circular(999)),
-                  ),
-                  child: Padding(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 14.0, vertical: 4.0),
-                    child: Text(
-                      'Un Kine Amigo',
-                      style: TextStyle(
-                        color: AppColors.orange,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
+              //mas espacio entre el titulo y el logo 
+              const SizedBox(height: 70),
               const Center(
                 child: Text(
                   'Ingresa tus datos\npara iniciar sesión.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.black,
-                    fontSize: 26,
+                    fontSize: 23,
                     height: 1.15,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              // 🔸 bajamos todo lo demás
+              const SizedBox(height: 24),
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,

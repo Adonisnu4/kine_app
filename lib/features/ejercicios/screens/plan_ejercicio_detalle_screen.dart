@@ -3,9 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kine_app/features/ejercicios/screens/sesion_ejercicio_screen.dart';
 
-/// Si ya tienes esta clase en otro archivo, usa esa y borra esta.
+/// Paleta centralizada (misma que en el resto de vistas)
 class AppColors {
-  static const background = Color(0xFFF4F4F4);
+  static const background = Color(0xFFF6F6F7);
   static const white = Color(0xFFFFFFFF);
   static const blue = Color(0xFF47A5D6);     // azul del logo
   static const orange = Color(0xFFE28825);   // acento
@@ -33,26 +33,18 @@ class _PlanEjercicioDetalleScreenState
     extends State<PlanEjercicioDetalleScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // ----------------------- COMENZAR PLAN -----------------------
-  void _comenzarPlan(List<dynamic> sesionesMaestras) async {
+  bool _descExpanded = false;
+
+  /* ---------------------- COMENZAR PLAN ---------------------- */
+  Future<void> _comenzarPlan(List<dynamic> sesionesMaestras) async {
     final firestore = FirebaseFirestore.instance;
     final userId = FirebaseAuth.instance.currentUser?.uid;
 
-    if (userId == null) {
-      // aquí puedes mostrar un snackbar
-      throw Exception("Usuario no autenticado.");
-    }
-
-    if (sesionesMaestras.isEmpty) {
-      debugPrint('⚠️ El plan no tiene sesiones definidas.');
-      return;
-    }
+    if (userId == null) throw Exception("Usuario no autenticado.");
+    if (sesionesMaestras.isEmpty) return;
 
     final planId = widget.planId;
-    if (planId.isEmpty) {
-      debugPrint('⚠️ planId no válido.');
-      return;
-    }
+    if (planId.isEmpty) return;
 
     final planRef = firestore.collection('plan').doc(planId);
     final userRef = firestore.collection('usuarios').doc(userId);
@@ -73,18 +65,15 @@ class _PlanEjercicioDetalleScreenState
       'sesiones': sesionesProgreso,
     });
 
-    // ir a la sesión
     if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => SesionEjercicioScreen(
-          ejecucionId: ejecucionRef.id,
-        ),
+        builder: (_) => SesionEjercicioScreen(ejecucionId: ejecucionRef.id),
       ),
     );
   }
 
-  // ----------------------- BUILD -----------------------
+  /* ---------------------------- BUILD ---------------------------- */
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,13 +81,10 @@ class _PlanEjercicioDetalleScreenState
       appBar: AppBar(
         backgroundColor: AppColors.white,
         elevation: 0,
-        foregroundColor: Colors.black,
+        foregroundColor: Colors.black87,
         title: Text(
           widget.planName,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.black,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         centerTitle: false,
       ),
@@ -110,20 +96,17 @@ class _PlanEjercicioDetalleScreenState
               child: Text('Error al cargar el plan: ${snapshot.error}'),
             );
           }
-
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-
           if (!snapshot.hasData || !snapshot.data!.exists) {
             return const Center(child: Text('No se encontró el plan.'));
           }
 
-          final planData =
-              snapshot.data!.data() as Map<String, dynamic>;
+          final planData = snapshot.data!.data() as Map<String, dynamic>;
           final sesiones = planData['sesiones'] as List<dynamic>? ?? [];
           final descripcion =
-              planData['descripcion'] ?? 'No hay descripción disponible.';
+              (planData['descripcion'] as String?) ?? 'Sin descripción.';
           final duracionSemanas = planData['duracion_semanas'] ?? 0;
 
           if (sesiones.isEmpty) {
@@ -132,36 +115,73 @@ class _PlanEjercicioDetalleScreenState
             );
           }
 
+          final totalSesiones = sesiones.length;
+          final totalEjercicios = _countAllExercises(sesiones);
+
           return Column(
             children: [
-              _buildPlanInfoCard(descripcion, duracionSemanas),
+              _HeaderBar(), // barrita naranja de acento
+              _buildPlanInfoCard(
+                descripcion: descripcion,
+                duracionSemanas: duracionSemanas,
+                totalSesiones: totalSesiones,
+                totalEjercicios: totalEjercicios,
+              ),
               Expanded(child: _buildSesionesList(sesiones)),
-              // botón fijo abajo
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                child: ElevatedButton.icon(
-                  onPressed: () => _comenzarPlan(sesiones),
-                  icon: const Icon(Icons.play_arrow_rounded, size: 26),
-                  label: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 10.0),
-                    child: Text(
-                      'Comenzar plan',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: .1,
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          // podrías abrir reglas / tips del plan
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Tips del plan próximamente 🙂'),
+                            ),
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.blue, width: 1),
+                          foregroundColor: AppColors.blue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          minimumSize: const Size(0, 50),
+                          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        child: const Text('Ver tips'),
                       ),
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFFE28825),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _comenzarPlan(sesiones),
+                        icon: const Icon(Icons.play_arrow_rounded, size: 24),
+                        label: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 6.0),
+                          child: Text(
+                            'Comenzar plan',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -.1,
+                            ),
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.orange,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
                     ),
-                    elevation: 0,
-                  ),
+                  ],
                 ),
               ),
             ],
@@ -171,13 +191,22 @@ class _PlanEjercicioDetalleScreenState
     );
   }
 
-  // ----------------------- UI HELPERS -----------------------
-  Widget _buildPlanInfoCard(String descripcion, int duracionSemanas) {
+  /* -------------------------- UI HELPERS -------------------------- */
+
+  Widget _buildPlanInfoCard({
+    required String descripcion,
+    required int duracionSemanas,
+    required int totalSesiones,
+    required int totalEjercicios,
+  }) {
     final duracionText =
         duracionSemanas > 0 ? '$duracionSemanas semanas' : 'No especificada';
 
+    // Para expandir/contraer descripción
+    final maxLines = _descExpanded ? 99 : 3;
+
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+      margin: const EdgeInsets.fromLTRB(16, 14, 16, 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -194,35 +223,25 @@ class _PlanEjercicioDetalleScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Chips superiores
           Row(
             children: [
-              Container(
-                height: 36,
-                width: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.blue.withOpacity(.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.calendar_month_rounded,
-                  size: 18,
-                  color: AppColors.blue,
-                ),
+              _Badge(icon: Icons.calendar_month_rounded, label: duracionText),
+              const SizedBox(width: 8),
+              _Badge(
+                icon: Icons.playlist_add_check_rounded,
+                label: '$totalSesiones sesiones',
               ),
-              const SizedBox(width: 12),
-              Text(
-                'Duración total: $duracionText',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.text,
-                ),
+              const SizedBox(width: 8),
+              _Badge(
+                icon: Icons.fitness_center_rounded,
+                label: '$totalEjercicios ejercicios',
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           const Divider(height: 1, color: Color(0x11000000)),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           const Text(
             'Descripción del plan',
             style: TextStyle(
@@ -233,6 +252,8 @@ class _PlanEjercicioDetalleScreenState
           const SizedBox(height: 6),
           Text(
             descripcion,
+            maxLines: maxLines,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 13.5,
               color: AppColors.textMuted,
@@ -240,10 +261,21 @@ class _PlanEjercicioDetalleScreenState
             ),
           ),
           const SizedBox(height: 8),
-          // acento naranja chiquito
+          GestureDetector(
+            onTap: () => setState(() => _descExpanded = !_descExpanded),
+            child: Text(
+              _descExpanded ? 'Ver menos' : 'Ver más',
+              style: const TextStyle(
+                color: AppColors.blue,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // acento naranja
           Container(
-            width: 40,
-            height: 3,
+            width: 44,
+            height: 3.5,
             decoration: BoxDecoration(
               color: AppColors.orange,
               borderRadius: BorderRadius.circular(99),
@@ -256,7 +288,7 @@ class _PlanEjercicioDetalleScreenState
 
   Widget _buildSesionesList(List<dynamic> sesiones) {
     return ListView.builder(
-      padding: const EdgeInsets.only(top: 10, bottom: 12),
+      padding: const EdgeInsets.only(top: 6, bottom: 12),
       itemCount: sesiones.length,
       itemBuilder: (context, index) {
         final sesionActual = sesiones[index] as Map<String, dynamic>;
@@ -272,18 +304,18 @@ class _PlanEjercicioDetalleScreenState
         }
 
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
             color: AppColors.white,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.border),
           ),
           child: Theme(
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
             child: ExpansionTile(
               tilePadding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-              childrenPadding: const EdgeInsets.only(bottom: 10),
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
               leading: Container(
                 height: 32,
                 width: 32,
@@ -301,24 +333,32 @@ class _PlanEjercicioDetalleScreenState
                   size: 18,
                 ),
               ),
-              title: Text(
-                'Sesión $numeroSesion',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                  color: sesionCompletada
-                      ? AppColors.textMuted
-                      : AppColors.text,
-                  decoration:
-                      sesionCompletada ? TextDecoration.lineThrough : null,
-                ),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Sesión $numeroSesion',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        color: sesionCompletada
+                            ? AppColors.textMuted
+                            : AppColors.text,
+                        decoration: sesionCompletada
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                    ),
+                  ),
+                  _StatusChip(
+                    text: sesionCompletada ? 'Completada' : 'Pendiente',
+                    color: sesionCompletada ? Colors.green : AppColors.blue,
+                  ),
+                ],
               ),
               subtitle: Text(
                 '$totalEjerciciosSesion ejercicios',
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  color: AppColors.textMuted,
-                ),
+                style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
               ),
               iconColor: AppColors.text,
               collapsedIconColor: AppColors.textMuted,
@@ -330,15 +370,14 @@ class _PlanEjercicioDetalleScreenState
     );
   }
 
-  // ----------------------- ejercicios -----------------------
+  /* -------------------- ejercicios -------------------- */
+
   List<Widget> _buildEjerciciosList(dynamic ejerciciosData) {
     if (ejerciciosData == null ||
         (ejerciciosData is Map && ejerciciosData.isEmpty) ||
         (ejerciciosData is List && ejerciciosData.isEmpty)) {
       return const [
-        ListTile(
-          title: Text('No hay ejercicios en esta sesión.'),
-        )
+        ListTile(title: Text('No hay ejercicios en esta sesión.')),
       ];
     }
 
@@ -364,9 +403,7 @@ class _PlanEjercicioDetalleScreenState
       }).toList();
     }
 
-    return const [
-      ListTile(title: Text('Error de formato de ejercicios.')),
-    ];
+    return const [ListTile(title: Text('Error de formato de ejercicios.'))];
   }
 
   Widget _buildEjercicioTileFromRef(
@@ -374,8 +411,7 @@ class _PlanEjercicioDetalleScreenState
     bool completado,
     int tiempoSesion,
   ) {
-    final ejercicioRef =
-        _firestore.collection('ejercicios').doc(ejercicioId);
+    final ejercicioRef = _firestore.collection('ejercicios').doc(ejercicioId);
 
     return StreamBuilder<DocumentSnapshot>(
       stream: ejercicioRef.snapshots(),
@@ -391,17 +427,14 @@ class _PlanEjercicioDetalleScreenState
           );
         }
 
-        if (snapshot.hasError ||
-            !snapshot.hasData ||
-            !snapshot.data!.exists) {
+        if (snapshot.hasError || !snapshot.hasData || !snapshot.data!.exists) {
           return ListTile(
             leading: const Icon(Icons.error_outline, color: Colors.red),
             title: Text('Error al cargar ejercicio ID: $ejercicioId'),
           );
         }
 
-        final ejercicioData =
-            snapshot.data!.data() as Map<String, dynamic>;
+        final ejercicioData = snapshot.data!.data() as Map<String, dynamic>;
         final nombre = ejercicioData['nombre'] ?? 'Ejercicio sin nombre';
 
         return _buildEjercicioTile(
@@ -418,29 +451,136 @@ class _PlanEjercicioDetalleScreenState
     required int tiempoSegundos,
     required bool completado,
   }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.only(left: 60, right: 16),
-      leading: Icon(
-        completado ? Icons.check_circle : Icons.directions_run_rounded,
-        color: completado ? Colors.green : AppColors.text,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
       ),
-      title: Text(
-        nombreEjercicio,
-        style: TextStyle(
-          fontWeight: FontWeight.w500,
-          color: completado ? AppColors.textMuted : AppColors.text,
-          decoration: completado ? TextDecoration.lineThrough : null,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        leading: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: (completado ? Colors.green : AppColors.blue).withOpacity(.12),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            completado ? Icons.check_circle : Icons.directions_run_rounded,
+            color: completado ? Colors.green : AppColors.blue,
+            size: 18,
+          ),
+        ),
+        title: Text(
+          nombreEjercicio,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: completado ? AppColors.textMuted : AppColors.text,
+            decoration: completado ? TextDecoration.lineThrough : null,
+          ),
+        ),
+        subtitle: tiempoSegundos > 0
+            ? Text(
+                'Duración recomendada: $tiempoSegundos seg',
+                style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+              )
+            : null,
+      ),
+    );
+  }
+
+  /* ---------------- utilidades ---------------- */
+
+  int _countAllExercises(List<dynamic> sesiones) {
+    int total = 0;
+    for (final s in sesiones) {
+      final m = s as Map<String, dynamic>;
+      final ex = m['ejercicios'];
+      if (ex is Map) total += ex.length;
+      if (ex is List) total += ex.length;
+    }
+    return total;
+  }
+}
+
+/* ---------------- widgets pequeños reutilizables ---------------- */
+
+class _HeaderBar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        width: 48,
+        height: 3.5,
+        margin: const EdgeInsets.fromLTRB(16, 10, 0, 6),
+        decoration: BoxDecoration(
+          color: AppColors.orange,
+          borderRadius: BorderRadius.circular(99),
         ),
       ),
-      trailing: tiempoSegundos > 0
-          ? Text(
-              'Duración: $tiempoSegundos seg',
-              style: const TextStyle(
-                fontSize: 12.5,
-                color: AppColors.textMuted,
-              ),
-            )
-          : null,
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _Badge({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.blue.withOpacity(.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AppColors.blue, size: 16),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: AppColors.text,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final String text;
+  final Color color;
+  const _StatusChip({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -.1,
+        ),
+      ),
     );
   }
 }

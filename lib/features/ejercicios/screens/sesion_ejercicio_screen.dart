@@ -30,6 +30,12 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
   String? _currentExerciseKey;
   int _currentSessionIndex = -1;
 
+  // —— PALETA (solo visual) ——
+  static const _bg = Color(0xFFF6F6F7);
+  static const _blue = Color(0xFF47A5D6);
+  static const _orange = Color(0xFFE28825);
+  static const _border = Color(0x11000000);
+
   @override
   void initState() {
     super.initState();
@@ -50,15 +56,13 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
       _videoController?.dispose();
       _videoController = null;
       _totalPlayed = Duration.zero;
-      _isSessionCompletedAndFinished =
-          false; // Resetear el estado de completado
+      _isSessionCompletedAndFinished = false; // Resetear el estado de completado
     });
 
     try {
       final firestore = FirebaseFirestore.instance;
-      final ejecucionRef = firestore
-          .collection('plan_tomados_por_usuarios')
-          .doc(widget.ejecucionId);
+      final ejecucionRef =
+          firestore.collection('plan_tomados_por_usuarios').doc(widget.ejecucionId);
 
       final ejecucionDoc = await ejecucionRef.get();
 
@@ -67,13 +71,6 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
       final data = ejecucionDoc.data()!;
       final sesionActual = data['sesion_actual'] ?? 0;
       final sesiones = List<Map<String, dynamic>>.from(data['sesiones'] ?? []);
-
-      // 1. Verificar si el plan ya terminó (por si acaso)
-      if (sesionActual >= sesiones.length) {
-        // En este punto, podríamos asumir que el plan anterior ya terminó
-        // O simplemente cargar el último estado si es un plan multi-sesión y la app debe parar aquí.
-        // Como el requerimiento es terminar la PANTALLA, solo cargamos la sesión actual.
-      }
 
       final sesion = sesiones[sesionActual];
       final ejercicios = Map<String, dynamic>.from(sesion['ejercicios'] ?? {});
@@ -87,7 +84,6 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
 
       // 3. Si todo en la sesión actual está completado, llama a _endSessionSuccess()
       if (currentKey.isEmpty) {
-        // La sesión actual ha terminado.
         _endSessionSuccess(sesion['nombre'] ?? 'Sesión ${sesionActual + 1}');
         return;
       }
@@ -107,15 +103,13 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
       final nombre = ejercicioData['nombre'] ?? 'Ejercicio sin nombre';
 
       // Corregido: Usando 'tiempo_segundos'
-      final targetSeconds =
-          currentData['tiempo_segundos'] as int? ?? 30; // Leer el tiempo
+      final targetSeconds = currentData['tiempo_segundos'] as int? ?? 30; // Leer el tiempo
 
       if (videoUrl.isEmpty || !videoUrl.startsWith('http')) {
         throw Exception('URL de video no válida');
       }
 
-      final sesionNombre =
-          (sesion['nombre'] != null && (sesion['nombre'] as String).isNotEmpty)
+      final sesionNombre = (sesion['nombre'] != null && (sesion['nombre'] as String).isNotEmpty)
           ? sesion['nombre']
           : 'Sesión ${sesionActual + 1}';
 
@@ -170,17 +164,14 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
     _videoController?.pause();
 
     if (_currentExerciseKey == null || _currentSessionIndex == -1) {
-      debugPrint(
-        'Error: Clave de ejercicio o índice de sesión no establecido.',
-      );
+      debugPrint('Error: Clave de ejercicio o índice de sesión no establecido.');
       return;
     }
 
     try {
       final firestore = FirebaseFirestore.instance;
-      final docRef = firestore
-          .collection('plan_tomados_por_usuarios')
-          .doc(widget.ejecucionId);
+      final docRef =
+          firestore.collection('plan_tomados_por_usuarios').doc(widget.ejecucionId);
 
       final doc = await docRef.get();
       if (!doc.exists) {
@@ -217,11 +208,11 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
         final isPlanCompleted = nextSessionIndex >= sesiones.length;
 
         if (isPlanCompleted) {
-          // ⭐ LÓGICA AGREGADA: El plan está 100% terminado
+          // ⭐ plan terminado
           updates['estado'] = 'terminado';
           updates['fecha_finalizacion'] = FieldValue.serverTimestamp();
         } else {
-          // 🔑 ¡ACTUALIZACIÓN CLAVE! Avanzar al siguiente índice de sesión
+          // avanzar de sesión
           updates['sesion_actual'] = nextSessionIndex;
         }
       }
@@ -229,11 +220,10 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
       // 5. Escribir TODOS los cambios en Firestore
       await docRef.update(updates);
 
-      // 6. Realizar acciones posteriores a la actualización
+      // 6. Acciones posteriores
       if (currentSessionCompleted) {
         _endSessionSuccess(sesion['nombre'] ?? 'Sesión ${sesionActual + 1}');
       } else {
-        // Cargar el siguiente ejercicio dentro de la misma sesión
         _loadExercise();
       }
     } catch (e) {
@@ -264,8 +254,8 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
     setState(() {
       _isLoading = false;
       _isSessionCompletedAndFinished = true;
-      _sesionNombre = '¡Éxito! 🎉';
-      _nombre = '$sessionName terminada.';
+      _sesionNombre = '¡Sesión completada!';
+      _nombre = sessionName;
     });
     // La pantalla permanecerá en este estado hasta que el usuario decida salir.
   }
@@ -273,190 +263,296 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _bg,
       appBar: AppBar(
-        title: Text(_sesionNombre.isEmpty ? 'Ejercicio Actual' : _sesionNombre),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
+        title: Text(_sesionNombre.isEmpty ? 'Sesión' : _sesionNombre),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 0,
+        centerTitle: false,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: _blue))
           : _isSessionCompletedAndFinished
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.check_circle_outline,
-                      color: Colors.green,
-                      size: 80,
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      _sesionNombre,
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      _nombre,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        color: Colors.black87,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 40),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Cierra la pantalla de ejercicios al terminar la sesión
-                        Navigator.of(context).pop();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 40,
-                          vertical: 15,
-                        ),
-                      ),
-                      child: const Text(
-                        'Volver',
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : _videoController == null || !_videoController!.value.isInitialized
-          ? Center(
-              child: Text(
-                'No se pudo cargar el video: $_nombre',
-                style: const TextStyle(color: Colors.red),
-              ),
-            )
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Ejercicio:  $_nombre", //Nombre del ejercicio
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    Container(
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(22.0),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.deepPurple, width: 3),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: AspectRatio(
-                          aspectRatio: _videoController!.value.aspectRatio,
-                          child: VideoPlayer(_videoController!),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    // Controles de reproducción
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            _videoController!.value.isPlaying
-                                ? Icons.pause_circle_filled
-                                : Icons.play_circle_fill,
-                            size: 60,
-                            color: Colors.deepPurple,
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: _border),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0A000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
                           ),
-                          onPressed: () {
-                            setState(() {
-                              if (_videoController!.value.isPlaying) {
-                                _videoController!.pause();
-                              } else {
-                                if (_totalPlayed < _targetDuration) {
-                                  _videoController!.play();
-                                }
-                              }
-                            });
-                          },
-                        ),
-                        const SizedBox(width: 20),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.stop_circle,
-                            size: 50,
-                            color: Colors.redAccent,
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            height: 52,
+                            width: 52,
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.check_rounded,
+                                color: Colors.green, size: 28),
                           ),
-                          onPressed: () {
-                            _videoController!.seekTo(Duration.zero);
-                            _videoController!.pause();
-                            if (_durationTimer.isActive) {
-                              _durationTimer.cancel();
-                              _startDurationTimer();
-                            }
-                            setState(() {
-                              _totalPlayed = Duration.zero;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    // Indicador de progreso
-                    LinearProgressIndicator(
-                      value: _targetDuration.inSeconds > 0
-                          ? _totalPlayed.inMilliseconds /
-                                _targetDuration.inMilliseconds
-                          : 0,
-                      backgroundColor: Colors.grey[300],
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        Colors.deepPurple,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    // Texto de tiempo y duración objetivo
-                    Text(
-                      'Tiempo ejercitado: ${_totalPlayed.inSeconds}s / ${_targetDuration.inSeconds}s',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    // Mensaje de completado
-                    if (_totalPlayed >= _targetDuration &&
-                        _targetDuration.inSeconds > 0)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 10.0),
-                        child: Text(
-                          '¡Objetivo alcanzado! Avanzando...',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green[700],
+                          const SizedBox(height: 12),
+                          const Text(
+                            '¡Sesión completada!',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _nombre,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              height: 1.35,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(
+                                        color: _blue, width: 1.2),
+                                    foregroundColor: _blue,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    minimumSize: const Size(0, 46),
+                                    textStyle: const TextStyle(
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                  child: const Text('Volver'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: _loadExercise,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _orange,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    minimumSize: const Size(0, 46),
+                                    textStyle: const TextStyle(
+                                        fontWeight: FontWeight.w700),
+                                  ),
+                                  child: const Text('Continuar'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              : _videoController == null || !_videoController!.value.isInitialized
+                  ? Center(
+                      child: Text(
+                        'No se pudo cargar el video: $_nombre',
+                        style: const TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Acento naranja
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                width: 48,
+                                height: 3.5,
+                                margin:
+                                    const EdgeInsets.fromLTRB(2, 6, 0, 12),
+                                decoration: BoxDecoration(
+                                  color: _orange,
+                                  borderRadius: BorderRadius.circular(99),
+                                ),
+                              ),
+                            ),
+                            Text(
+                              "Ejercicio:  $_nombre",
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: _blue,
+                                letterSpacing: -.1,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Tarjeta de video
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(color: _border),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x0A000000),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: AspectRatio(
+                                  aspectRatio:
+                                      _videoController!.value.aspectRatio,
+                                  child: VideoPlayer(_videoController!),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+
+                            // Controles
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // Play/Pause (redondo)
+                                Material(
+                                  color: _blue,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(32),
+                                  ),
+                                  elevation: 2,
+                                  child: InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        if (_videoController!
+                                            .value.isPlaying) {
+                                          _videoController!.pause();
+                                        } else {
+                                          if (_totalPlayed < _targetDuration) {
+                                            _videoController!.play();
+                                          }
+                                        }
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(32),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12.0),
+                                      child: Icon(
+                                        _videoController!.value.isPlaying
+                                            ? Icons.pause_rounded
+                                            : Icons.play_arrow_rounded,
+                                        size: 34,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                // Stop (outlined rojo)
+                                Material(
+                                  color: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(32),
+                                    side: BorderSide(
+                                      color: Colors.red.shade500,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: InkWell(
+                                    onTap: () {
+                                      _videoController!
+                                          .seekTo(Duration.zero);
+                                      _videoController!.pause();
+                                      if (_durationTimer.isActive) {
+                                        _durationTimer.cancel();
+                                        _startDurationTimer();
+                                      }
+                                      setState(() {
+                                        _totalPlayed = Duration.zero;
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(32),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12.0),
+                                      child: Icon(
+                                        Icons.stop_rounded,
+                                        size: 30,
+                                        color: Colors.red.shade500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 18),
+
+                            // Progreso redondeado
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(99),
+                              child: LinearProgressIndicator(
+                                value: _targetDuration.inSeconds > 0
+                                    ? _totalPlayed.inMilliseconds /
+                                        _targetDuration.inMilliseconds
+                                    : 0,
+                                minHeight: 8,
+                                backgroundColor: Colors.black12,
+                                valueColor:
+                                    const AlwaysStoppedAnimation<Color>(_blue),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Texto de tiempo y duración objetivo
+                            Text(
+                              'Tiempo ejercitado: ${_totalPlayed.inSeconds}s / ${_targetDuration.inSeconds}s',
+                              style: const TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+
+                            // Mensaje de completado
+                            if (_totalPlayed >= _targetDuration &&
+                                _targetDuration.inSeconds > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 10.0),
+                                child: Text(
+                                  '¡Objetivo alcanzado! Avanzando...',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.green.shade700,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                    const SizedBox(height: 20),
-                  ],
-                ),
-              ),
-            ),
+                    ),
     );
   }
 }

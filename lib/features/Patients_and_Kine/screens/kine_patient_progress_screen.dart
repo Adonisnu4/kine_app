@@ -25,6 +25,14 @@ class KinePatientProgressScreen extends StatefulWidget {
 
 class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
     with SingleTickerProviderStateMixin {
+  // 🎨 Paleta (solo visual)
+  static const _bg = Color(0xFFF6F7FB);
+  static const _blue = Color(0xFF47A5D6);
+  static const _orange = Color(0xFFE28825);
+  static const _muted = Color(0xFF6D6D6D);
+  static const _card = Colors.white;
+  static const _border = Color(0x11000000);
+
   final PlanService _planService = PlanService();
   final MetricsService _metricsService = MetricsService();
 
@@ -61,17 +69,21 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: _bg,
       appBar: AppBar(
-        title: Text('Progreso de ${widget.patientName}'),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black87,
+        title: Text(
+          'Progreso de ${widget.patientName}',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
       ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: _dashboardData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: _blue));
           }
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
@@ -88,6 +100,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
               : plans.take(5).toList();
 
           return RefreshIndicator(
+            color: _blue,
             onRefresh: () async {
               setState(() => _dashboardData = _loadDashboardData());
             },
@@ -96,7 +109,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
               children: [
                 _buildMetricsDashboard(metrics),
                 const SizedBox(height: 16),
-                const Divider(),
+                Container(height: 1, color: _border),
                 const SizedBox(height: 10),
                 const Text(
                   'Planes Asignados',
@@ -118,14 +131,14 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
                           _mostrarTodosLosPlanes
                               ? Icons.expand_less
                               : Icons.expand_more,
-                          color: Colors.teal,
+                          color: _blue,
                         ),
                         label: Text(
                           _mostrarTodosLosPlanes
                               ? 'Ver menos'
                               : 'Ver todos (${plans.length})',
                           style: const TextStyle(
-                            color: Colors.teal,
+                            color: _blue,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -140,14 +153,12 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
     );
   }
 
-  // ==============================================
-  // 🔹 PANEL DE MÉTRICAS
-  // ==============================================
+  // ======== PANEL DE MÉTRICAS (visual) ========
   Widget _buildMetricsDashboard(PatientMetrics metrics) {
     final double adherence = (metrics.totalEjerciciosAsignados > 0)
         ? (metrics.totalEjerciciosCompletados /
-                  metrics.totalEjerciciosAsignados) *
-              100
+                metrics.totalEjerciciosAsignados) *
+            100
         : 0.0;
 
     final screenWidth = MediaQuery.of(context).size.width;
@@ -157,13 +168,14 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _card,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
+          border: Border.all(color: _border),
+          boxShadow: const [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Color(0x08000000),
               blurRadius: 8,
-              offset: const Offset(0, 3),
+              offset: Offset(0, 3),
             ),
           ],
         ),
@@ -174,7 +186,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Colors.teal,
+                color: _blue,
               ),
             ),
             const SizedBox(height: 16),
@@ -197,14 +209,14 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
                   value: metrics.totalHorasCompletadas.toString(),
                   label: 'Horas Totales',
                   icon: Icons.timer_outlined,
-                  color: Colors.deepPurple,
+                  color: Colors.yellow,
                 ),
               ],
             ),
             const SizedBox(height: 20),
-            const Divider(),
+            Container(height: 1, color: _border),
 
-            // --- Gráfico 1 ---
+            const SizedBox(height: 12),
             const Text(
               'Comparativa de Días Activos e Inactivos',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -257,9 +269,9 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
             ),
 
             const SizedBox(height: 24),
-            const Divider(),
+            Container(height: 1, color: _border),
 
-            // --- Gráfico 2 ---
+            const SizedBox(height: 12),
             const Text(
               'Ejercicios por Día de la Semana',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -291,7 +303,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
                       barRods: [
                         BarChartRodData(
                           toY: metrics.ejerciciosPorDiaSemana[i].toDouble(),
-                          color: Colors.teal,
+                          color: _blue,
                           width: 10,
                           borderRadius: BorderRadius.circular(4),
                         ),
@@ -303,7 +315,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
             ),
 
             const SizedBox(height: 24),
-            const Divider(),
+            Container(height: 1, color: _border),
 
             // --- Adherencia ---
             const SizedBox(height: 12),
@@ -320,7 +332,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // 🔹 Indicador circular limpio y proporcionado
+                // Indicador circular
                 Stack(
                   alignment: Alignment.center,
                   children: [
@@ -358,7 +370,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
 
                 const SizedBox(width: 24),
 
-                // 🔹 Leyenda limpia y alineada verticalmente
+                // Leyenda
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -387,9 +399,7 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
     );
   }
 
-  // ==============================================
-  // 🔹 TARJETA DE PLAN
-  // ==============================================
+  // ======== TARJETA DE PLAN (con color de ícono según estado) ========
   Widget _buildPlanCard(PlanTomado plan) {
     final bool isInProgress = plan.estado == 'en_progreso';
     final String statusText = isInProgress
@@ -402,13 +412,16 @@ class _KinePatientProgressScreenState extends State<KinePatientProgressScreen>
       color: const Color(0xFFF9F9FC),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         title: Text(
           plan.nombre,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         subtitle: Text(
           plan.descripcion,
-          style: TextStyle(color: Colors.grey.shade700),
+          style: const TextStyle(color: _muted),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         trailing: Chip(
           avatar: Icon(

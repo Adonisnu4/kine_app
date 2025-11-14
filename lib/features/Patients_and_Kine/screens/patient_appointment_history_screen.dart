@@ -65,6 +65,8 @@ class _PatientAppointmentHistoryScreenState
     // 🚀 --- FIN DE CORRECCIÓN ---
   }
 
+  String _capitalize(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
