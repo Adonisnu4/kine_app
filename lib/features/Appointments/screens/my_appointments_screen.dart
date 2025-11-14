@@ -33,10 +33,9 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     );
   }
 
-  // --- Función para Cancelar Cita Pendiente ---
+  // 🚀 --- FUNCIÓN DE CANCELAR MODIFICADA (USA DIÁLOGOS) ---
   void _handleCancelAppointment(Appointment appointment) async {
     // Pide confirmación (con el nuevo diálogo)
-    // 💡 --- CÓDIGO MODIFICADO AQUÍ ---
     bool? confirm = await showAppConfirmationDialog(
       context: context,
       icon: Icons.warning_amber_rounded, // Icono de advertencia
@@ -46,7 +45,6 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
       cancelText: 'No',
       isDestructive: true, // ¡Esta sí es destructiva! (Botón rojo)
     );
-    // 💡 --- FIN DE CÓDIGO MODIFICADO ---
 
     // Si confirma, llama al servicio para borrar
     if (confirm == true) {
@@ -55,28 +53,28 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         await _appointmentService.deleteAppointment(appointment.id);
 
         if (mounted) {
-          // Muestra mensaje de éxito
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Cita cancelada.'),
-              backgroundColor: Colors.orange,
-            ),
+          // Muestra mensaje de éxito (CON DIÁLOGO)
+          await showAppInfoDialog(
+            context: context,
+            icon: Icons.check_circle_outline,
+            title: 'Solicitud Cancelada',
+            content: 'Tu solicitud de cita ha sido cancelada exitosamente.',
           );
         }
       } catch (e) {
-        // Muestra mensaje de error
+        // Muestra mensaje de error (CON DIÁLOGO)
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al cancelar: $e'),
-              backgroundColor: Colors.red,
-            ),
+          await showAppErrorDialog(
+            context: context,
+            icon: Icons.error_outline,
+            title: 'Error al Cancelar',
+            content: 'No se pudo cancelar la solicitud: ${e.toString()}',
           );
         }
       }
     }
   }
-  // --- Fin Función Cancelar ---
+  // 🚀 --- FIN FUNCIÓN MODIFICADA ---
 
   @override
   Widget build(BuildContext context) {
@@ -149,6 +147,12 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
       case 'completada':
         estadoIcon = Icons.check_box;
         estadoColor = Colors.blueGrey;
+        break;
+      // ⚠️ AÑADIDO: Estado para la cancelación automática
+      case 'cancelada':
+        estadoIcon = Icons.do_not_disturb_alt;
+        estadoColor = Colors.grey.shade700;
+        estadoTexto = 'CANCELADA';
         break;
       case 'pendiente':
       default:
