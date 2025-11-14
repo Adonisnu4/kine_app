@@ -6,7 +6,6 @@
  */
 
 const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/firestore");
-const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { logger } = require("firebase-functions");
 const admin = require("firebase-admin");
 
@@ -15,7 +14,7 @@ admin.initializeApp();
 const db = admin.firestore();
 
 // === CONFIGURACIÓN GENERAL ===
-const REGION = "northamerica-northeast1"; // nam5 //
+const REGION = "northamerica-northeast1"; // nam5 // 
 const TIMEZONE = "America/Santiago"; // 🇨🇱 Zona horaria de Chile
 
 /**
@@ -139,17 +138,13 @@ exports.notifyCitaStatusChange = onDocumentUpdated(
     const nuevoEstado = after.estado;
 
     let mensaje = "";
-    // 🚀 --- ¡CAMBIO CRÍTICO AQUÍ! (Usando MAYÚSCULAS) ---
-    if (nuevoEstado === "ACEPTADA" || nuevoEstado === "CONFIRMADA") {
+    if (nuevoEstado === "aceptada") {
       mensaje = `Tu cita con ${kineNombre} fue aceptada ✅`;
-    } else if (nuevoEstado === "DENEGADA" || nuevoEstado === "RECHAZADA") {
+    } else if (nuevoEstado === "rechazada") {
       mensaje = `Tu cita con ${kineNombre} fue rechazada ❌`;
-    } else if (nuevoEstado === "CANCELADA") {
-      mensaje = `Tu cita con ${kineNombre} ha sido cancelada.`;
     } else {
-      return; // No notifica en 'completada' u otros estados
+      return;
     }
-    // 🚀 --- FIN DEL CAMBIO ---
 
     try {
       const pacienteDoc = await db.collection("usuarios").doc(pacienteId).get();
@@ -218,52 +213,5 @@ exports.updateUserPlanOnSubscription = onDocumentWritten(
     } catch (error) {
       logger.error("❌ Error en updateUserPlanOnSubscription:", error);
     }
-  }
-);
-
-/**
- * ============================================================
- * ⏰ 5️⃣ TAREA PROGRAMADA - Cancela citas expiradas
- * ============================================================
- */
-exports.cancelarCitasExpiradas = onSchedule(
-  {
-    schedule: "every 1 hours", // Se ejecuta cada hora
-    region: REGION,
-    timeZone: TIMEZONE,
-  },
-  async (event) => {
-    logger.info("⏰ Ejecutando la función para cancelar citas expiradas...");
-
-    const ahora = admin.firestore.Timestamp.now();
-
-    const citasPendientesRef = db.collection("citas");
-    const snapshot = await citasPendientesRef
-      // 🚀 --- ¡CAMBIO CRÍTICO AQUÍ! (Usando MAYÚSCULAS) ---
-      .where("estado", "==", "PENDIENTE")
-      .where("fechaCita", "<", ahora)
-      .get();
-
-    if (snapshot.empty) {
-      logger.info("👍 No se encontraron citas 'PENDIENTE' para cancelar.");
-      return null;
-    }
-
-    const batch = db.batch();
-
-    snapshot.forEach(doc => {
-      logger.warn(`⏳ Cancelando cita expirada: ${doc.id}`);
-      const citaRef = db.collection("citas").doc(doc.id);
-      batch.update(citaRef, {
-        // 🚀 --- ¡CAMBIO CRÍTICO AQUÍ! (Usando MAYÚSCULAS) ---
-        estado: "CANCELADA",
-        motivoCancelacion: "Expiró por falta de confirmación."
-      });
-    });
-
-    await batch.commit();
-
-    logger.info(`✅ Se cancelaron automáticamente ${snapshot.size} citas.`);
-    return null;
   }
 );

@@ -8,9 +8,6 @@ import 'package:kine_app/features/Appointments/models/appointment.dart';
 import 'package:kine_app/features/Appointments/services/appointment_service.dart';
 import 'package:kine_app/features/Chat/screens/chat_screen.dart';
 
-// 💡 IMPORTAMOS LOS DIÁLOGOS
-import 'package:kine_app/shared/widgets/app_dialog.dart';
-
 class KinePanelScreen extends StatefulWidget {
   const KinePanelScreen({super.key});
 
@@ -227,61 +224,44 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
 
   List<Appointment> _getEventsForDay(DateTime day) {
     return _allAppointments.where((appointment) {
-      // 🚀 --- CORRECCIÓN A MAYÚSCULAS ---
-      if (appointment.estado == 'CONFIRMADA' ||
-          appointment.estado == 'PENDIENTE') {
-        // 🚀 --- FIN DE CORRECCIÓN ---
+      if (appointment.estado == 'confirmada' ||
+          appointment.estado == 'pendiente') {
         return isSameDay(appointment.fechaCitaDT, day);
       }
       return false;
     }).toList();
   }
 
-  /// Maneja la acción de Aceptar, Denegar o CANCELAR una cita.
   Future<void> _handleUpdateStatus(
     Appointment appointment,
-    String newStatus, // 🚀 Recibirá "CONFIRMADA", "DENEGADA", etc.
+    String newStatus,
   ) async {
-    // 1. CONFIRMACIÓN para ACEPTAR
-    // 🚀 --- CORRECCIÓN A MAYÚSCULAS ---
-    if (newStatus == 'CONFIRMADA') {
-      // 🚀 --- FIN DE CORRECCIÓN ---
-      final bool? confirm = await showAppConfirmationDialog(
-        context: context,
+    if (newStatus == 'confirmada') {
+      final ok = await _showConfirmDialog(
         icon: Icons.check_circle_outline_rounded,
-        title: 'Confirmar Cita',
-        content:
-            '¿Estás seguro de confirmar esta cita con ${appointment.pacienteNombre}?',
-        confirmText: 'Sí, Confirmar',
-        cancelText: 'Cancelar',
-        isDestructive: false,
+        title: 'Confirmar cita',
+        message:
+            '¿Confirmas la cita con ${appointment.pacienteNombre} a las ${DateFormat('HH:mm').format(appointment.fechaCitaDT)}?',
+        confirmText: 'Confirmar',
       );
-      if (confirm != true) return;
+      if (ok != true) return;
     }
 
-    // 2. CONFIRMACIÓN para RECHAZAR (Denegar)
-    // 🚀 --- CORRECCIÓN A MAYÚSCULAS ---
-    if (newStatus == 'DENEGADA') {
-      // 🚀 --- FIN DE CORRECCIÓN ---
-      final bool? confirm = await showAppConfirmationDialog(
-        context: context,
+    if (newStatus == 'denegada') {
+      final ok = await _showConfirmDialog(
         icon: Icons.block_rounded,
-        title: 'Rechazar Cita',
-        content:
-            '¿Estás seguro de rechazar esta solicitud de ${appointment.pacienteNombre}?',
-        confirmText: 'Sí, Rechazar',
-        cancelText: 'Cancelar',
-        isDestructive: true,
+        title: 'Rechazar cita',
+        message:
+            '¿Seguro que quieres rechazar la solicitud de ${appointment.pacienteNombre}?',
+        confirmText: 'Rechazar',
+        destructive: true,
+        accentColor: Colors.red.shade500,
       );
-      if (confirm != true) return;
+      if (ok != true) return;
     }
 
-    // 3. CONFIRMACIÓN para CANCELAR
-    // 🚀 --- CORRECCIÓN A MAYÚSCULAS ---
-    if (newStatus == 'CANCELADA') {
-      // 🚀 --- FIN DE CORRECCIÓN ---
-      final bool? confirm = await showAppConfirmationDialog(
-        context: context,
+    if (newStatus == 'cancelada') {
+      final ok = await _showConfirmDialog(
         icon: Icons.warning_amber_rounded,
         title: 'Cancelar cita',
         message:
@@ -290,42 +270,30 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
         destructive: true,
         accentColor: Colors.red.shade500,
       );
-      if (confirm != true) return;
+      if (ok != true) return;
     }
 
-    // 4. ACTUALIZACIÓN DEL ESTADO
     try {
-      // 🚀 Se envía el estado en MAYÚSCULAS al servicio
       await _appointmentService.updateAppointmentStatus(appointment, newStatus);
 
       if (!mounted) return;
 
-      // Muestra el POPUP de RESULTADO
-      // 🚀 --- CORRECCIÓN A MAYÚSCULAS ---
-      if (newStatus == 'CONFIRMADA') {
-        // 🚀 --- FIN DE CORRECCIÓN ---
-        await showAppInfoDialog(
-          context: context,
+      if (newStatus == 'confirmada') {
+        await _showInfoDialog(
           icon: Icons.check_circle_outline_rounded,
           title: '¡Cita confirmada!',
           message: 'El paciente será notificado.',
           color: _blue,
         );
-        // 🚀 --- CORRECCIÓN A MAYÚSCULAS ---
-      } else if (newStatus == 'DENEGADA') {
-        // 🚀 --- FIN DE CORRECCIÓN ---
-        await showAppWarningDialog(
-          context: context,
+      } else if (newStatus == 'denegada') {
+        await _showInfoDialog(
           icon: Icons.block_rounded,
           title: 'Cita rechazada',
           message: 'La solicitud ha sido rechazada.',
           color: Colors.red.shade500,
         );
-        // 🚀 --- CORRECCIÓN A MAYÚSCULAS ---
-      } else if (newStatus == 'CANCELADA') {
-        // 🚀 --- FIN DE CORRECCIÓN ---
-        await showAppErrorDialog(
-          context: context,
+      } else if (newStatus == 'cancelada') {
+        await _showInfoDialog(
           icon: Icons.cancel_outlined,
           title: 'Cita cancelada',
           message: 'La cita ha sido cancelada y el paciente fue informado.',
@@ -334,9 +302,7 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-
-      await showAppErrorDialog(
-        context: context,
+      await _showInfoDialog(
         icon: Icons.error_outline_rounded,
         title: 'Error',
         message: 'No se pudo actualizar la cita: $e',
@@ -374,34 +340,27 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
       builder: (ctx) {
-        return Container(
-          padding: EdgeInsets.only(
-            top: 20,
-            left: 20,
-            right: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 30,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                appointment.pacienteNombre,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 10),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.email_outlined, color: Colors.grey[600]),
-                title: Text(appointment.pacienteEmail ?? 'No disponible'),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  Icons.calendar_today_outlined,
-                  color: Colors.grey[600],
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 18,
+              top: 10,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle superior
+                Container(
+                  width: 44,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
                 ),
 
                 // Header
@@ -475,18 +434,37 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
                     ),
                   ],
                 ),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.info_outline, color: Colors.grey[600]),
-                title: Text('Estado: ${appointment.estado.toUpperCase()}'),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.chat_bubble_outline),
-                label: const Text('Enviar Mensaje'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 45),
+
+                const SizedBox(height: 14),
+
+                // Tarjetas informativas
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0x11000000)),
+                  ),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        dense: true,
+                        leading: Icon(Icons.calendar_today_rounded, color: _blue),
+                        title: Text(
+                          DateFormat('EEEE d \'de\' MMMM, HH:mm', 'es_ES')
+                              .format(appointment.fechaCitaDT),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: const Text('Fecha y hora de la cita'),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        dense: true,
+                        leading: Icon(Icons.person_outline_rounded, color: Colors.black54),
+                        title: const Text('Paciente'),
+                        subtitle: Text(appointment.pacienteNombre),
+                      ),
+                    ],
+                  ),
                 ),
 
                 const SizedBox(height: 16),
@@ -690,16 +668,10 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
       );
     }
 
-    final pendientes = appointmentsForDay
-        // 🚀 --- CORRECCIÓN A MAYÚSCULAS ---
-        .where((a) => a.estado == 'PENDIENTE')
-        // 🚀 --- FIN DE CORRECCIÓN ---
-        .toList();
-    final otras = appointmentsForDay
-        // 🚀 --- CORRECCIÓN A MAYÚSCULAS ---
-        .where((a) => a.estado != 'PENDIENTE')
-        // 🚀 --- FIN DE CORRECCIÓN ---
-        .toList();
+    final pendientes =
+        appointmentsForDay.where((a) => a.estado == 'pendiente').toList();
+    final otras =
+        appointmentsForDay.where((a) => a.estado != 'pendiente').toList();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
@@ -736,43 +708,34 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
 
   Widget _buildAppointmentCard(Appointment appointment) {
     final hora = DateFormat('HH:mm').format(appointment.fechaCitaDT);
-    IconData estadoIcon;
+    final bool isPastAppointment =
+        appointment.fechaCitaDT.isBefore(DateTime.now());
+
+    // colores por estado
     Color estadoColor;
-
-    // 🚀 --- ¡ESTA ES LA LÓGICA PRINCIPAL DEL BUG! ---
-    final bool isPastAppointment = appointment.fechaCitaDT.isBefore(
-      DateTime.now(),
-    );
-    // 🚀 --- FIN DE LA LÓGICA ---
-
-    // 🚀 --- CORRECCIÓN A MAYÚSCULAS (Switch) ---
+    IconData estadoIcon;
     switch (appointment.estado) {
-      case 'CONFIRMADA':
-        estadoIcon = Icons.check_circle;
+      case 'confirmada':
         estadoColor = Colors.green;
         estadoIcon = Icons.check_circle;
         break;
-      case 'DENEGADA':
+      case 'denegada':
+        estadoColor = Colors.red.shade500;
         estadoIcon = Icons.cancel;
-        estadoColor = Colors.red;
         break;
-      case 'COMPLETADA':
-        estadoIcon = Icons.check_box;
-        estadoColor = Colors.blueGrey;
-        break;
-      case 'CANCELADA':
+      case 'cancelada':
+        estadoColor = Colors.red.shade500;
         estadoIcon = Icons.close;
         break;
       case 'completada':
         estadoColor = Colors.blueGrey;
         estadoIcon = Icons.check_box;
         break;
-      case 'PENDIENTE':
+      case 'pendiente':
       default:
         estadoColor = Colors.orange.shade800;
         estadoIcon = Icons.hourglass_top_rounded;
     }
-    // 🚀 --- FIN DE CORRECCIÓN ---
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -840,20 +803,25 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // 🚀 --- LÓGICA DE BOTONES CORREGIDA ---
-
-                // 1. Botones para citas PENDIENTES (Solo si NO han pasado)
-                if (appointment.estado == 'PENDIENTE' &&
-                    !isPastAppointment) ...[
-                  TextButton.icon(
-                    icon: const Icon(Icons.close, color: Colors.red),
-                    label: const Text(
-                      'Denegar',
-                      style: TextStyle(color: Colors.red),
-                    ),
+                if (appointment.estado == 'pendiente') ...[
+                  // Denegar mantiene rojo, con borde rojo para consistencia
+                  OutlinedButton.icon(
                     onPressed: () =>
-                        // 🚀 Envía MAYÚSCULAS
-                        _handleUpdateStatus(appointment, 'DENEGADA'),
+                        _handleUpdateStatus(appointment, 'denegada'),
+                    icon: const Icon(Icons.close, color: Colors.red),
+                    label: const Text('Denegar',
+                        style: TextStyle(color: Colors.red)),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.red.shade400, width: 1.2),
+                      foregroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 6),
                   ElevatedButton.icon(
@@ -873,37 +841,31 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
                         vertical: 8,
                       ),
                     ),
-                    onPressed: () =>
-                        // 🚀 Envía MAYÚSCULAS
-                        _handleUpdateStatus(appointment, 'CONFIRMADA'),
                   ),
                 ],
 
-                // 2. Indicador para citas PENDIENTES (Que SÍ han pasado)
-                if (appointment.estado == 'PENDIENTE' && isPastAppointment)
-                  Text(
-                    'Expirada (no confirmada)',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-
-                // 3. Botón para citas CONFIRMADAS (Solo si NO han pasado)
-                if (appointment.estado == 'CONFIRMADA' && !isPastAppointment)
-                  TextButton.icon(
-                    icon: const Icon(Icons.cancel, color: Colors.red),
-                    label: const Text(
-                      'Cancelar Cita',
-                      style: TextStyle(color: Colors.red),
-                    ),
+                // “Cancelar cita” (acción destructiva) ahora con borde rojo
+                if (appointment.estado == 'confirmada' && !isPastAppointment)
+                  OutlinedButton.icon(
                     onPressed: () =>
-                        // 🚀 Envía MAYÚSCULAS
-                        _handleUpdateStatus(appointment, 'CANCELADA'),
+                        _handleUpdateStatus(appointment, 'cancelada'),
+                    icon: const Icon(Icons.cancel, color: Colors.red),
+                    label: const Text('Cancelar cita',
+                        style: TextStyle(color: Colors.red)),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.red.shade400, width: 1.2),
+                      foregroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
                   ),
 
-                // 4. INDICADOR para citas CONFIRMADAS PASADAS
-                if (appointment.estado == 'CONFIRMADA' && isPastAppointment)
+                if (appointment.estado == 'confirmada' && isPastAppointment)
                   Text(
                     'Cita finalizada',
                     style: TextStyle(
@@ -911,7 +873,6 @@ class _KinePanelScreenState extends State<KinePanelScreen> {
                       fontStyle: FontStyle.italic,
                     ),
                   ),
-                // 🚀 --- FIN DE LA LÓGICA DE BOTONES ---
               ],
             ),
           ),
