@@ -3,14 +3,13 @@ import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:kine_app/features/auth/services/notification_tokens.dart'; // 👈 Import del servicio de notificaciones
+import 'package:kine_app/features/auth/services/push_token_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
-  final PushTokenService _tokenService =
-      PushTokenService(); // 👈 Instancia del servicio
+  final PushTokenService _tokenService = PushTokenService();
 
   // ===========================================================
   // 1️⃣ LOGIN CON CORREO Y CONTRASEÑA
@@ -21,8 +20,11 @@ class AuthService {
       password: password,
     );
 
-    // 👇 Registra el token FCM para el usuario logueado
-    await _tokenService.registerTokenForUser(userCred.user!.uid);
+    final uid = userCred.user!.uid;
+
+    // 🔥 Guardar token + escuchar cambios
+    await _tokenService.saveToken(uid);
+    _tokenService.listenTokenChanges(uid);
 
     return userCred;
   }
@@ -40,33 +42,38 @@ class AuthService {
       } else {
         final googleUser = await _googleSignIn.signIn();
         if (googleUser == null) throw Exception("Inicio de sesión cancelado");
+
         final googleAuth = await googleUser.authentication;
+
         final credential = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
+
         userCred = await _auth.signInWithCredential(credential);
       }
 
       final user = userCred.user;
-      if (user != null) {
-        final userDoc = _firestore.collection('usuarios').doc(user.uid);
-        final doc = await userDoc.get();
 
-        if (!doc.exists) {
-          await userDoc.set({
-            'uid': user.uid,
-            'nombre_completo': user.displayName ?? '',
-            'email': user.email ?? '',
-            'imagen_perfil': user.photoURL ?? '',
-            'fecha_registro': FieldValue.serverTimestamp(),
-            'provider': 'google',
-            'tipo_usuario': _firestore.collection('tipo_usuario').doc('1'),
+      if (user != null) {
+        final ref = _firestore.collection("usuarios").doc(user.uid);
+        final snap = await ref.get();
+
+        if (!snap.exists) {
+          await ref.set({
+            "uid": user.uid,
+            "nombre_completo": user.displayName ?? "",
+            "email": user.email ?? "",
+            "imagen_perfil": user.photoURL ?? "",
+            "fecha_registro": FieldValue.serverTimestamp(),
+            "provider": "google",
+            "tipo_usuario": _firestore.collection('tipo_usuario').doc('1'),
           });
         }
 
-        // 👇 Registra el token FCM
-        await _tokenService.registerTokenForUser(user.uid);
+        // 🔥 Guardar token + escuchar cambios
+        await _tokenService.saveToken(user.uid);
+        _tokenService.listenTokenChanges(user.uid);
       }
 
       return userCred;
@@ -87,37 +94,39 @@ class AuthService {
         final facebookProvider = FacebookAuthProvider();
         userCred = await _auth.signInWithPopup(facebookProvider);
       } else {
-        final LoginResult result = await FacebookAuth.instance.login();
-        if (result.status == LoginStatus.success) {
-          final AccessToken accessToken = result.accessToken!;
-          final credential = FacebookAuthProvider.credential(
-            accessToken.tokenString,
-          );
-          userCred = await _auth.signInWithCredential(credential);
-        } else {
-          throw Exception(result.message ?? 'Inicio de sesión cancelado');
+        final result = await FacebookAuth.instance.login();
+
+        if (result.status != LoginStatus.success) {
+          throw Exception(result.message ?? "Inicio cancelado");
         }
+
+        final fbToken = result.accessToken!;
+        final credential = FacebookAuthProvider.credential(fbToken.tokenString);
+
+        userCred = await _auth.signInWithCredential(credential);
       }
 
       final user = userCred.user;
-      if (user != null) {
-        final userDoc = _firestore.collection('usuarios').doc(user.uid);
-        final doc = await userDoc.get();
 
-        if (!doc.exists) {
-          await userDoc.set({
-            'uid': user.uid,
-            'nombre_completo': user.displayName ?? '',
-            'email': user.email ?? '',
-            'imagen_perfil': user.photoURL ?? '',
-            'fecha_registro': FieldValue.serverTimestamp(),
-            'provider': 'facebook',
-            'tipo_usuario': _firestore.collection('tipo_usuario').doc('1'),
+      if (user != null) {
+        final ref = _firestore.collection("usuarios").doc(user.uid);
+        final snap = await ref.get();
+
+        if (!snap.exists) {
+          await ref.set({
+            "uid": user.uid,
+            "nombre_completo": user.displayName ?? "",
+            "email": user.email ?? "",
+            "imagen_perfil": user.photoURL ?? "",
+            "fecha_registro": FieldValue.serverTimestamp(),
+            "provider": "facebook",
+            "tipo_usuario": _firestore.collection('tipo_usuario').doc('1'),
           });
         }
 
-        // 👇 Registra el token FCM
-        await _tokenService.registerTokenForUser(user.uid);
+        // 🔥 Guardar token + escuchar cambios
+        await _tokenService.saveToken(user.uid);
+        _tokenService.listenTokenChanges(user.uid);
       }
 
       return userCred;
@@ -135,19 +144,18 @@ class AuthService {
   }
 
   // ===========================================================
-  // 5️⃣ CERRAR SESIÓN
+  // 5️⃣ LOGOUT
   // ===========================================================
   Future<void> signOut() async {
     try {
       final user = _auth.currentUser;
+
       if (user != null) {
-        // 👇 Elimina el token FCM del usuario al cerrar sesión
-        await _tokenService.removeTokenForUser(user.uid);
+        await _tokenService.removeToken(user.uid);
       }
 
       if (!kIsWeb) {
-        final bool isGoogleSigned = await _googleSignIn.isSignedIn();
-        if (isGoogleSigned) {
+        if (await _googleSignIn.isSignedIn()) {
           await _googleSignIn.disconnect();
           await _googleSignIn.signOut();
         }
@@ -155,9 +163,10 @@ class AuthService {
       }
 
       await _auth.signOut();
-      debugPrint('✅ Sesión cerrada correctamente');
+
+      debugPrint("✅ Sesión cerrada correctamente");
     } catch (e) {
-      debugPrint('⚠️ Error al cerrar sesión: $e');
+      debugPrint("⚠️ Error al cerrar sesión: $e");
     }
   }
 

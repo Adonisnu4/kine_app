@@ -1,9 +1,3 @@
-/**
- * ============================================================
- * CLOUD FUNCTIONS - UN KINE AMIGO
- * Compatible con Firebase Functions v2
- * ============================================================
- */
 
 // IMPORTANTE: ESTA LÍNEA FALTABA
 const { onSchedule } = require("firebase-functions/v2/scheduler");
@@ -214,7 +208,7 @@ exports.updateUserPlanOnSubscription = onDocumentWritten(
  */
 exports.autoCancelOldAppointments = onSchedule(
   {
-    schedule: "every 1 minutes",
+    schedule: "every 5 minutes",
     timeZone: "America/Santiago",
     region: REGION,
   },

@@ -1,57 +1,54 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
-// --- Imports de Firebase (comunes y de Notificaciones) ---
+// --- Firebase ---
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'firebase_options.dart'; // Importante para Firebase
+import 'firebase_options.dart';
 
-// --- Imports de Notificaciones Locales ---
+// --- Notificaciones locales ---
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-// --- Imports de Utilidades (intl) y Supabase ---
+// --- Otros ---
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
-// --- Imports de tus pantallas ---
-// (Asegúrate de que estos archivos existan en tu proyecto)
+// --- Tus pantallas ---
 import 'package:kine_app/features/home_screen.dart';
-import 'package:kine_app/features/splash_screen.dart'; // Asumo que WelcomeScreen está aquí
+import 'package:kine_app/features/splash_screen.dart';
 
 // ===================================================================
-// 1. CONFIGURACIÓN DE NOTIFICACIONES (del Archivo 1)
+// 🔥 1) HANDLER BACKGROUND
 // ===================================================================
-
-// Handler para mensajes en background
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Asegúrate de inicializar Firebase aquí también, usando las options
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  print("Handling a background message: ${message.messageId}");
+  print("📩 Mensaje recibido en background: ${message.messageId}");
 }
 
-// Plugin de notificaciones locales
+// ===================================================================
+// 🔥 2) CONFIG LOCAL NOTIFICATIONS
+// ===================================================================
+
 final FlutterLocalNotificationsPlugin _localNotifs =
     FlutterLocalNotificationsPlugin();
+
 const AndroidNotificationChannel _androidChannel = AndroidNotificationChannel(
-  'kine_channel', // id
-  'Notificaciones Kine', // nombre visible
-  description: 'Alertas de ejercicios, citas y mensajes',
+  'kine_channel',
+  'Notificaciones Kine',
+  description: 'Alertas de citas, mensajes y ejercicios',
   importance: Importance.defaultImportance,
 );
 
-// Función de inicialización para notificaciones locales
 Future<void> _initLocalNotifications() async {
-  const AndroidInitializationSettings androidInit =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
-  const DarwinInitializationSettings iosInit = DarwinInitializationSettings();
+  const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const ios = DarwinInitializationSettings();
 
   await _localNotifs.initialize(
-    const InitializationSettings(android: androidInit, iOS: iosInit),
+    const InitializationSettings(android: android, iOS: ios),
   );
 
-  // Crear canal en Android
   await _localNotifs
       .resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin
@@ -60,52 +57,56 @@ Future<void> _initLocalNotifications() async {
 }
 
 // ===================================================================
-// 2. FUNCIÓN main() FUSIONADA
+// 🔥 3) MAIN COMPLETO Y CORREGIDO
 // ===================================================================
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // --- Inicialización de Firebase (del Archivo 2, con options) ---
+  // 1) Inicializar Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // --- Inicialización de intl (del Archivo 2) ---
+  // 2) Localización
   await initializeDateFormatting('es_ES', null);
 
-  // --- Inicialización de Supabase (del Archivo 2) ---
+  // 3) Supabase
   await sb.Supabase.initialize(
     url: 'https://gwnbsjunvxiexmqpthkv.supabase.co',
     anonKey:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3bmJzanVudnhpZXhtcXB0aGt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxOTE3NTEsImV4cCI6MjA3NDc2Nzc1MX0.ZpQIlCgkRYr7SwDY7mtWHqTsgiOzsDqciXSvqugBk8U',
   );
-  // Nota: La segunda llamada a initializeDateFormatting en tu Archivo 2 era redundante.
 
-  // --- Configuración de Notificaciones (del Archivo 1) ---
-
-  // 3) Background handler
+  // 4) Handler background
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // 4) Permisos de notificación
-  final messaging = FirebaseMessaging.instance;
-  await messaging.requestPermission(alert: true, sound: true, badge: true);
+  // 5) 🔥 PIDE PERMISOS (Android 13 muestra popup)
+  NotificationSettings settings = await FirebaseMessaging.instance
+      .requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        criticalAlert: true,
+        announcement: true,
+        provisional: false,
+      );
 
-  // 5) iOS: mostrar notificaciones cuando la app está en foreground
+  print("🔔 Permiso de notificaciones: ${settings.authorizationStatus}");
+
+  // 6) Notificaciones en foreground (iOS)
   await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
     alert: true,
     badge: true,
     sound: true,
   );
 
-  // 6) Init locales
+  // 7) Notificaciones locales
   await _initLocalNotifications();
 
   runApp(const MyApp());
 }
 
 // ===================================================================
-// 3. WIDGET MyApp FUSIONADO (Stateful + Listeners + Auth Stream)
+// 🔥 4) CLASE PRINCIPAL MyApp CON LISTENERS
 // ===================================================================
-
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
   @override
@@ -113,12 +114,13 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  // --- Lógica de Listeners de Notificaciones (del Archivo 1) ---
   @override
   void initState() {
     super.initState();
 
-    // 7) Listener para notificaciones en foreground
+    // ────────────────────────────────────────────────
+    // 🔥 NOTIFICACIONES EN FOREGROUND
+    // ────────────────────────────────────────────────
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       final notif = message.notification;
       if (notif != null) {
@@ -128,7 +130,7 @@ class _MyAppState extends State<MyApp> {
           notif.body,
           const NotificationDetails(
             android: AndroidNotificationDetails(
-              'kine_channel', // Mismo ID de canal que el creado arriba
+              'kine_channel',
               'Notificaciones Kine',
               channelDescription: 'Alertas de ejercicios, citas y mensajes',
               importance: Importance.defaultImportance,
@@ -140,91 +142,61 @@ class _MyAppState extends State<MyApp> {
       }
     });
 
-    // 8) Tocar notificación cuando la app está en background y se abre
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print("Notificación tocada (background): ${message.data}");
+    // ────────────────────────────────────────────────
+    // 🔥 NOTIFICACIÓN TOCADA (APP EN BACKGROUND)
+    // ────────────────────────────────────────────────
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      print("📲 Notificación tocada en background: ${message.data}");
       _handleNotificationTap(message.data);
     });
 
-    // 9) Si la app se abrió desde terminada por una notificación
-    FirebaseMessaging.instance.getInitialMessage().then((
-      RemoteMessage? message,
-    ) {
+    // ────────────────────────────────────────────────
+    // 🔥 NOTIFICACIÓN TOCADA (APP CERRADA)
+    // ────────────────────────────────────────────────
+    FirebaseMessaging.instance.getInitialMessage().then((message) {
       if (message != null) {
-        print("Notificación tocada (terminada): ${message.data}");
+        print("📲 Notificación tocada con app cerrada: ${message.data}");
         _handleNotificationTap(message.data);
       }
     });
   }
 
-  // --- Lógica de Navegación por Notificación (del Archivo 1) ---
+  // ===================================================================
+  // 🔥 Manejo de navegación según la notificación
+  // ===================================================================
   void _handleNotificationTap(Map<String, dynamic> data) {
-    // IMPORTANTE:
-    // Desde aquí no puedes navegar directamente con `Navigator.push(context, ...)`
-    // porque este `context` es el raíz de la app (el de MaterialApp).
-    // Necesitarás un GlobalKey<NavigatorState> o un sistema de manejo de
-    // estado (como Riverpod/Bloc) para gestionar la navegación globalmente.
-    // Por ahora, solo imprimiré los datos para que veas que funciona.
-
     final type = data['type'];
-    print("Manejando toque de notificación. Tipo: $type, Data: $data");
+    print("➡ Navegar según notificación: $type");
 
     if (type == 'mensaje') {
-      final chatWith = data['chatWith']; // id del otro usuario
-      print("Navegar a ChatScreen con $chatWith");
-      // Ejemplo con GlobalKey: navigatorKey.currentState?.push(...)
+      print("Abrir chat con: ${data['chatWith']}");
     } else if (type == 'cita') {
-      print("Navegar a CitasScreen");
+      print("Ir a pantalla de Citas");
     } else if (type == 'recordatorio') {
-      print("Navegar a ProgresoEjerciciosScreen");
+      print("Ir al progreso de ejercicios");
     }
   }
 
-  // --- Lógica de UI (del Archivo 2) ---
+  // ===================================================================
+  // 🔥 5) MATERIAL APP + AUTH STREAM
+  // ===================================================================
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      // (Opcional) Aquí deberías poner tu GlobalKey si quieres navegar
-      // navigatorKey: tuGlobalKey,
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            // Puedes mostrar un splash screen más bonito aquí
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasData) {
-            // Usuario logeado
             return const HomeScreen();
           } else {
-            // Usuario no logeado
-            return const WelcomeScreen(); // Asegúrate de que este Widget exista
+            return const WelcomeScreen();
           }
         },
       ),
     );
   }
 }
-
-// --- CLASES DE EJEMPLO ---
-// Si no tienes estas clases, el código fallará.
-// Asegúrate de importarlas correctamente desde tus archivos.
-// (Las comento porque tú las estás importando arriba)
-/*
-class WelcomeScreen extends StatelessWidget {
-  const WelcomeScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(body: Center(child: Text('Welcome Screen (Login/Register)')));
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(appBar: AppBar(title: Text('Home')), body: Center(child: Text('Home Screen')));
-  }
-}
-*/

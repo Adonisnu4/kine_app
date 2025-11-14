@@ -79,7 +79,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         };
 
         await _firestore.collection('usuarios').doc(user.uid).set(userData);
-        await PushTokenService().registerTokenForUser(user.uid);
+        await PushTokenService().saveToken(user.uid);
         await _auth.signOut();
 
         if (!mounted) return;

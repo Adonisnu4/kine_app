@@ -125,9 +125,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _navigateToKineActivation() async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (ctx) => const KineActivationScreen(),
-      ),
+      MaterialPageRoute(builder: (ctx) => const KineActivationScreen()),
     );
     _refreshProfile();
   }
@@ -182,10 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Color(0xFF9AA0A5),
-          ),
+          style: const TextStyle(fontSize: 12, color: Color(0xFF9AA0A5)),
         ),
       ],
     );
@@ -216,11 +211,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: iconBg ?? AppColors.blue.withOpacity(.08),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(
-            icon,
-            color: iconColor ?? AppColors.text,
-            size: 19,
-          ),
+          child: Icon(icon, color: iconColor ?? AppColors.text, size: 19),
         ),
         title: Text(
           label,
@@ -248,8 +239,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (ctx) {
         return Dialog(
           insetPadding: const EdgeInsets.symmetric(horizontal: 28),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
             child: Column(
@@ -263,8 +255,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     color: destructive.withOpacity(.12),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.logout_rounded,
-                      color: destructive, size: 24),
+                  child: Icon(
+                    Icons.logout_rounded,
+                    color: destructive,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -393,7 +388,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: Color(0x12000000),
                                 offset: Offset(0, 1),
                                 blurRadius: 6,
-                              )
+                              ),
                             ],
                           ),
                           child: Row(
@@ -477,8 +472,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         color: isKine
                                             ? AppColors.blue
                                             : (isPending
-                                                ? AppColors.orange
-                                                : AppColors.grey),
+                                                  ? AppColors.orange
+                                                  : AppColors.grey),
                                         borderRadius: BorderRadius.circular(99),
                                       ),
                                       child: Text(
@@ -530,13 +525,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     const SizedBox(height: 10),
                                   ],
                                 ),
-                              )
+                              ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 14),
                         // card PRO
-                        if (!_isPro)
+                        // 👉 SOLO kinesiólogo ve el banner de Pro
+                        if (!_isPro && isKine)
                           Container(
                             margin: const EdgeInsets.symmetric(horizontal: 16),
                             decoration: BoxDecoration(
@@ -547,7 +543,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                             child: ListTile(
-                              onTap: () => _navigateToSubscriptions(userTypeString),
+                              onTap: () =>
+                                  _navigateToSubscriptions(userTypeString),
                               leading: Container(
                                 width: 34,
                                 height: 34,
@@ -600,7 +597,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 // lista de opciones
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 2,
+                  ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       _menuCard(
@@ -667,7 +667,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             onTap: () {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Tu solicitud está siendo revisada.'),
+                                  content: Text(
+                                    'Tu solicitud está siendo revisada.',
+                                  ),
                                 ),
                               );
                             },
@@ -683,8 +685,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         iconColor: AppColors.blue,
                       ),
                       // cerrar sesión
-                      Container
-                      (
+                      Container(
                         margin: const EdgeInsets.only(top: 4, bottom: 28),
                         decoration: BoxDecoration(
                           color: AppColors.white,

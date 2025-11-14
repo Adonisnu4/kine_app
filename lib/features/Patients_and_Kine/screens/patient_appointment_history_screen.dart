@@ -1,4 +1,5 @@
 // lib/screens/patient_appointment_history_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:kine_app/features/Appointments/models/appointment.dart';
 import 'package:kine_app/features/Appointments/services/appointment_service.dart';
@@ -32,11 +33,10 @@ class _PatientAppointmentHistoryScreenState
   static const _card = Colors.white;
   static const _text = Color(0xFF111111);
   static const _muted = Color(0xFF7A8285);
-  static const _blue = Color(0xFF47A5D6);
   static const _teal = Color(0xFF00897B);
-  static const _green = Color(0xFF2E7D32);
   static const _orange = Color(0xFFE28825);
   static const _red = Color(0xFFD32F2F);
+  static const _green = Color(0xFF2E7D32);
   static const _blueGrey = Color(0xFF546E7A);
 
   @override
@@ -48,11 +48,10 @@ class _PatientAppointmentHistoryScreenState
     );
   }
 
-  // ---------- Header (igual estilo que otras pantallas) ----------
+  // ---------- Header ----------
   Widget _buildHeader() {
     return Column(
       children: [
-        // Barra superior blanca con sombra leve
         SafeArea(
           bottom: false,
           child: Container(
@@ -65,7 +64,7 @@ class _PatientAppointmentHistoryScreenState
                   color: Color(0x12000000),
                   offset: Offset(0, 1),
                   blurRadius: 6,
-                )
+                ),
               ],
             ),
             child: Row(
@@ -108,7 +107,6 @@ class _PatientAppointmentHistoryScreenState
             ),
           ),
         ),
-        // Barrita naranja
         Container(
           margin: const EdgeInsets.fromLTRB(16, 10, 0, 12),
           width: 44,
@@ -129,29 +127,65 @@ class _PatientAppointmentHistoryScreenState
       return (icon: Icons.check_circle, color: _green, label: 'CONFIRMADA');
     }
     if (s == 'completada') {
-      return (icon: Icons.task_alt_rounded, color: _blueGrey, label: 'COMPLETADA');
+      return (
+        icon: Icons.task_alt_rounded,
+        color: _blueGrey,
+        label: 'COMPLETADA',
+      );
     }
     if (s == 'denegada' || s == 'rechazada' || s == 'cancelada') {
       return (
         icon: Icons.cancel_rounded,
         color: _red,
-        label: (s == 'denegada') ? 'RECHAZADA' : s.toUpperCase()
+        label: (s == 'denegada') ? 'RECHAZADA' : s.toUpperCase(),
       );
     }
     if (s == 'pendiente') {
-      return (icon: Icons.hourglass_top_rounded, color: _orange, label: 'PENDIENTE');
+      return (
+        icon: Icons.hourglass_top_rounded,
+        color: _orange,
+        label: 'PENDIENTE',
+      );
     }
-    return (icon: Icons.help_outline_rounded, color: Colors.grey, label: s.toUpperCase());
+    return (
+      icon: Icons.help_outline_rounded,
+      color: Colors.grey,
+      label: s.toUpperCase(),
+    );
   }
 
   String _formatDate(DateTime dt) {
-    final locale = 'es_ES';
+    const locale = 'es_ES';
     final day = DateFormat('EEEE d MMM yyyy', locale).format(dt);
     final hour = DateFormat('HH:mm', locale).format(dt);
     return '${_capitalize(day)} – $hour hrs';
   }
 
-  String _capitalize(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+  String _capitalize(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+
+  // ===========================
+  // 🔥 FUNCIÓN CANCELAR CITA
+  // ===========================
+  Future<void> _cancelAppointment(Appointment ap) async {
+    try {
+      await _appointmentService.cancelAppointment(ap.id);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Cita cancelada correctamente"),
+          backgroundColor: _red,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error al cancelar: $e"), backgroundColor: _red),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -168,13 +202,16 @@ class _PatientAppointmentHistoryScreenState
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return _errorState('Error al cargar historial: ${snapshot.error}');
+                  return _errorState(
+                    'Error al cargar historial: ${snapshot.error}',
+                  );
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return _emptyState();
                 }
 
                 final appointments = snapshot.data!;
+
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
                   itemCount: appointments.length,
@@ -182,6 +219,16 @@ class _PatientAppointmentHistoryScreenState
                   itemBuilder: (context, i) {
                     final ap = appointments[i];
                     final style = _statusStyle(ap.estado);
+
+                    final lower = ap.estado.toLowerCase();
+
+                    // NUEVA LÓGICA:
+                    // El kine puede cancelar si:
+                    // - Es dueño de la cita
+                    // - La cita está PENDIENTE o CONFIRMADA
+                    final bool canCancel =
+                        ap.kineId == _currentKineId &&
+                        (lower == "pendiente" || lower == "confirmada");
 
                     return Container(
                       decoration: BoxDecoration(
@@ -197,64 +244,94 @@ class _PatientAppointmentHistoryScreenState
                         border: Border.all(color: const Color(0x0F000000)),
                       ),
                       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                      child: Row(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Avatar de estado
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: style.color.withOpacity(.12),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(style.icon, color: style.color, size: 22),
-                          ),
-                          const SizedBox(width: 12),
-                          // Texto + chip
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _formatDate(ap.fechaCitaDT),
-                                  style: const TextStyle(
-                                    fontSize: 15.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: _text,
-                                    letterSpacing: -.1,
-                                  ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: style.color.withOpacity(.12),
+                                  shape: BoxShape.circle,
                                 ),
-                                const SizedBox(height: 8),
-                                Row(
+                                child: Icon(
+                                  style.icon,
+                                  color: style.color,
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 5,
+                                    Text(
+                                      _formatDate(ap.fechaCitaDT),
+                                      style: const TextStyle(
+                                        fontSize: 15.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: _text,
+                                        letterSpacing: -.1,
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: style.color.withOpacity(.10),
-                                        border: Border.all(
-                                          color: style.color.withOpacity(.50),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 5,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: style.color.withOpacity(.10),
+                                            border: Border.all(
+                                              color: style.color.withOpacity(
+                                                .50,
+                                              ),
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              999,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            style.label,
+                                            style: TextStyle(
+                                              color: style.color,
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 12.5,
+                                              letterSpacing: .2,
+                                            ),
+                                          ),
                                         ),
-                                        borderRadius: BorderRadius.circular(999),
-                                      ),
-                                      child: Text(
-                                        style.label,
-                                        style: TextStyle(
-                                          color: style.color,
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12.5,
-                                          letterSpacing: .2,
-                                        ),
-                                      ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
+
+                          // -------- BOTÓN CANCELAR --------
+                          if (canCancel) ...[
+                            const SizedBox(height: 10),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                onPressed: () => _cancelAppointment(ap),
+                                icon: const Icon(Icons.cancel_outlined),
+                                label: const Text(
+                                  'Cancelar cita',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: _red,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     );
@@ -268,7 +345,7 @@ class _PatientAppointmentHistoryScreenState
     );
   }
 
-  // ---------- States vacíos / error con header ya puesto arriba ----------
+  // ---------- States vacíos / error ----------
   Widget _emptyState() {
     return Center(
       child: Padding(
