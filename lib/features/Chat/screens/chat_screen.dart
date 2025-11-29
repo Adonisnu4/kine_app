@@ -35,7 +35,19 @@ class _ChatScreenState extends State<ChatScreen> {
   // Controlador para permitir desplazamiento automático del ListView.
   final ScrollController _scrollController = ScrollController();
 
-  // LÓGICA DE NAVEGACIÓN
+  @override
+  void initState() {
+    super.initState();
+    _ensureChatRoomInitialized();
+  }
+
+  // Asegura que el documento de la sala de chat exista en la base de datos.
+  void _ensureChatRoomInitialized() async {
+    final currentUserId = _auth.currentUser?.uid;
+    if (currentUserId != null) {
+      await _chatService.ensureChatRoomExists(currentUserId, widget.receiverId);
+    }
+  }
 
   // Acción al pulsar el encabezado de la app (nombre del receptor).
   void _navigateToUserProfile() {
@@ -44,7 +56,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // Envía un mensaje utilizando el chatService si el campo no está vacío.
+  // Envía un mensaje utilizando el chatService.
   void sendMessage() async {
     if (_messageController.text.isNotEmpty) {
       await _chatService.sendMessage(
@@ -55,50 +67,35 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // Formatea la hora del mensaje a un formato legible (ej: 5:31 PM).
+  // Formatea la hora del mensaje.
   String _formatTimestamp(DateTime timestamp) {
     return DateFormat('h:mm a').format(timestamp);
   }
 
-  // ITEM INDIVIDUAL DEL MENSAJE
-
-  // Construye el widget visual para un mensaje individual del chat.
+  // Widget para un mensaje individual.
   Widget _buildMessageItem(Message message) {
-    // Determina si el mensaje fue enviado por el usuario actual.
     bool isCurrentUser = message.senderId == _auth.currentUser!.uid;
 
-    // Define colores dependiendo del remitente.
     final Color primaryColor = Theme.of(context).colorScheme.primary;
     final Color senderColor = primaryColor.withOpacity(0.9);
     const Color receiverColor = Color(0xFFE0E0E0);
 
-    // Define la alineación del mensaje.
-    final Alignment alignment = isCurrentUser
-        ? Alignment.centerRight
-        : Alignment.centerLeft;
+    final Alignment alignment =
+        isCurrentUser ? Alignment.centerRight : Alignment.centerLeft;
 
-    // Define el color del globo de mensaje.
     final Color messageColor = isCurrentUser ? senderColor : receiverColor;
-
-    // Color del texto según si es enviado o recibido.
     final Color textColor = isCurrentUser ? Colors.white : Colors.black87;
-
-    // Color de la hora de envío.
     final Color timeColor = isCurrentUser ? Colors.white70 : Colors.black54;
 
-    // Bordes personalizados para diferenciar mensajes del remitente.
     final BorderRadius borderRadius = BorderRadius.only(
       topLeft: const Radius.circular(20),
       topRight: const Radius.circular(20),
-      bottomLeft: isCurrentUser
-          ? const Radius.circular(20)
-          : const Radius.circular(5),
-      bottomRight: isCurrentUser
-          ? const Radius.circular(5)
-          : const Radius.circular(20),
+      bottomLeft:
+          isCurrentUser ? const Radius.circular(20) : const Radius.circular(5),
+      bottomRight:
+          isCurrentUser ? const Radius.circular(5) : const Radius.circular(20),
     );
 
-    // Convierte el timestamp Firestore a un DateTime legible.
     final String formattedTime = _formatTimestamp(message.timestamp.toDate());
 
     return Container(
@@ -106,7 +103,6 @@ class _ChatScreenState extends State<ChatScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          // Limita el ancho máximo del mensaje.
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         child: Container(
@@ -142,14 +138,11 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  //
-  // LISTA DE MENSAJES
+  // Lista de mensajes.
   Widget _buildMessageList() {
-    // Obtiene el ID del usuario actual para identificar mensajes propios.
     String currentUserId = _auth.currentUser!.uid;
 
     return StreamBuilder<List<Message>>(
-      // Escucha los mensajes en tiempo real entre usuario y receptor.
       stream: _chatService.getMessages(currentUserId, widget.receiverId),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
@@ -161,21 +154,28 @@ class _ChatScreenState extends State<ChatScreen> {
           );
         }
 
-        // Estado inicial mientras carga los primeros mensajes.
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // Lista final de mensajes obtenidos.
         List<Message> messages = snapshot.data!;
+
+        if (messages.isEmpty) {
+          return const Center(
+            child: Text(
+              '¡Envía el primer mensaje!',
+              style: TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+          );
+        }
+
 
         return ListView.builder(
           controller: _scrollController,
-          reverse: true, // Hace que el chat empiece desde abajo.
+          reverse: true, //hace que el chat comience desde abajo
           itemCount: messages.length,
           padding: const EdgeInsets.only(top: 8),
           itemBuilder: (context, index) {
-            // Se invierte el orden manualmente para que coincida con reverse:true.
             Message message = messages[messages.length - 1 - index];
             return _buildMessageItem(message);
           },
@@ -184,7 +184,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  //CAMPO DE TEXTO PARA ESCRIBIR MENSAJES
+  // Campo de texto para escribir mensajes.
   Widget _buildMessageInput() {
     final Color primaryColor = Theme.of(context).colorScheme.primary;
 
@@ -231,12 +231,10 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // BUILD PRINCIPAL DE LA PANTALLA
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // Hace que el título (nombre del usuario) sea clickeable.
         title: GestureDetector(
           onTap: _navigateToUserProfile,
           child: Text(
