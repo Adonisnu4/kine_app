@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
-// FLUTTER
+// FLUTTER (SUPABASE)
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // FIREBASE
@@ -17,32 +17,37 @@ class KineActivationScreen extends StatefulWidget {
 }
 
 class _KineActivationScreenState extends State<KineActivationScreen> {
-  // Estado para almacenar el archivo seleccionado (FilePicker)
+  // Archivo seleccionado desde FilePicker
   PlatformFile? _selectedPlatformFile;
   String? _fileName;
+
+  // Estado para indicar si se está subiendo el archivo
   bool _isUploading = false;
 
-  // Cliente de Supabase
+  // Cliente de Supabase para manejar el Storage
   final supabase = Supabase.instance.client;
 
-  // Cliente Firestore
+  // Referencia a Firestore
   final firestore = FirebaseFirestore.instance;
 
-  // Función para seleccionar el archivo
+  /// Permite seleccionar un archivo desde el dispositivo.
+  /// Se aceptan extensiones: jpg, jpeg, png y pdf.
+  /// Se requiere withData:true para obtener los bytes necesarios para subirlos.
   Future<void> pickFile() async {
     final FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
-      withData: true, // Necesitamos los bytes para uploadBinary
+      withData: true, // Necesario para obtener bytes del archivo
     );
 
+    // Si el usuario selecciona archivo
     if (result != null && result.files.single.path != null) {
       setState(() {
         _selectedPlatformFile = result.files.single;
         _fileName = result.files.single.name;
       });
     } else {
-      // Usuario canceló la selección
+      // Si cancela, se limpia el estado
       setState(() {
         _selectedPlatformFile = null;
         _fileName = null;
@@ -50,8 +55,10 @@ class _KineActivationScreenState extends State<KineActivationScreen> {
     }
   }
 
-  // Lógica de subida a Supabase
+  /// Sube el archivo seleccionado a Supabase Storage
+  /// y crea una solicitud en Firestore para activar al usuario como kinesiólogo.
   Future<void> uploadFile() async {
+    // Validación inicial
     if (_selectedPlatformFile == null || _selectedPlatformFile!.bytes == null) {
       return;
     }
@@ -61,18 +68,26 @@ class _KineActivationScreenState extends State<KineActivationScreen> {
     });
 
     try {
-      // 1. Obtener los bytes y la extensión
+      // Obtiene bytes del archivo
       final Uint8List fileBytes = _selectedPlatformFile!.bytes!;
+
+      // Extensión del archivo
       final String fileExtension = _selectedPlatformFile!.extension ?? 'dat';
+
+      // UID del usuario actual
       final String? userUid = FirebaseAuth.instance.currentUser?.uid;
 
-      // 2. Definir la ruta de almacenamiento
+      // Carpeta principal en Supabase Storage
       const String mainFolder = 'documentos_kinesiologo';
+
+      // Nombre único basado en timestamp
       final String uniqueFileName =
           '${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
+
+      // Ruta final del archivo dentro del bucket
       final String storagePath = '$mainFolder/$userUid/$uniqueFileName';
 
-      // 3. Subir el archivo
+      // Subida efectiva del archivo a Supabase Storage
       final String fullPath = await supabase.storage
           .from('kine_app') // Nombre del bucket
           .uploadBinary(
@@ -81,18 +96,17 @@ class _KineActivationScreenState extends State<KineActivationScreen> {
             fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
           );
 
-      // 4. Mostrar éxito
+      // Notifica éxito al usuario
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('✅ Archivo $_fileName subido con éxito')),
+        SnackBar(content: Text('Archivo $_fileName subido con éxito')),
       );
 
-      // 5. Obtener URL pública
+      // Obtiene URL pública del archivo subido
       final String publicUrl = supabase.storage
           .from('kine_app')
           .getPublicUrl(storagePath);
-      print(publicUrl);
 
-      // 6. Guardar solicitud en Firestore
+      // Registra la solicitud en Firestore
       await firestore.collection('solicitudes_kinesiologo').add({
         'usuario': userUid,
         'estado': 'pendiente',
@@ -100,19 +114,21 @@ class _KineActivationScreenState extends State<KineActivationScreen> {
         'documento': publicUrl,
       });
 
-      // 7. Limpiar estado
+      // Limpia estado interno
       setState(() {
         _selectedPlatformFile = null;
         _fileName = null;
       });
     } on StorageException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Error de Storage: ${e.message}')),
-      );
+      // Error específico del Storage de Supabase
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error de Storage: ${e.message}')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Error inesperado al subir: $e')),
-      );
+      // Error general
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error inesperado al subir: $e')));
     } finally {
       setState(() {
         _isUploading = false;
@@ -120,6 +136,12 @@ class _KineActivationScreenState extends State<KineActivationScreen> {
     }
   }
 
+  /// Construcción visual de la pantalla.
+  /// Muestra:
+  /// - Botón para seleccionar archivo
+  /// - Vista previa del archivo seleccionado
+  /// - Botón para subir archivo a Supabase
+  /// - Indicador de carga durante la subida
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -134,7 +156,7 @@ class _KineActivationScreenState extends State<KineActivationScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Botón de Seleccionar Archivo
+              // Botón para seleccionar archivo del dispositivo
               ElevatedButton.icon(
                 onPressed: _isUploading ? null : pickFile,
                 icon: const Icon(Icons.folder_open),
@@ -149,7 +171,7 @@ class _KineActivationScreenState extends State<KineActivationScreen> {
 
               const SizedBox(height: 30),
 
-              // Vista condicional del archivo seleccionado
+              // Si está subiendo, muestra indicador
               if (_isUploading)
                 const Column(
                   children: [
@@ -158,11 +180,12 @@ class _KineActivationScreenState extends State<KineActivationScreen> {
                     Text("Subiendo archivo..."),
                   ],
                 )
+              // Si ya hay un archivo seleccionado
               else if (_selectedPlatformFile != null)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Indicador de archivo seleccionado
+                    // Vista del archivo seleccionado
                     Card(
                       elevation: 4,
                       color: Colors.blue.shade50,
@@ -192,7 +215,7 @@ class _KineActivationScreenState extends State<KineActivationScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Botón de Subir Archivo
+                    // Botón de subida a Supabase
                     ElevatedButton.icon(
                       onPressed: uploadFile,
                       icon: const Icon(Icons.cloud_upload),
@@ -208,6 +231,7 @@ class _KineActivationScreenState extends State<KineActivationScreen> {
                     ),
                   ],
                 )
+              // Cuando aún no se ha seleccionado archivo
               else
                 const Text(
                   "Aún no se ha seleccionado ningún archivo para subir.",

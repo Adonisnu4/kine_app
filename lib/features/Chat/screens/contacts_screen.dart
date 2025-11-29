@@ -1,9 +1,12 @@
 // lib/screens/contacts_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/chat_service.dart';
 import 'chat_screen.dart';
 
+// Pantalla que muestra la lista de contactos disponibles para iniciar un chat.
+// El contenido mostrado depende del tipo de usuario: paciente o kinesiólogo.
 class ContactsScreen extends StatefulWidget {
   const ContactsScreen({super.key});
 
@@ -12,10 +15,13 @@ class ContactsScreen extends StatefulWidget {
 }
 
 class _ContactsScreenState extends State<ContactsScreen> {
+  // Servicio que gestiona la obtención de contactos y mensajes.
   final ChatService _chatService = ChatService();
+
+  // Almacena el ID del tipo de usuario actual (1 = paciente, 3 = kinesiólogo).
   String? _currentUserTypeId;
 
-  // paleta
+  // Paleta de colores utilizada por la pantalla.
   static const Color _blue = Color(0xFF47A5D6);
   static const Color _orange = Color(0xFFE28825);
   static const Color _bg = Color(0xFFF3F3F3);
@@ -27,6 +33,8 @@ class _ContactsScreenState extends State<ContactsScreen> {
     _loadUserTypeId();
   }
 
+  // Obtiene desde el servicio el tipo de usuario actualmente autenticado
+  // y lo guarda para renderizar correctamente la pantalla.
   void _loadUserTypeId() async {
     final typeId = await _chatService.getCurrentUserTypeId();
     setState(() {
@@ -36,19 +44,20 @@ class _ContactsScreenState extends State<ContactsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Si aún no se ha cargado el tipo de usuario, muestra un loader.
     if (_currentUserTypeId == null || _currentUserTypeId == '0') {
       return const Scaffold(
         backgroundColor: _bg,
         body: SafeArea(
-          child: Center(
-            child: CircularProgressIndicator(color: _blue),
-          ),
+          child: Center(child: CircularProgressIndicator(color: _blue)),
         ),
       );
     }
 
-    final String title =
-        _currentUserTypeId == '3' ? 'Pacientes' : 'Kinesiólogos';
+    // Define si se deben mostrar pacientes o kinesiólogos según el tipo de usuario.
+    final String title = _currentUserTypeId == '3'
+        ? 'Pacientes'
+        : 'Kinesiólogos';
 
     return Scaffold(
       backgroundColor: _bg,
@@ -57,6 +66,8 @@ class _ContactsScreenState extends State<ContactsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 14),
+
+            // Encabezado de la pantalla.
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Text(
@@ -69,18 +80,20 @@ class _ContactsScreenState extends State<ContactsScreen> {
                 ),
               ),
             ),
+
+            // Subtítulo.
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 4,
+              ),
               child: Text(
                 'Selecciona un contacto para continuar.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               ),
             ),
-            // barra más pegadita
+
+            // Barra decorativa.
             Container(
               margin: const EdgeInsets.fromLTRB(16, 0, 0, 10),
               width: 48,
@@ -90,7 +103,8 @@ class _ContactsScreenState extends State<ContactsScreen> {
                 borderRadius: BorderRadius.circular(99),
               ),
             ),
-            // LISTA
+
+            // Lista de contactos.
             Expanded(child: _buildContactsList()),
           ],
         ),
@@ -98,10 +112,13 @@ class _ContactsScreenState extends State<ContactsScreen> {
     );
   }
 
+  // Construye la lista de contactos según el rol del usuario.
   Widget _buildContactsList() {
     return StreamBuilder<QuerySnapshot>(
+      // Stream que obtiene la lista de contactos ordenados por tipo.
       stream: _chatService.getContactsByType(_currentUserTypeId!),
       builder: (context, snapshot) {
+        // Manejo de errores del stream.
         if (snapshot.hasError) {
           return Center(
             child: Padding(
@@ -115,12 +132,12 @@ class _ContactsScreenState extends State<ContactsScreen> {
           );
         }
 
+        // Muestra un loader mientras se obtienen los datos.
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: _blue),
-          );
+          return const Center(child: CircularProgressIndicator(color: _blue));
         }
 
+        // Si la consulta no retorna datos, indica que no hay contactos disponibles.
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return Center(
             child: Text(
@@ -130,6 +147,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
           );
         }
 
+        // Lista de documentos obtenidos.
         final docs = snapshot.data!.docs;
 
         return ListView.builder(
@@ -139,6 +157,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
             final document = docs[index];
             final data = document.data()! as Map<String, dynamic>;
             final receiverId = document.id;
+
             return _contactCard(context, receiverId, data);
           },
         );
@@ -146,15 +165,20 @@ class _ContactsScreenState extends State<ContactsScreen> {
     );
   }
 
+  // Construye cada tarjeta individual de contacto (usuario).
   Widget _contactCard(
     BuildContext context,
     String receiverId,
     Map<String, dynamic> data,
   ) {
+    // Extrae nombre completo y nombre de usuario.
     final receiverName = data['nombre_completo'] ?? 'Usuario';
     final receiverUser = data['nombre_usuario'] ?? '';
-    final initial =
-        receiverName.isNotEmpty ? receiverName[0].toUpperCase() : '?';
+
+    // Obtiene la inicial del nombre para mostrar en el avatar.
+    final initial = receiverName.isNotEmpty
+        ? receiverName[0].toUpperCase()
+        : '?';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -171,6 +195,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
         ],
       ),
       child: ListTile(
+        // Abre la pantalla de chat al pulsar el contacto.
         onTap: () {
           Navigator.push(
             context,
@@ -182,8 +207,13 @@ class _ContactsScreenState extends State<ContactsScreen> {
             ),
           );
         },
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 10,
+        ),
+
+        // Avatar con la inicial del usuario.
         leading: CircleAvatar(
           radius: 25,
           backgroundColor: _blue.withOpacity(.12),
@@ -196,6 +226,8 @@ class _ContactsScreenState extends State<ContactsScreen> {
             ),
           ),
         ),
+
+        // Nombre visible en la tarjeta.
         title: Text(
           receiverName,
           style: const TextStyle(
@@ -204,15 +236,16 @@ class _ContactsScreenState extends State<ContactsScreen> {
             color: _text,
           ),
         ),
+
+        // Muestra el nombre de usuario si existe.
         subtitle: receiverUser.isNotEmpty
             ? Text(
                 receiverUser,
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 12.5,
-                ),
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5),
               )
             : null,
+
+        // Icono de navegación.
         trailing: const Icon(
           Icons.chevron_right_rounded,
           color: Colors.black45,

@@ -1,30 +1,33 @@
-// lib/auth/auth_gate.dart
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:kine_app/features/chat/screens/contacts_screen.dart'; // Asegúrate de tener una pantalla de login para el caso de no estar autenticado
-import '../features/auth/screens/login_screen.dart'; // <--- CAMBIA ESTO A TU RUTA REAL DE LOGIN
+//El AuthGate es un widget que decide automáticamente si el usuario debe ver la pantalla de home o la pantalla de login.
+// Importaciones necesarias
+import 'package:firebase_auth/firebase_auth.dart'; // Manejo de autenticación con Firebase
+import 'package:flutter/material.dart'; // Widgets básicos de Flutter
+import '../features/home_screen.dart'; // Pantalla principal del chat
+import '../features/auth/screens/login_screen.dart'; // Pantalla de inicio de sesión
 
+// Widget que decide qué pantalla mostrar según si el usuario está logueado
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Escucha el estado de autenticación. Es la forma más segura de esperar al UID.
+    // StreamBuilder escucha el estado de autenticación en tiempo real
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+      stream: FirebaseAuth.instance
+          .authStateChanges(), // Cambios cuando el usuario inicia/cierra sesión
       builder: (context, snapshot) {
-        // 1. Esperando: Muestra una pantalla de carga mientras Firebase inicializa.
+        // Mientras Firebase verifica el estado del usuario, muestra un loader
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        // 2. Logueado: El UID está disponible. Carga la pantalla de contactos.
+        // Si existe un usuario autenticado → ir a homescreem(principal)
         if (snapshot.hasData) {
-          return const ContactsScreen();
+          return const HomeScreen();
         }
-        // 3. No Logueado: Carga la pantalla de inicio de sesión.
+        // Si NO hay usuario autenticado → mostrar pantalla de login
         else {
           return const LoginScreen();
         }

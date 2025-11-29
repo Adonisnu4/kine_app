@@ -4,18 +4,25 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
-// ⚠️ Ajusta estas rutas a tu estructura actual:
+// Importa el modelo de Cita
 import 'package:kine_app/features/Appointments/models/appointment.dart';
+
+// Servicios auxiliares para obtener información del usuario
 import 'package:kine_app/features/auth/services/get_user_data.dart';
-import 'package:kine_app/features/auth/services/user_service.dart'; // Contiene getUserEmailById
+import 'package:kine_app/features/auth/services/user_service.dart';
 
 class AppointmentService {
+  // Instancia de Firestore para consultas y escritura
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Instancia de FirebaseAuth para obtener el usuario autenticado
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // Referencia directa a la colección "citas"
   final CollectionReference _citasCollection = FirebaseFirestore.instance
       .collection('citas');
 
-  /// Revisa si el paciente YA tiene una cita pendiente.
+  /// Verifica si un paciente ya tiene una cita PENDIENTE con un kinesiólogo.
   Future<bool> hasPendingAppointment(String pacienteId, String kineId) async {
     final query = await _citasCollection
         .where('pacienteId', isEqualTo: pacienteId)
@@ -23,50 +30,51 @@ class AppointmentService {
         .where('estado', isEqualTo: 'pendiente')
         .limit(1)
         .get();
+
+    // Retorna true si existe al menos un documento
     return query.docs.isNotEmpty;
   }
 
-  /// Revisa si el paciente YA tiene una cita CONFIRMADA (futura).
+  /// Verifica si un paciente ya tiene una cita CONFIRMADA con un kinesiólogo.
+  /// Solo considera citas que están en el futuro.
   Future<bool> hasConfirmedAppointmentWithKine(
     String pacienteId,
     String kineId,
   ) async {
-    // 🚀 LÓGICA AGREGADA: Solo considera citas confirmadas que están en el futuro.
-    // La conversión a Timestamp es necesaria para usarla en la consulta de Firestore.
+    // Convierte el DateTime actual a Timestamp para Firestore
     final nowTimestamp = Timestamp.fromDate(DateTime.now());
 
     final query = await _citasCollection
         .where('pacienteId', isEqualTo: pacienteId)
         .where('kineId', isEqualTo: kineId)
         .where('estado', isEqualTo: 'confirmada')
-        .where(
-          'fechaCita',
-          isGreaterThan: nowTimestamp,
-        ) // <--- ¡FILTRO CLAVE AGREGADO AQUÍ!
+        .where('fechaCita', isGreaterThan: nowTimestamp)
         .limit(1)
         .get();
-
-    // NOTA: Esta consulta requiere un índice compuesto en Firestore:
-    // (pacienteId ASC, kineId ASC, estado ASC, fechaCita ASC)
 
     return query.docs.isNotEmpty;
   }
 
-  /// Revisa si un horario específico ya está ocupado.
-  // ... (Esta función se mantiene igual) ...
+  /// Verifica si un horario específico ya está ocupado.
+  /// Se considera ocupado si hay una cita pendiente o confirmada en esa misma hora.
   Future<bool> isSlotTaken(String kineId, DateTime slot) async {
     final slotTimestamp = Timestamp.fromDate(slot);
+
     final query = await _citasCollection
         .where('kineId', isEqualTo: kineId)
         .where('fechaCita', isEqualTo: slotTimestamp)
         .where('estado', whereIn: ['pendiente', 'confirmada'])
         .limit(1)
         .get();
+
     return query.docs.isNotEmpty;
   }
 
-  /// Crea la solicitud de cita e incluye la validación de tiempo.
-  // ... (Esta función se mantiene igual, ya tiene la validación requestAppointment) ...
+  /// Envía una solicitud de cita:
+  /// - Valida fecha futura
+  /// - Verifica que no esté tomada
+  /// - Guarda en Firestore
+  /// - Envía correo al kinesiólogo
   Future<void> requestAppointment({
     required String kineId,
     required String kineNombre,
@@ -75,7 +83,7 @@ class AppointmentService {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Usuario no autenticado');
 
-    // Validación de tiempo: No se puede solicitar en el pasado.
+    // Valida que la cita no sea en el pasado ni a minutos del horario actual
     final nowWithBuffer = DateTime.now().add(const Duration(minutes: 5));
     if (fechaCita.isBefore(nowWithBuffer)) {
       throw Exception(
@@ -83,17 +91,17 @@ class AppointmentService {
       );
     }
 
-    // Validación de slot ocupado.
+    // Valida que la hora no esté tomada
     if (await isSlotTaken(kineId, fechaCita)) {
       throw Exception('Esta hora ya no está disponible o fue reservada.');
     }
 
-    // Datos del Paciente (usando las funciones importadas)
+    // Obtiene datos del paciente
     final userData = await getUserData();
     final String pacienteNombre = userData?['nombre_completo'] ?? 'Paciente';
     final String? pacienteEmail = user.email;
 
-    // Guarda cita en Firestore
+    // Crea el documento en Firestore
     await _citasCollection.add({
       'pacienteId': user.uid,
       'pacienteNombre': pacienteNombre,
@@ -105,14 +113,16 @@ class AppointmentService {
       'creadaEn': Timestamp.now(),
     });
 
-    // Envía Correo al Kine (Lógica original)
+    // Intenta enviar correo al kinesiólogo usando la colección "mail"
     try {
       final String? kineEmail = await getUserEmailById(kineId);
+
       if (kineEmail != null) {
         final String fechaFormateada = DateFormat(
           'EEEE d \'de\' MMMM, yyyy',
           'es_ES',
         ).format(fechaCita);
+
         final String horaFormateada = DateFormat(
           'HH:mm',
           'es_ES',
@@ -131,18 +141,18 @@ class AppointmentService {
                 <b>Fecha Solicitada:</b> $fechaFormateada<br>
                 <b>Hora Solicitada:</b> $horaFormateada hrs.
               </p>
-              <p>Por favor, revisa tu panel de citas en la aplicación KineApp para gestionar esta solicitud.</p>
+              <p>Revisa tu panel de citas para gestionarla.</p>
             ''',
           },
         });
       }
     } catch (e) {
-      print('Error al intentar disparar correo de nueva solicitud al Kine: $e');
+      print('Error al intentar enviar correo al Kine: $e');
     }
   }
 
-  /// Obtiene TODAS las citas para el Kine (para su panel).
-  // ... (Esta función se mantiene igual) ...
+  /// Obtiene todas las citas para un kinesiólogo.
+  /// Ordenadas por fecha de manera ascendente.
   Stream<List<Appointment>> getKineAppointments(String kineId) {
     return _citasCollection
         .where('kineId', isEqualTo: kineId)
@@ -155,74 +165,78 @@ class AppointmentService {
         );
   }
 
-  /// Actualiza el estado (confirmada, denegada, cancelada) Y ENVÍA EMAIL AL PACIENTE.
-  // ... (Esta función se mantiene igual, ya tiene la validación updateAppointmentStatus) ...
+  /// Actualiza el estado de una cita (confirmada, denegada, cancelada)
+  /// y envía correo de notificación al paciente.
   Future<void> updateAppointmentStatus(
     Appointment appointment,
     String newStatus,
   ) async {
-    // VALIDACIÓN AÑADIDA: Evitar cambiar el estado de citas que ya pasaron.
+    // Valida que la cita aún no haya pasado
     final now = DateTime.now();
     if (appointment.fechaCitaDT.isBefore(now)) {
       final formattedTime = DateFormat(
         'dd/MM/yyyy HH:mm',
         'es_ES',
       ).format(appointment.fechaCitaDT);
+
       throw Exception(
-        'La cita programada para $formattedTime ya ha pasado y no puede cambiar su estado (aceptar, denegar o cancelar).',
+        'La cita programada para $formattedTime ya ha pasado y no puede cambiar su estado.',
       );
     }
 
     // Actualiza el estado en Firestore
     await _citasCollection.doc(appointment.id).update({'estado': newStatus});
 
-    // Prepara datos comunes para correo
-    final String fechaFormateada = DateFormat(
+    // Prepara textos comunes
+    final fechaFormateada = DateFormat(
       'EEEE d \'de\' MMMM, yyyy',
       'es_ES',
     ).format(appointment.fechaCitaDT);
-    final String horaFormateada = DateFormat(
+    final horaFormateada = DateFormat(
       'HH:mm',
       'es_ES',
     ).format(appointment.fechaCitaDT);
+
     String emailSubject = '';
     String emailHtmlBody = '';
 
-    // Define contenido según estado
+    // Construye el contenido del correo según el nuevo estado
     if (newStatus == 'confirmada') {
       emailSubject = '¡Tu cita ha sido confirmada!';
       emailHtmlBody =
           '''
         <p>Hola ${appointment.pacienteNombre},</p>
-        <p>¡Buenas noticias! Tu cita con <b>${appointment.kineNombre}</b> ha sido <b>confirmada</b>.</p>
-        <p>Te esperamos el día:</p>
+        <p>Tu cita con <b>${appointment.kineNombre}</b> ha sido confirmada.</p>
         <p>
           <b>Fecha:</b> $fechaFormateada<br>
           <b>Hora:</b> $horaFormateada hrs.
         </p>
-        <p>Nos vemos pronto,<br>Equipo KineApp</p>
       ''';
     } else if (newStatus == 'denegada') {
       emailSubject = 'Actualización sobre tu solicitud de cita';
       emailHtmlBody =
           '''
         <p>Hola ${appointment.pacienteNombre},</p>
-        <p>Te informamos que tu solicitud de cita con <b>${appointment.kineNombre}</b> para el día $fechaFormateada a las $horaFormateada hrs. ha sido <b>rechazada</b>.</p>
-        <p>Esto puede deberse a la disponibilidad del profesional u otros motivos. Te recomendamos intentar solicitar otro horario disponible o contactar directamente al kinesiólogo a través del chat en la aplicación si tienes alguna consulta.</p>
-        <p>Lamentamos cualquier inconveniente,<br>Equipo KineApp</p>
+        <p>Tu solicitud de cita fue rechazada.</p>
+        <p>
+          <b>Fecha:</b> $fechaFormateada<br>
+          <b>Hora:</b> $horaFormateada hrs.
+        </p>
       ''';
     } else if (newStatus == 'cancelada') {
-      emailSubject = 'Importante: Cancelación de tu Cita Programada';
+      emailSubject = 'Importante: Cancelación de tu Cita';
       emailHtmlBody =
           '''
-          <p>Hola ${appointment.pacienteNombre},</p>
-          <p>Lamentamos informarte que tu cita con <b>${appointment.kineNombre}</b>, programada para el día $fechaFormateada a las $horaFormateada hrs., ha sido <b>cancelada por el profesional</b>.</p>
-          <p>Esto se debe a problemas de fuerza mayor o disponibilidad. Por favor, revisa la aplicación para reagendar con el mismo o con otro kinesiólogo.</p>
-          <p>Lamentamos cualquier inconveniente que esto pueda causarte,<br>Equipo KineApp</p>
-        ''';
+        <p>Hola ${appointment.pacienteNombre},</p>
+        <p>Tu cita fue cancelada por el profesional.</p>
+        <p>
+          <b>Fecha:</b> $fechaFormateada<br>
+          <b>Hora:</b> $horaFormateada hrs.
+        </p>
+      ''';
     }
 
-    // Envía correo si aplica
+    // Envía correo al paciente si corresponde
     if (emailSubject.isNotEmpty &&
         emailHtmlBody.isNotEmpty &&
         appointment.pacienteEmail != null) {
@@ -232,14 +246,13 @@ class AppointmentService {
           'message': {'subject': emailSubject, 'html': emailHtmlBody},
         });
       } catch (e) {
-        print(
-          'Error al intentar disparar correo de estado ($newStatus) al Paciente: $e',
-        );
+        print('Error al enviar correo de estado ($newStatus) al paciente: $e');
       }
     }
   }
 
-  /// Obtiene TODAS las citas para el PACIENTE.
+  /// Obtiene todas las citas del paciente actual.
+  /// Ordenadas por fecha de creación de manera descendente.
   Stream<List<Appointment>> getPatientAppointments(String pacienteId) {
     return _citasCollection
         .where('pacienteId', isEqualTo: pacienteId)
@@ -252,12 +265,12 @@ class AppointmentService {
         );
   }
 
-  /// Elimina una cita (usado por el paciente para cancelar).
+  /// Elimina una cita según su ID.
   Future<void> deleteAppointment(String appointmentId) {
     return _citasCollection.doc(appointmentId).delete();
   }
 
-  /// Obtiene el historial de citas entre un Kine y un Paciente específico.
+  /// Obtiene el historial de citas entre un kinesiólogo y un paciente específico.
   Stream<List<Appointment>> getAppointmentHistory(
     String kineId,
     String pacienteId,
@@ -267,10 +280,10 @@ class AppointmentService {
         .where('pacienteId', isEqualTo: pacienteId)
         .orderBy('fechaCita', descending: true)
         .snapshots()
-        .map((snapshot) {
-          return snapshot.docs
+        .map(
+          (snapshot) => snapshot.docs
               .map((doc) => Appointment.fromFirestore(doc))
-              .toList();
-        });
+              .toList(),
+        );
   }
 }

@@ -6,17 +6,23 @@ import 'package:kine_app/features/ejercicios/models/plan_tomado.dart';
 import 'package:kine_app/features/ejercicios/screens/sesion_ejercicio_screen.dart';
 import 'package:kine_app/features/ejercicios/service/plan_service.dart';
 
-/// misma paleta que splash/login
+/// Paleta general usada en esta pantalla.
+/// Coincide con la usada en pantallas como login y splash.
 class AppColors {
   static const white = Color(0xFFFFFFFF);
   static const background = Color(0xFFF6F6F6);
 
-  static const blue = Color(0xFF47A5D6);    // primario
-  static const orange = Color(0xFFE28825);  // acento
+  static const blue = Color(0xFF47A5D6); // color primario
+  static const orange = Color(0xFFE28825); // color acento
   static const greyText = Color(0xFF8A9397);
   static const lightBorder = Color(0x11000000);
 }
 
+/// Pantalla principal del usuario tipo "Inicio".
+/// Muestra:
+///  - Guía básica de salud kinesiológica
+///  - Tip animado que cambia cada 10s
+///  - Lista de planes de ejercicios en progreso
 class Index extends StatefulWidget {
   const Index({super.key});
 
@@ -25,18 +31,29 @@ class Index extends StatefulWidget {
 }
 
 class _IndexState extends State<Index> {
+  // Servicio para obtener los planes en progreso desde Firestore
   final PlanService _planService = PlanService();
+
+  // Future usado por FutureBuilder para cargar planes
   late Future<List<PlanTomado>> _plansFuture;
 
+  // Timer que rota los tips automáticamente
   late Timer _tipTimer;
+
+  // Generador aleatorio para seleccionar tips distintos
   final Random _rnd = Random();
+
+  // Lista completa de tips
   late List<String> _allTips;
+
+  // Índice actual del tip mostrado
   int _currentTipIndex = 0;
 
   @override
   void initState() {
     super.initState();
 
+    // Tips cargados de forma local
     _allTips = const [
       'Muévete cada 45 min si trabajas sentado.',
       'Calienta antes de hacer fuerza.',
@@ -66,14 +83,14 @@ class _IndexState extends State<Index> {
       'Si manejas mucho, trabaja el cuello y hombros.',
       'En lumbago: movimiento suave > reposo absoluto.',
       'En tendón: carga progresiva y controlada.',
-      'Calienta SIEMPRE antes de fútbol o pádel.',
+      'Calienta siempre antes de fútbol o pádel.',
       'Usa calzado acorde a tu actividad.',
       'Sé constante: poco pero todos los días.',
-      'Registra tu dolor (0-10) para ver avances.',
+      'Registra tu dolor (0–10) para ver avances.',
       'Extiende columna si trabajas en PC.',
       'Haz pausas activas de cuello y hombros.',
       'Evita dormir boca abajo si tienes dolor cervical.',
-      'Puentes de glúteo → activa cadena posterior.',
+      'Puentes de glúteo activan cadena posterior.',
       'Si hay hormigueo o pérdida de fuerza: consulta.',
       'Respira por la nariz para relajar.',
       'No mantengas la misma postura más de 1 hora.',
@@ -82,11 +99,13 @@ class _IndexState extends State<Index> {
       'Celebra pequeños avances de movilidad.',
     ];
 
+    // Selección inicial aleatoria
     _currentTipIndex = _rnd.nextInt(_allTips.length);
 
+    // Cargar lista de planes
     _reloadPlans();
 
-    // cada 10s cambia de tip
+    /// Timer que actualiza el tip cada 10 segundos.
     _tipTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       if (!mounted) return;
       setState(() {
@@ -101,8 +120,10 @@ class _IndexState extends State<Index> {
     super.dispose();
   }
 
+  /// Genera un índice aleatorio diferente al actual.
   int _getNextRandomIndex(int current) {
     if (_allTips.length <= 1) return current;
+
     int next = current;
     while (next == current) {
       next = _rnd.nextInt(_allTips.length);
@@ -110,12 +131,15 @@ class _IndexState extends State<Index> {
     return next;
   }
 
+  /// Llama al servicio para recargar los planes en progreso.
   void _reloadPlans() {
     setState(() {
       _plansFuture = _planService.obtenerPlanesEnProgresoPorUsuario();
     });
   }
 
+  /// Navega a la pantalla de sesión de ejercicios.
+  /// Al volver, recarga los planes.
   void _navigateToSession(String ejecucionId) async {
     await Navigator.push(
       context,
@@ -138,7 +162,7 @@ class _IndexState extends State<Index> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // header tipo splash (título + barrita naranja)
+              /// Encabezado principal (título + barra naranja)
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 20, 16, 4),
                 child: Text(
@@ -151,6 +175,7 @@ class _IndexState extends State<Index> {
                   ),
                 ),
               ),
+
               Padding(
                 padding: const EdgeInsets.only(left: 16, bottom: 10),
                 child: Container(
@@ -163,10 +188,10 @@ class _IndexState extends State<Index> {
                 ),
               ),
 
-              // bloque guía
+              /// Bloque fijo de guía de salud
               const _HealthGuideSection(),
 
-              // título tips
+              /// Título de tips dinámicos
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 18, 16, 6),
                 child: Text(
@@ -179,7 +204,7 @@ class _IndexState extends State<Index> {
                 ),
               ),
 
-              // card que cambia
+              /// Tarjeta animada que muestra el tip actual
               Padding(
                 padding: pagePadding,
                 child: _TipChangingCard(
@@ -189,7 +214,7 @@ class _IndexState extends State<Index> {
                 ),
               ),
 
-              // separador
+              /// Separador visual
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 18, 16, 4),
                 child: Divider(
@@ -199,7 +224,7 @@ class _IndexState extends State<Index> {
                 ),
               ),
 
-              // título planes
+              /// Título sección "Mis planes de ejercicios"
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 10, 16, 8),
                 child: Text(
@@ -212,15 +237,17 @@ class _IndexState extends State<Index> {
                 ),
               ),
 
-              // contenido
+              /// Contenido principal: lista de planes del usuario
               Expanded(
                 child: FutureBuilder<List<PlanTomado>>(
                   future: _plansFuture,
                   builder: (context, snapshot) {
+                    // Estado de carga
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
 
+                    // Error en la consulta
                     if (snapshot.hasError) {
                       return ListView(
                         padding: const EdgeInsets.all(24),
@@ -237,6 +264,7 @@ class _IndexState extends State<Index> {
                       );
                     }
 
+                    // Lista vacía
                     if (!snapshot.hasData || snapshot.data!.isEmpty) {
                       return ListView(
                         padding: const EdgeInsets.all(24),
@@ -254,6 +282,7 @@ class _IndexState extends State<Index> {
                           Center(
                             child: ElevatedButton.icon(
                               onPressed: () {
+                                // Envía al tab de ejercicios
                                 final TabController controller =
                                     DefaultTabController.of(context);
                                 controller.animateTo(1);
@@ -278,7 +307,9 @@ class _IndexState extends State<Index> {
                       );
                     }
 
+                    // Con datos → construir lista de planes
                     final plans = snapshot.data!;
+
                     return ListView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                       itemCount: plans.length,
@@ -301,7 +332,8 @@ class _IndexState extends State<Index> {
   }
 }
 
-/// ---------- CARD que cambia de tip ----------
+/// Tarjeta animada que muestra un tip y cambia automáticamente.
+/// Usa AnimatedSwitcher para transiciones suaves.
 class _TipChangingCard extends StatelessWidget {
   final String tip;
   final int index;
@@ -336,14 +368,12 @@ class _TipChangingCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: AppColors.lightBorder,
-          ),
+          border: Border.all(color: AppColors.lightBorder),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // numerito con borde azul
+            /// Número del tip dentro de un círculo
             Container(
               height: 32,
               width: 32,
@@ -362,6 +392,8 @@ class _TipChangingCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
+
+            /// Texto del tip
             Expanded(
               child: Text(
                 tip,
@@ -379,7 +411,7 @@ class _TipChangingCard extends StatelessWidget {
   }
 }
 
-/// --- SECCIÓN DE LA GUÍA DE SALUD ---
+/// Sección superior fija que muestra una mini guía informativa.
 class _HealthGuideSection extends StatelessWidget {
   const _HealthGuideSection();
 
@@ -392,9 +424,7 @@ class _HealthGuideSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.lightBorder,
-        ),
+        border: Border.all(color: AppColors.lightBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -410,13 +440,11 @@ class _HealthGuideSection extends StatelessWidget {
           const SizedBox(height: 6),
           const Text(
             'Mantén tu rutina, respeta las cargas y sigue lo que te indicó tu kine.',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.black54,
-              height: 1.4,
-            ),
+            style: TextStyle(fontSize: 13, color: Colors.black54, height: 1.4),
           ),
           const SizedBox(height: 12),
+
+          /// Chip informativo con el estado de la guía
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
@@ -445,7 +473,14 @@ class _HealthGuideSection extends StatelessWidget {
   }
 }
 
-/// --- TARJETA DE PLAN ---
+/// Tarjeta que muestra un plan de ejercicios tomado.
+/// Incluye:
+///  - nombre
+///  - descripción
+///  - sesión actual
+///  - estado
+///  - fecha inicio
+///  - botón para iniciar/reanudar
 class _PlanCard extends StatelessWidget {
   final PlanTomado plan;
   final VoidCallback onTapResume;
@@ -458,20 +493,24 @@ class _PlanCard extends StatelessWidget {
     Color estadoColor;
     bool showResumeButton = true;
 
+    /// Conversión de estado interno -> texto y color
     switch (plan.estado) {
       case 'terminado':
         estadoDisplay = 'Completado';
         estadoColor = Colors.green.shade600;
         showResumeButton = false;
         break;
+
       case 'en_progreso':
         estadoDisplay = 'En progreso';
         estadoColor = AppColors.orange;
         break;
+
       case 'pendiente':
         estadoDisplay = 'Pendiente';
         estadoColor = Colors.black87;
         break;
+
       default:
         estadoDisplay = 'Desconocido';
         estadoColor = Colors.grey;
@@ -493,6 +532,7 @@ class _PlanCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              /// Nombre del plan
               Text(
                 plan.nombre,
                 style: const TextStyle(
@@ -502,6 +542,8 @@ class _PlanCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
+
+              /// Breve descripción
               Text(
                 plan.descripcion,
                 style: const TextStyle(
@@ -511,6 +553,8 @@ class _PlanCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
+
+              /// Fila con datos de sesión + estado
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -525,11 +569,16 @@ class _PlanCard extends StatelessWidget {
                   ),
                 ],
               ),
+
               const SizedBox(height: 6),
+
+              /// Fecha de inicio
               Text(
                 'Iniciado el: ${plan.fechaInicio.day}/${plan.fechaInicio.month}/${plan.fechaInicio.year}',
                 style: const TextStyle(fontSize: 11.5, color: Colors.black45),
               ),
+
+              /// Botón de acción si el plan no está completado
               if (showResumeButton) ...[
                 const SizedBox(height: 12),
                 SizedBox(
@@ -570,6 +619,7 @@ class _PlanCard extends StatelessWidget {
     );
   }
 
+  /// Construye un pequeño indicador con ícono + texto
   Widget _buildInfoChip({
     required IconData icon,
     required String label,

@@ -1,4 +1,5 @@
 // lib/screens/login_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kine_app/features/auth/services/auth_service.dart';
@@ -6,13 +7,15 @@ import 'register_screen.dart';
 import '../../home_screen.dart';
 import 'package:kine_app/shared/widgets/app_dialog.dart';
 
+/// Paleta de colores utilizada en esta pantalla.
 class AppColors {
-  static const blue = Color(0xFF47A5D6);   // del logo
-  static const orange = Color(0xFFE28825); // del logo
+  static const blue = Color(0xFF47A5D6); // Color principal del logo
+  static const orange = Color(0xFFE28825); // Color secundario del logo
   static const greyText = Color(0xFF8A9397);
   static const fieldBorder = Color(0xFFD9D9D9);
 }
 
+/// Pantalla de inicio de sesión principal.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -21,20 +24,29 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // Controladores para los campos de correo y contraseña
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
+  // Firebase Auth para manejo de autenticación
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // Servicio propio que maneja Google/Facebook sign-in
   final AuthService _authService = AuthService();
+
+  // Control del estado visual
   bool _isLoading = false;
   bool _showPassword = false;
 
   @override
   void dispose() {
+    // Liberar memoria de los controladores
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
+  /// Navega a la pantalla principal una vez logueado.
   void _navigateToHome() {
     if (!mounted) return;
     Navigator.pushReplacement(
@@ -43,42 +55,55 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  /// Lógica de inicio de sesión con correo y contraseña.
   Future<void> _login() async {
     setState(() => _isLoading = true);
+
     try {
+      // Intenta autenticar al usuario
       final cred = await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+
       final user = cred.user;
+
       if (user != null) {
         await user.reload();
         if (!mounted) return;
         final reloaded = _auth.currentUser;
 
+        // Solo permite login si el correo está verificado
         if (reloaded != null && reloaded.emailVerified) {
           _navigateToHome();
         } else {
+          // Si no está verificado, se cierra sesión y se avisa al usuario
           await _auth.signOut();
           if (!mounted) return;
           setState(() => _isLoading = false);
+
           await showAppWarningDialog(
             context: context,
             icon: Icons.lock_outline_rounded,
             title: 'Cuenta no verificada',
             content: 'Revisa tu correo (y spam) para activar la cuenta.',
           );
+
+          // Reenvía verificación
           await user.sendEmailVerification();
         }
       }
     } on FirebaseAuthException catch (e) {
+      // Traducción de errores comunes al español
       final msg = switch (e.code) {
         'user-not-found' => 'Correo o contraseña incorrectos.',
         'wrong-password' => 'Correo o contraseña incorrectos.',
         'invalid-email' => 'Formato de correo inválido.',
         _ => 'Error de inicio de sesión: ${e.message}',
       };
+
       if (mounted) setState(() => _isLoading = false);
+
       await showAppErrorDialog(
         context: context,
         icon: Icons.error_outline_rounded,
@@ -90,14 +115,17 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// Login con Google usando AuthService.
   Future<void> _loginWithGoogle() async {
     setState(() => _isLoading = true);
+
     try {
       await _authService.signInWithGoogle();
       if (!mounted) return;
       _navigateToHome();
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
+
       await showAppErrorDialog(
         context: context,
         icon: Icons.g_mobiledata_rounded,
@@ -109,14 +137,17 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// Login con Facebook.
   Future<void> _loginWithFacebook() async {
     setState(() => _isLoading = true);
+
     try {
       await _authService.signInWithFacebook();
       if (!mounted) return;
       _navigateToHome();
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
+
       await showAppErrorDialog(
         context: context,
         icon: Icons.facebook_rounded,
@@ -128,13 +159,18 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// Envía correo de recuperación de contraseña.
   Future<void> _sendPasswordResetEmail(String email) async {
     if (email.isEmpty) return;
+
     setState(() => _isLoading = true);
+
     try {
       await _auth.sendPasswordResetEmail(email: email);
       if (!mounted) return;
+
       setState(() => _isLoading = false);
+
       await showAppInfoDialog(
         context: context,
         icon: Icons.mark_email_read_rounded,
@@ -147,7 +183,9 @@ class _LoginScreenState extends State<LoginScreen> {
         'invalid-email' => 'Formato de correo inválido.',
         _ => 'Error al enviar recuperación: ${e.message}',
       };
+
       if (mounted) setState(() => _isLoading = false);
+
       await showAppErrorDialog(
         context: context,
         icon: Icons.alternate_email_rounded,
@@ -159,6 +197,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// Diálogo que solicita correo para recuperar contraseña.
   Future<void> _showResetPasswordDialog() async {
     final ctrl = TextEditingController();
     final key = GlobalKey<FormState>();
@@ -245,17 +284,16 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  /// Diseño base para los campos de texto estilo "píldora".
   InputDecoration _pillDecoration({required String hint, Widget? suffix}) {
     final base = OutlineInputBorder(
       borderRadius: BorderRadius.circular(20),
       borderSide: const BorderSide(color: AppColors.fieldBorder, width: 1),
     );
+
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(
-        color: AppColors.greyText,
-        fontSize: 15,
-      ),
+      hintStyle: const TextStyle(color: AppColors.greyText, fontSize: 15),
       filled: true,
       fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -269,10 +307,12 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  /// Construcción completa de la interfaz del Login.
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    // 🔸 logo más grande
+
+    // Tamaño del logo en función del ancho del dispositivo
     final logoH = (width * 0.26).clamp(70, 220).toDouble();
 
     return Scaffold(
@@ -298,6 +338,8 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 6),
+
+              // Logo superior
               Center(
                 child: Image.asset(
                   'assets/kine-naranjo.png',
@@ -305,8 +347,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   fit: BoxFit.contain,
                 ),
               ),
-              //mas espacio entre el titulo y el logo 
+
+              // Separación entre logo y título
               const SizedBox(height: 70),
+
               const Center(
                 child: Text(
                   'Ingresa tus datos\npara iniciar sesión.',
@@ -319,14 +363,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              // 🔸 bajamos todo lo demás
+
               const SizedBox(height: 24),
+
+              // Campo correo
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: _pillDecoration(hint: 'Correo electrónico*'),
               ),
+
               const SizedBox(height: 12),
+
+              // Campo contraseña
               TextField(
                 controller: _passwordController,
                 obscureText: !_showPassword,
@@ -346,7 +395,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
+
               const SizedBox(height: 10),
+
+              // Botón "¿Olvidaste tu contraseña?"
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -364,7 +416,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
+
               const SizedBox(height: 4),
+
+              // Botón principal de login
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -390,7 +445,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       : const Text('Ingresar', style: TextStyle(fontSize: 16)),
                 ),
               ),
+
               const SizedBox(height: 16),
+
+              // Separador "o iniciar con"
               Row(
                 children: const [
                   Expanded(
@@ -408,7 +466,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
+
               const SizedBox(height: 14),
+
+              // Botones sociales
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -435,7 +496,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
+
               const SizedBox(height: 18),
+
+              // Botón de navegación al registro
               Center(
                 child: TextButton(
                   onPressed: _isLoading
@@ -474,10 +538,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
+/// Botón redondo reutilizable para Google/Facebook.
 class _SocialCircle extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;
   final Color borderColor;
+
   const _SocialCircle({
     required this.child,
     required this.onTap,

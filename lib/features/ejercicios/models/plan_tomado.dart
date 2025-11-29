@@ -1,5 +1,4 @@
 // lib/features/ejercicios/models/plan_tomado.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PlanTomado {
   final String id;

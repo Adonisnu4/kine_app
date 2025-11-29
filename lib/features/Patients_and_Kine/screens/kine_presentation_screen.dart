@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:kine_app/features/Appointments/screens/booking_screen.dart';
 import 'package:kine_app/features/Chat/screens/chat_screen.dart';
 
+/// Pantalla pública de presentación del kinesiólogo.
+/// Muestra datos profesionales, foto, especialidad, experiencia,
+/// carta de presentación y botones para chatear o agendar una cita.
 class KinePresentationScreen extends StatelessWidget {
   final String kineId;
+
   final Map<String, String> kineData;
 
   const KinePresentationScreen({
@@ -12,11 +16,12 @@ class KinePresentationScreen extends StatelessWidget {
     required this.kineData,
   });
 
-  // paleta centralizada
+  // 🎨 Paleta centralizada
   static const Color _blue = Color(0xFF47A5D6);
   static const Color _orange = Color(0xFFE28825);
   static const Color _bg = Color(0xFFF4F4F5);
 
+  /// Navega a la pantalla de agendamiento
   void _navigateToBooking(BuildContext context) {
     Navigator.push(
       context,
@@ -29,6 +34,7 @@ class KinePresentationScreen extends StatelessWidget {
     );
   }
 
+  /// Navega al chat con el kinesiólogo
   void _navigateToChat(BuildContext context) {
     Navigator.push(
       context,
@@ -43,31 +49,36 @@ class KinePresentationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Variables limpias para usar en la UI
     final String kineName = kineData['name'] ?? 'Kinesiólogo';
     final String kineTitle = kineData['specialization'] ?? 'Especialista';
     final String kinePhotoUrl = kineData['photoUrl'] ?? '';
+    final String kineExperience = kineData['experience'] ?? '—';
+
     final String kinePresentation =
         kineData['presentation'] ??
-            'Este profesional aún no agrega una presentación.';
-    final String kineExperience = kineData['experience'] ?? '—';
+        'Este profesional aún no agrega una presentación.';
 
     return Scaffold(
       backgroundColor: _bg,
+
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0,
         foregroundColor: Colors.black87,
+        elevation: 0,
         title: const Text(
           'Perfil Profesional',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // acento
+            // Línea decorativa naranja
             Container(
               width: 46,
               height: 3.5,
@@ -78,7 +89,7 @@ class KinePresentationScreen extends StatelessWidget {
               ),
             ),
 
-            // CARD de perfil
+            // TARJETA DE PERFIL
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -92,14 +103,16 @@ class KinePresentationScreen extends StatelessWidget {
                 ],
               ),
               padding: const EdgeInsets.all(16),
+
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  /// FOTO DEL KINESIÓLOGO
                   CircleAvatar(
                     radius: 38,
                     backgroundColor: _blue.withOpacity(.12),
-                    backgroundImage:
-                        kinePhotoUrl.isNotEmpty ? NetworkImage(kinePhotoUrl) : null,
+                    backgroundImage: kinePhotoUrl.isNotEmpty
+                        ? NetworkImage(kinePhotoUrl)
+                        : null,
                     child: kinePhotoUrl.isEmpty
                         ? Icon(
                             Icons.person,
@@ -109,19 +122,23 @@ class KinePresentationScreen extends StatelessWidget {
                         : null,
                   ),
                   const SizedBox(width: 16),
+
+                  /// INFORMACIÓN PRINCIPAL
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Nombre
                         Text(
                           kineName,
                           style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
-                            color: Colors.black,
                           ),
                         ),
                         const SizedBox(height: 3),
+
+                        // Especialidad
                         Text(
                           kineTitle,
                           style: const TextStyle(
@@ -129,8 +146,10 @@ class KinePresentationScreen extends StatelessWidget {
                             color: Colors.black54,
                           ),
                         ),
+
                         const SizedBox(height: 10),
-                        // chip de experiencia
+
+                        // Chip de experiencia
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
@@ -143,7 +162,7 @@ class KinePresentationScreen extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.badge_outlined,
                                 size: 14,
                                 color: _blue,
@@ -159,7 +178,7 @@ class KinePresentationScreen extends StatelessWidget {
                               ),
                             ],
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
@@ -169,50 +188,48 @@ class KinePresentationScreen extends StatelessWidget {
 
             const SizedBox(height: 22),
 
+            // PRESENTACIÓN DEL KINESIÓLOGO
             const Text(
               'Presentación profesional',
-              style: TextStyle(
-                fontSize: 15.5,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
+              style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600),
             ),
+
             const SizedBox(height: 10),
 
-            // card de presentación (no textfield)
             Container(
               width: double.infinity,
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0x0FA1A1AA)),
+                border: Border.all(color: Color(0x0FA1A1AA)),
               ),
-              padding: const EdgeInsets.all(14),
+
               child: Text(
                 kinePresentation,
                 style: const TextStyle(
                   fontSize: 14,
-                  color: Colors.black87,
                   height: 1.4,
+                  color: Colors.black87,
                 ),
               ),
             ),
 
             const SizedBox(height: 26),
 
-            // BOTONES
+            // BOTONES: CHAT + AGENDAR
             Row(
               children: [
-                // mensaje
+                ///BOTÓN MENSAJE
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _navigateToChat(context),
-                    icon: Icon(
+                    icon: const Icon(
                       Icons.chat_bubble_outline,
                       size: 18,
                       color: _blue,
                     ),
-                    label: Text(
+                    label: const Text(
                       'Mensaje',
                       style: TextStyle(
                         color: _blue,
@@ -225,12 +242,13 @@ class KinePresentationScreen extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      backgroundColor: Colors.white,
                     ),
                   ),
                 ),
+
                 const SizedBox(width: 12),
-                // agendar
+
+                // BOTÓN AGENDAR
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () => _navigateToBooking(context),
@@ -240,13 +258,11 @@ class KinePresentationScreen extends StatelessWidget {
                       backgroundColor: _orange,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      textStyle: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      elevation: 0,
+                      textStyle: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),

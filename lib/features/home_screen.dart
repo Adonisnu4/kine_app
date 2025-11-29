@@ -11,23 +11,31 @@ import 'package:kine_app/features/auth/screens/profile_screen.dart';
 import 'package:kine_app/features/Patients_and_Kine/screens/kine_directory_screen.dart';
 import 'package:kine_app/features/Patients_and_Kine/screens/my_patients_screen.dart';
 
-// si ya tienes esta clase en otro lado, importa y borra esto
+/// Paleta general de colores usada en HomeScreen.
+/// Si ya está definida en otro archivo, esta clase se debe eliminar.
 class AppColors {
   static const white = Color(0xFFFFFFFF);
   static const background = Color(0xFFF5F5F5);
-
-  static const blue = Color(0xFF47A5D6);     // del logo
-  static const orange = Color(0xFFE28825);   // acento
+  static const blue = Color(0xFF47A5D6);
+  static const orange = Color(0xFFE28825);
   static const text = Color(0xFF101010);
   static const greyText = Color(0xFF6D6D6D);
   static const border = Color(0xFFE3E6E8);
 }
 
+// GlobalKey por si se necesita acceder al estado desde otros widgets
 final GlobalKey<_HomeScreenState> homeScreenKey = GlobalKey<_HomeScreenState>();
 
+/// Pantalla principal que controla navegación por tabs.
+/// Estructura:
+///  - Header con título dinámico.
+///  - TabBarView con contenidos.
+///  - Footer con menú inferior.
+/// Se configura dinámicamente según si el usuario es kine verificado.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
+  /// Permite navegar a un tab específico desde cualquier parte de la app.
   static void navigateToTabIndex(BuildContext context, int index) {
     final TabController controller = DefaultTabController.of(context);
     controller.animateTo(index);
@@ -40,7 +48,11 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+
+  // Define si el usuario es kinesiólogo verificado (tipo_usuario_id == 3)
   bool _isKineVerified = false;
+
+  // Controla el estado de carga inicial mientras se obtiene la info
   bool _isLoading = true;
 
   @override
@@ -49,13 +61,22 @@ class _HomeScreenState extends State<HomeScreen>
     _loadUserStateAndSetupTabs();
   }
 
+  /// Carga el estado del usuario y configura cuántos tabs debe mostrar.
+  ///
+  /// Para usuario verificado → 5 tabs (Inicio, Ejercicios, Citas, Mensajes, Pacientes)
+  /// Para usuario normal → 4 tabs (Inicio, Ejercicios, Servicios, Mensajes)
   Future<void> _loadUserStateAndSetupTabs() async {
     final userData = await getUserData();
+
+    // Tipo de usuario (1: paciente, 2: kine en verificación, 3: kine aprobado)
     final userStatusId = userData?['tipo_usuario_id'] ?? 1;
 
     _isKineVerified = (userStatusId == 3);
+
+    // Cantidad de tabs según el tipo de usuario
     final tabLength = _isKineVerified ? 5 : 4;
 
+    // TabController dinámico
     _tabController =
         TabController(length: tabLength, vsync: this, initialIndex: 0)
           ..addListener(() {
@@ -63,27 +84,30 @@ class _HomeScreenState extends State<HomeScreen>
           });
 
     if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
   @override
   void dispose() {
+    // Evitar error: no se puede dispose si todavía no fue inicializado
     if (!_isLoading) {
       _tabController.dispose();
     }
     super.dispose();
   }
 
+  /// Navega al perfil del usuario.
   Future<void> _onProfileTap() async {
     if (!mounted) return;
-    await Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
   }
 
-  // ---------- vistas ----------
+  // VISTAS DEL TABBAR
+
+  /// Retorna la lista de pantallas según el tipo de usuario.
   List<Widget> _getTabViews() {
     if (_isKineVerified) {
       return const [
@@ -103,7 +127,9 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  // ---------- datos de los tabs para el footer ----------
+  // BOTTOM BAR ITEMS
+
+  /// Íconos y labels del menú inferior.
   List<_BottomItem> _bottomItems() {
     if (_isKineVerified) {
       return const [
@@ -123,24 +149,24 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  // ---------- labels para el header ----------
+  // LABELS PARA EL HEADER
+
+  /// Títulos mostrados en el header según el tab actual.
   List<String> _tabLabels() {
     if (_isKineVerified) {
-      return [
-        'Inicio',
-        'Ejercicios',
-        'Citas',
-        'Mensajes',
-        'Mis Pacientes',
-      ];
+      return ['Inicio', 'Ejercicios', 'Citas', 'Mensajes', 'Mis Pacientes'];
     } else {
       return ['Inicio', 'Ejercicios', 'Servicios', 'Mensajes'];
     }
   }
 
-  // ---------- header PRO ----------
+  // HEADER PERSONALIZADO
+
+  /// Construye el encabezado superior con título dinámico y botón de perfil.
   PreferredSizeWidget _buildHeader() {
     final labels = _tabLabels();
+
+    // Título según el tab actual
     final title = _isLoading ? 'Cargando…' : labels[_tabController.index];
 
     return PreferredSize(
@@ -165,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen>
             padding: const EdgeInsets.symmetric(horizontal: 14.0),
             child: Row(
               children: [
-                // avatar botón
+                // Botón avatar / perfil
                 InkWell(
                   borderRadius: BorderRadius.circular(999),
                   onTap: _onProfileTap,
@@ -185,7 +211,8 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
                 const SizedBox(width: 12),
-                // titulo + subtitulo
+
+                // Título y subtítulo
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,7 +223,6 @@ class _HomeScreenState extends State<HomeScreen>
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: AppColors.text,
-                        letterSpacing: -0.12,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -205,7 +231,6 @@ class _HomeScreenState extends State<HomeScreen>
                       style: TextStyle(
                         fontSize: 12.5,
                         color: AppColors.greyText,
-                        letterSpacing: -0.1,
                       ),
                     ),
                   ],
@@ -218,9 +243,12 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ---------- footer custom ----------
+  // FOOTER CUSTOM
+
+  /// Menú inferior personalizado, animado y responsivo.
   Widget _buildBottomBar() {
     final items = _bottomItems();
+
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.white,
@@ -242,12 +270,12 @@ class _HomeScreenState extends State<HomeScreen>
         children: List.generate(items.length, (index) {
           final selected = _tabController.index == index;
           final item = items[index];
+
           return Expanded(
             child: InkWell(
               onTap: () => _tabController.animateTo(index),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
-                curve: Curves.easeOut,
                 height: 54,
                 margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 decoration: BoxDecoration(
@@ -269,8 +297,9 @@ class _HomeScreenState extends State<HomeScreen>
                       item.label,
                       style: TextStyle(
                         fontSize: 11.5,
-                        fontWeight:
-                            selected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         color: selected ? AppColors.blue : AppColors.greyText,
                       ),
                     ),
@@ -283,6 +312,8 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
   }
+
+  // UI PRINCIPAL
 
   @override
   Widget build(BuildContext context) {
@@ -311,7 +342,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 }
 
-// modelo para el footer
+/// Modelo interno para los ítems del footer
 class _BottomItem {
   final IconData icon;
   final String label;

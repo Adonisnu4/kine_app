@@ -1,4 +1,6 @@
-// lib/screens/patient_appointment_history_screen.dart
+// Pantalla que muestra el historial de citas entre un kinesiólogo y un paciente.
+// Incluye filtrado por el paciente elegido y estado visual coherente con el resto de la aplicación.
+
 import 'package:flutter/material.dart';
 import 'package:kine_app/features/Appointments/models/appointment.dart';
 import 'package:kine_app/features/Appointments/services/appointment_service.dart';
@@ -6,8 +8,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
 class PatientAppointmentHistoryScreen extends StatefulWidget {
-  final String patientId;
-  final String patientName;
+  final String patientId; // ID del paciente del cual se verá el historial
+  final String patientName; // Nombre para mostrar en el header
 
   const PatientAppointmentHistoryScreen({
     super.key,
@@ -22,12 +24,16 @@ class PatientAppointmentHistoryScreen extends StatefulWidget {
 
 class _PatientAppointmentHistoryScreenState
     extends State<PatientAppointmentHistoryScreen> {
+  // Servicio que obtiene citas desde Firestore
   final AppointmentService _appointmentService = AppointmentService();
+
+  // ID del kinesiólogo actual (autenticado)
   final String _currentKineId = FirebaseAuth.instance.currentUser!.uid;
 
+  // Stream que entregará el historial en tiempo real
   late Stream<List<Appointment>> _historyStream;
 
-  // Paleta coherente
+  // Paleta de colores consistente con el resto de la app
   static const _bg = Color(0xFFF6F7FB);
   static const _card = Colors.white;
   static const _text = Color(0xFF111111);
@@ -42,17 +48,18 @@ class _PatientAppointmentHistoryScreenState
   @override
   void initState() {
     super.initState();
+
+    // Obtiene el historial filtrado por kinesiólogo + paciente
     _historyStream = _appointmentService.getAppointmentHistory(
       _currentKineId,
       widget.patientId,
     );
   }
 
-  // ---------- Header (igual estilo que otras pantallas) ----------
+  // Header superior coherente con el estilo de toda la app
   Widget _buildHeader() {
     return Column(
       children: [
-        // Barra superior blanca con sombra leve
         SafeArea(
           bottom: false,
           child: Container(
@@ -61,15 +68,17 @@ class _PatientAppointmentHistoryScreenState
             decoration: const BoxDecoration(
               color: Colors.white,
               boxShadow: [
+                // Sombra inferior suave
                 BoxShadow(
                   color: Color(0x12000000),
                   offset: Offset(0, 1),
                   blurRadius: 6,
-                )
+                ),
               ],
             ),
             child: Row(
               children: [
+                // Botón para volver atrás
                 IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(
@@ -79,6 +88,8 @@ class _PatientAppointmentHistoryScreenState
                   ),
                 ),
                 const SizedBox(width: 8),
+
+                // Título con nombre del paciente
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -108,7 +119,8 @@ class _PatientAppointmentHistoryScreenState
             ),
           ),
         ),
-        // Barrita naranja
+
+        // Barra naranja decorativa
         Container(
           margin: const EdgeInsets.fromLTRB(16, 10, 0, 12),
           width: 44,
@@ -122,28 +134,47 @@ class _PatientAppointmentHistoryScreenState
     );
   }
 
-  // ---------- Estilos por estado ----------
+  // Determina estilo visual (icono, color, etiqueta) según el estado de la cita
   ({IconData icon, Color color, String label}) _statusStyle(String status) {
     final s = status.toLowerCase().trim();
+
     if (s == 'confirmada') {
       return (icon: Icons.check_circle, color: _green, label: 'CONFIRMADA');
     }
+
     if (s == 'completada') {
-      return (icon: Icons.task_alt_rounded, color: _blueGrey, label: 'COMPLETADA');
+      return (
+        icon: Icons.task_alt_rounded,
+        color: _blueGrey,
+        label: 'COMPLETADA',
+      );
     }
+
     if (s == 'denegada' || s == 'rechazada' || s == 'cancelada') {
       return (
         icon: Icons.cancel_rounded,
         color: _red,
-        label: (s == 'denegada') ? 'RECHAZADA' : s.toUpperCase()
+        label: (s == 'denegada') ? 'RECHAZADA' : s.toUpperCase(),
       );
     }
+
     if (s == 'pendiente') {
-      return (icon: Icons.hourglass_top_rounded, color: _orange, label: 'PENDIENTE');
+      return (
+        icon: Icons.hourglass_top_rounded,
+        color: _orange,
+        label: 'PENDIENTE',
+      );
     }
-    return (icon: Icons.help_outline_rounded, color: Colors.grey, label: s.toUpperCase());
+
+    // Estado desconocido
+    return (
+      icon: Icons.help_outline_rounded,
+      color: Colors.grey,
+      label: s.toUpperCase(),
+    );
   }
 
+  // Formatea fecha y hora de forma elegante en español
   String _formatDate(DateTime dt) {
     final locale = 'es_ES';
     final day = DateFormat('EEEE d MMM yyyy', locale).format(dt);
@@ -151,7 +182,9 @@ class _PatientAppointmentHistoryScreenState
     return '${_capitalize(day)} – $hour hrs';
   }
 
-  String _capitalize(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+  // Capitaliza la primera letra de un texto
+  String _capitalize(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
   @override
   Widget build(BuildContext context) {
@@ -160,21 +193,32 @@ class _PatientAppointmentHistoryScreenState
       body: Column(
         children: [
           _buildHeader(),
+
+          // Contenido principal: historial con StreamBuilder
           Expanded(
             child: StreamBuilder<List<Appointment>>(
               stream: _historyStream,
               builder: (context, snapshot) {
+                // Estado de carga
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
+
+                // Error al cargar los datos
                 if (snapshot.hasError) {
-                  return _errorState('Error al cargar historial: ${snapshot.error}');
+                  return _errorState(
+                    'Error al cargar historial: ${snapshot.error}',
+                  );
                 }
+
+                // Sin registros
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return _emptyState();
                 }
 
                 final appointments = snapshot.data!;
+
+                // Lista del historial
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
                   itemCount: appointments.length,
@@ -200,7 +244,7 @@ class _PatientAppointmentHistoryScreenState
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Avatar de estado
+                          // Icono circular de estado
                           Container(
                             width: 40,
                             height: 40,
@@ -208,14 +252,21 @@ class _PatientAppointmentHistoryScreenState
                               color: style.color.withOpacity(.12),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(style.icon, color: style.color, size: 22),
+                            child: Icon(
+                              style.icon,
+                              color: style.color,
+                              size: 22,
+                            ),
                           ),
+
                           const SizedBox(width: 12),
-                          // Texto + chip
+
+                          // Información de la cita
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                // Fecha formateada
                                 Text(
                                   _formatDate(ap.fechaCitaDT),
                                   style: const TextStyle(
@@ -226,6 +277,8 @@ class _PatientAppointmentHistoryScreenState
                                   ),
                                 ),
                                 const SizedBox(height: 8),
+
+                                // Chip de estado
                                 Row(
                                   children: [
                                     Container(
@@ -238,7 +291,9 @@ class _PatientAppointmentHistoryScreenState
                                         border: Border.all(
                                           color: style.color.withOpacity(.50),
                                         ),
-                                        borderRadius: BorderRadius.circular(999),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
                                       ),
                                       child: Text(
                                         style.label,
@@ -268,7 +323,7 @@ class _PatientAppointmentHistoryScreenState
     );
   }
 
-  // ---------- States vacíos / error con header ya puesto arriba ----------
+  // Estado vacío (no hay historial)
   Widget _emptyState() {
     return Center(
       child: Padding(
@@ -276,6 +331,7 @@ class _PatientAppointmentHistoryScreenState
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Icono decorativo
             Container(
               width: 60,
               height: 60,
@@ -285,7 +341,10 @@ class _PatientAppointmentHistoryScreenState
               ),
               child: const Icon(Icons.history_rounded, color: _teal, size: 28),
             ),
+
             const SizedBox(height: 14),
+
+            // Título
             const Text(
               'Sin registros de citas',
               style: TextStyle(
@@ -295,7 +354,10 @@ class _PatientAppointmentHistoryScreenState
               ),
               textAlign: TextAlign.center,
             ),
+
             const SizedBox(height: 6),
+
+            // Mensaje descriptivo
             const Text(
               'Cuando se agenden o completen citas, aparecerán aquí.',
               style: TextStyle(color: _muted, height: 1.35),
@@ -307,6 +369,7 @@ class _PatientAppointmentHistoryScreenState
     );
   }
 
+  // Estado de error
   Widget _errorState(String msg) {
     return Center(
       child: Padding(
@@ -314,6 +377,7 @@ class _PatientAppointmentHistoryScreenState
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Icono de error
             Container(
               width: 60,
               height: 60,
@@ -323,7 +387,10 @@ class _PatientAppointmentHistoryScreenState
               ),
               child: Icon(Icons.error_outline_rounded, color: _red, size: 28),
             ),
+
             const SizedBox(height: 14),
+
+            // Título
             const Text(
               'No pudimos cargar el historial',
               style: TextStyle(
@@ -333,7 +400,10 @@ class _PatientAppointmentHistoryScreenState
               ),
               textAlign: TextAlign.center,
             ),
+
             const SizedBox(height: 6),
+
+            // Descripción del error
             Text(
               msg,
               style: const TextStyle(color: _muted, height: 1.35),

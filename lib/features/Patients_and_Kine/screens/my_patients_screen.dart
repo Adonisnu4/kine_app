@@ -1,4 +1,6 @@
-// lib/screens/my_patients_screen.dart
+// Pantalla que muestra todos los pacientes asignados a un kinesiólogo.
+// Tiene navegación a progreso, historial, chat y verificación del plan
+
 import 'package:flutter/material.dart';
 import 'package:kine_app/features/Chat/screens/chat_screen.dart';
 import 'package:kine_app/features/Patients_and_Kine/screens/patient_appointment_history_screen.dart';
@@ -15,48 +17,63 @@ class MyPatientsScreen extends StatefulWidget {
 }
 
 class _MyPatientsScreenState extends State<MyPatientsScreen> {
-  // Paleta
+  // Colores base utilizados en la interfaz.
   static const _bg = Color(0xFFF3F3F3);
   static const _blue = Color(0xFF47A5D6);
   static const _orange = Color(0xFFE28825);
   static const _border = Color(0x11000000);
 
+  // Servicio que consulta Stripe para saber si el usuario tiene plan Pro.
   final StripeService _stripeService = StripeService();
+
+  // Futuro que obtiene los pacientes desde Firestore mediante UserService.
   late Future<List<Map<String, dynamic>>> _patientsFuture;
 
-  bool _isPro = false;
-  int _patientLimit = 50;
-  bool _isLoadingProStatus = true;
+  // Estado del plan.
+  bool _isPro = false; // Indica si el kinesiologo está suscrito al plan PRO.
+  int _patientLimit = 50; // Límite de pacientes según plan.
+  bool _isLoadingProStatus =
+      true; // Control del estado de carga de la verificación.
 
   @override
   void initState() {
     super.initState();
-    _checkPlanAndLoadPatients();
+    _checkPlanAndLoadPatients(); // Verifica plan y carga pacientes al iniciar.
   }
 
+  // Obtiene estado del plan en Stripe y carga los pacientes.
   Future<void> _checkPlanAndLoadPatients() async {
-    if (!mounted) return;
+    if (!mounted)
+      return; // Seguridad para evitar actualizaciones fuera del árbol de widgets.
+
     setState(() => _isLoadingProStatus = true);
 
+    // Consulta plan del usuario en Stripe.
     Map<String, dynamic> planStatus;
     try {
       planStatus = await _stripeService.getUserPlanStatus();
     } catch (e) {
+      // Si falla la consulta, se asume plan básico.
       planStatus = {'isPro': false, 'limit': 50};
     }
 
     if (!mounted) return;
+
+    // Se actualiza el estado con la información recibida.
     setState(() {
       _isPro = planStatus['isPro'] as bool;
       _patientLimit = planStatus['limit'] as int;
       _isLoadingProStatus = false;
+
+      // Se asigna el Future que cargará los datos de pacientes.
       _patientsFuture = getKinePatients();
     });
   }
 
+  // Refresca completamente los datos reiniciando el proceso.
   void _refreshData() => _checkPlanAndLoadPatients();
 
-  // Navegaciones
+  // Navega al historial de citas del paciente.
   void _navigateToHistory(String patientId, String patientName) {
     Navigator.push(
       context,
@@ -69,18 +86,18 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     );
   }
 
+  // Navega al chat con el paciente.
   void _navigateToChat(String patientId, String patientName) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ChatScreen(
-          receiverId: patientId,
-          receiverName: patientName,
-        ),
+        builder: (_) =>
+            ChatScreen(receiverId: patientId, receiverName: patientName),
       ),
     );
   }
 
+  // Navega al progreso y métricas del paciente.
   void _navigateToProgress(String patientId, String patientName) {
     Navigator.push(
       context,
@@ -93,6 +110,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     );
   }
 
+  // Navega a la pantalla de suscripciones (Kine Pro).
   Future<void> _navigateToSubscriptions() async {
     await Navigator.push(
       context,
@@ -100,10 +118,13 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
         builder: (_) => const SubscriptionScreen(userType: "kine"),
       ),
     );
+
+    // Al volver, se refresca la información del plan.
     _checkPlanAndLoadPatients();
   }
 
-  // ---------- Diálogo elegante tipo iOS (refinado) ----------
+  // Diálogo de confirmación reutilizable.
+  // Permite mostrar un cuadro de pregunta con dos botones.
   Future<bool?> _showConfirmDialog({
     required IconData icon,
     required String title,
@@ -116,8 +137,8 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
 
     return showDialog<bool>(
       context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(.35),
+      barrierDismissible: true, // Permite cerrar tocando afuera.
+      barrierColor: Colors.black.withOpacity(.35), // Sombra alrededor.
       builder: (ctx) => Dialog(
         elevation: 0,
         insetPadding: const EdgeInsets.symmetric(horizontal: 28),
@@ -127,6 +148,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Icono superior del diálogo.
               Container(
                 height: 44,
                 width: 44,
@@ -136,7 +158,10 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                 ),
                 child: Icon(icon, color: color, size: 22),
               ),
+
               const SizedBox(height: 14),
+
+              // Título del diálogo.
               Text(
                 title,
                 textAlign: TextAlign.center,
@@ -147,7 +172,10 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                   color: Color(0xFF111111),
                 ),
               ),
+
               const SizedBox(height: 8),
+
+              // Mensaje descriptivo.
               Text(
                 message,
                 textAlign: TextAlign.center,
@@ -157,10 +185,13 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                   height: 1.35,
                 ),
               ),
+
               const SizedBox(height: 18),
+
+              // Botones del cuadro de diálogo.
               Row(
                 children: [
-                  // Cancelar con contorno y mismo color del texto
+                  // Botón cancelar (contorno).
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(ctx).pop(false),
@@ -171,7 +202,6 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         minimumSize: const Size(0, 44),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
                       child: Text(
                         cancelText,
@@ -182,8 +212,10 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                       ),
                     ),
                   ),
+
                   const SizedBox(width: 10),
-                  // Confirmar sólido
+
+                  // Botón aceptar (relleno).
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () => Navigator.of(ctx).pop(true),
@@ -195,7 +227,6 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         minimumSize: const Size(0, 44),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
                       child: Text(
                         confirmText,
@@ -215,6 +246,8 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     );
   }
 
+  // Diálogo informativo.
+  // Muestra solo un botón "Entendido".
   Future<void> _showInfoDialog({
     required IconData icon,
     required String title,
@@ -222,6 +255,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     Color? accent,
   }) async {
     final color = accent ?? _blue;
+
     await showDialog(
       context: context,
       barrierDismissible: true,
@@ -233,6 +267,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Icono circular superior.
               Container(
                 height: 44,
                 width: 44,
@@ -242,7 +277,10 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                 ),
                 child: Icon(icon, color: color, size: 22),
               ),
+
               const SizedBox(height: 14),
+
+              // Título.
               Text(
                 title,
                 textAlign: TextAlign.center,
@@ -252,7 +290,10 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                   letterSpacing: -.1,
                 ),
               ),
+
               const SizedBox(height: 8),
+
+              // Mensaje.
               Text(
                 message,
                 textAlign: TextAlign.center,
@@ -262,7 +303,10 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                   height: 1.35,
                 ),
               ),
+
               const SizedBox(height: 16),
+
+              // Botón de cierre.
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -288,14 +332,14 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
       ),
     );
   }
-  // ---------------------------------------------------
 
+  // Construcción del widget principal.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
 
-      // 🔵 FAB circular de refresco
+      // Botón flotante para refrescar la lista manualmente.
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: FloatingActionButton(
         onPressed: _refreshData,
@@ -306,22 +350,27 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
         child: const Icon(Icons.refresh_rounded),
       ),
 
-      // ❌ Sin AppBar
+      // No se usa AppBar, todo se maneja desde la vista misma.
       body: _isLoadingProStatus
+          // Indicador de carga inicial mientras se verifica el plan.
           ? const Center(child: CircularProgressIndicator(color: _blue))
+          // Cuando ya cargó el estado del plan:
           : FutureBuilder<List<Map<String, dynamic>>>(
               future: _patientsFuture,
               builder: (context, snapshot) {
+                // Esperando datos de Firestore.
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
                     child: CircularProgressIndicator(color: _blue),
                   );
                 }
 
+                // Error al cargar datos.
                 if (snapshot.hasError) {
                   return _buildErrorState(snapshot.error.toString());
                 }
 
+                // Lista vacía.
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return _buildEmptyState();
                 }
@@ -330,6 +379,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                 List<Map<String, dynamic>> patientsToShow;
                 bool limitReached = false;
 
+                // Lógica de límite del plan básico.
                 if (!_isPro && allPatients.length > _patientLimit) {
                   patientsToShow = allPatients.take(_patientLimit).toList();
                   limitReached = true;
@@ -341,7 +391,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Título interno
+                      // Título del listado.
                       const Padding(
                         padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
                         child: Text(
@@ -354,7 +404,8 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                           ),
                         ),
                       ),
-                      // barrita naranja
+
+                      // Línea decorativa naranja.
                       Container(
                         width: 48,
                         height: 3.5,
@@ -364,7 +415,11 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                           borderRadius: BorderRadius.circular(99),
                         ),
                       ),
+
+                      // Banner que indica límite alcanzado si corresponde.
                       if (limitReached) _buildPaywallBanner(),
+
+                      // Lista de pacientes.
                       Expanded(
                         child: RefreshIndicator(
                           color: _blue,
@@ -376,7 +431,8 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                               final data = patientsToShow[index];
                               final id = data['id'] ?? 'ID_Desconocido';
                               final name =
-                                  data['nombre_completo'] ?? 'Nombre desconocido';
+                                  data['nombre_completo'] ??
+                                  'Nombre desconocido';
                               final age = data['edad']?.toString() ?? '?';
                               final sex = data['sexo'] ?? 'N/E';
                               final photoUrl = data['imagen_perfil'];
@@ -400,7 +456,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     );
   }
 
-  // ---------- states ----------
+  // Estado cuando no hay pacientes.
   Widget _buildEmptyState() {
     return SafeArea(
       child: Column(
@@ -435,6 +491,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Icono ilustrativo.
                     Container(
                       height: 56,
                       width: 56,
@@ -442,10 +499,15 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                         color: _blue.withOpacity(.12),
                         shape: BoxShape.circle,
                       ),
-                      child:
-                          const Icon(Icons.groups_rounded, color: _blue, size: 28),
+                      child: const Icon(
+                        Icons.groups_rounded,
+                        color: _blue,
+                        size: 28,
+                      ),
                     ),
                     const SizedBox(height: 14),
+
+                    // Mensaje principal.
                     const Text(
                       'Aún no tienes pacientes asignados',
                       textAlign: TextAlign.center,
@@ -455,12 +517,17 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
+
+                    // Explicación.
                     const Text(
                       'Los pacientes aparecerán aquí automáticamente después de que confirmes su primera cita.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.black54, height: 1.35),
                     ),
+
                     const SizedBox(height: 16),
+
+                    // Botón para recargar.
                     OutlinedButton(
                       onPressed: _refreshData,
                       style: OutlinedButton.styleFrom(
@@ -491,6 +558,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     );
   }
 
+  // Estado cuando ocurre un error en la carga.
   Widget _buildErrorState(String error) {
     return SafeArea(
       child: Column(
@@ -525,6 +593,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Icono de error.
                     Container(
                       height: 56,
                       width: 56,
@@ -532,10 +601,15 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                         color: Colors.red.withOpacity(.10),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.error_outline_rounded,
-                          color: Colors.red.shade500, size: 28),
+                      child: Icon(
+                        Icons.error_outline_rounded,
+                        color: Colors.red.shade500,
+                        size: 28,
+                      ),
                     ),
                     const SizedBox(height: 14),
+
+                    // Título.
                     const Text(
                       'No pudimos cargar tus pacientes',
                       textAlign: TextAlign.center,
@@ -544,14 +618,22 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
+
                     const SizedBox(height: 8),
+
+                    // Mensaje de error técnico.
                     Text(
                       error,
                       textAlign: TextAlign.center,
-                      style:
-                          const TextStyle(color: Colors.black54, height: 1.35),
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        height: 1.35,
+                      ),
                     ),
+
                     const SizedBox(height: 16),
+
+                    // Botón de reintento.
                     ElevatedButton(
                       onPressed: _refreshData,
                       style: ElevatedButton.styleFrom(
@@ -574,7 +656,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     );
   }
 
-  // ---------- widgets ----------
+  // Widget que genera cada tarjeta de paciente en la lista.
   Widget _patientCard({
     required String id,
     required String name,
@@ -582,7 +664,9 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     required String sex,
     required String? photoUrl,
   }) {
-    final hasImage = photoUrl != null &&
+    // Verifica si la imagen es válida.
+    final hasImage =
+        photoUrl != null &&
         photoUrl.isNotEmpty &&
         Uri.tryParse(photoUrl)?.hasAbsolutePath == true &&
         !photoUrl.contains('via.placeholder.com');
@@ -601,12 +685,15 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
           ),
         ],
       ),
+
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+
+        // Avatar del paciente.
         leading: CircleAvatar(
           radius: 26,
           backgroundColor: _blue.withOpacity(.12),
-          backgroundImage: hasImage ? NetworkImage(photoUrl!) : null,
+          backgroundImage: hasImage ? NetworkImage(photoUrl) : null,
           child: !hasImage
               ? Text(
                   name.isNotEmpty ? name[0].toUpperCase() : '?',
@@ -618,14 +705,20 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                 )
               : null,
         ),
+
+        // Nombre del paciente.
         title: Text(
           name,
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15.5),
         ),
+
+        // Edad y sexo.
         subtitle: Text(
           'Edad: $age   •   Sexo: $sex',
           style: const TextStyle(fontSize: 12.5, color: Colors.black54),
         ),
+
+        // Botones de acciones: progreso, historial, chat.
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -642,11 +735,15 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
             IconButton(
               tooltip: 'Enviar mensaje',
               onPressed: () => _navigateToChat(id, name),
-              icon:
-                  const Icon(Icons.chat_bubble_outline_rounded, color: _orange),
+              icon: const Icon(
+                Icons.chat_bubble_outline_rounded,
+                color: _orange,
+              ),
             ),
           ],
         ),
+
+        // Acción al tocar toda la tarjeta: preguntar qué hacer.
         onTap: () async {
           final ok = await _showConfirmDialog(
             icon: Icons.person_rounded,
@@ -661,7 +758,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
     );
   }
 
-  // Paywall / Límite de pacientes
+  // Banner que muestra cuando se alcanza el límite de pacientes del plan básico.
   Widget _buildPaywallBanner() {
     return Container(
       width: double.infinity,
@@ -677,6 +774,7 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
         children: [
           Row(
             children: [
+              // Icono decorativo.
               Container(
                 height: 28,
                 width: 28,
@@ -687,6 +785,8 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                 child: const Icon(Icons.star_rounded, color: _orange, size: 18),
               ),
               const SizedBox(width: 8),
+
+              // Título del aviso.
               Text(
                 'Límite del Plan Básico alcanzado',
                 style: TextStyle(
@@ -696,14 +796,21 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
               ),
             ],
           ),
+
           const SizedBox(height: 6),
+
+          // Texto explicativo.
           Text(
             'Estás viendo los primeros $_patientLimit pacientes. Actualiza a Kine Pro para ver pacientes ilimitados.',
             style: const TextStyle(fontSize: 13.5, height: 1.3),
           ),
+
           const SizedBox(height: 8),
+
+          // Botones de acción.
           Row(
             children: [
+              // Refrescar lista.
               OutlinedButton(
                 onPressed: _refreshData,
                 style: OutlinedButton.styleFrom(
@@ -714,11 +821,13 @@ class _MyPatientsScreenState extends State<MyPatientsScreen> {
                 ),
                 child: const Text(
                   'Actualizar lista',
-                  style:
-                      TextStyle(color: _orange, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: _orange, fontWeight: FontWeight.w600),
                 ),
               ),
+
               const SizedBox(width: 8),
+
+              // Ir a pantallas de suscripción Pro.
               ElevatedButton(
                 onPressed: _navigateToSubscriptions,
                 style: ElevatedButton.styleFrom(

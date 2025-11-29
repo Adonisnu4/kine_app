@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:kine_app/features/Patients_and_Kine/screens/kine_directory_screen.dart';
+// Imports de tu proyecto
 import 'package:kine_app/features/auth/services/get_user_data.dart';
 import 'package:kine_app/features/auth/screens/login_screen.dart';
 import 'package:kine_app/features/auth/services/user_service.dart';
@@ -14,9 +14,8 @@ import 'package:kine_app/features/Stripe/services/stripe_service.dart';
 import 'package:kine_app/features/Stripe/screens/subscription_screen.dart';
 import 'package:kine_app/features/Appointments/screens/my_appointments_screen.dart';
 import 'package:kine_app/features/Appointments/screens/manage_availability_screen.dart';
-// Puedes seguir usando tus otros diálogos en otras partes
-import 'package:kine_app/shared/widgets/app_dialog.dart';
 
+//paleta de colores para el perfil
 class AppColors {
   static const blue = Color(0xFF47A5D6);
   static const orange = Color(0xFFE28825);
@@ -26,6 +25,7 @@ class AppColors {
   static const text = Color(0xFF111111);
 }
 
+//Pantalla de Perfil
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -34,36 +34,46 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  // Future para cargar datos del usuario una vez al iniciar
   late Future<Map<String, dynamic>?> _userDataFuture;
+
+  // Almacena temporalmente los datos del usuario
   Map<String, dynamic>? _currentUserData;
 
+  // Servicio de Stripe para ver si el usuario es Pro
   final StripeService _stripeService = StripeService();
-  bool _isPro = false;
-  bool _isLoadingProStatus = true;
 
+  bool _isPro = false; // Estado Pro del usuario
+  bool _isLoadingProStatus = true; // Para mostrar loading mientras consulta
+
+  // Clientes de Supabase y Firestore
   final supabase = Supabase.instance.client;
   final firestore = FirebaseFirestore.instance;
 
+  //carga datos de usuario + estado de suscripción
   @override
   void initState() {
     super.initState();
-    _userDataFuture = _loadUserData();
-    _checkSubscriptionStatus();
+    _userDataFuture = _loadUserData(); // Carga los datos del perfil
+    _checkSubscriptionStatus(); // Consulta si el usuario es PRO
   }
 
+  // Carga datos desde getUserData()
   Future<Map<String, dynamic>?> _loadUserData() async {
     final data = await getUserData();
     if (mounted) _currentUserData = data;
     return data;
   }
 
+  // Refresca el perfil completo
   void _refreshProfile() {
     setState(() {
-      _userDataFuture = _loadUserData();
+      _userDataFuture = _loadUserData(); // Recarga datos
     });
-    _checkSubscriptionStatus();
+    _checkSubscriptionStatus(); // Revisa nuevamente PRO
   }
 
+  // Consulta el estado de suscripción PRO del usuario
   Future<void> _checkSubscriptionStatus() async {
     if (mounted) setState(() => _isLoadingProStatus = true);
     try {
@@ -79,6 +89,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  // Navega a la pantalla de suscripción PRO
   void _navigateToSubscriptions(String userType) async {
     await Navigator.push(
       context,
@@ -86,9 +97,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         builder: (ctx) => SubscriptionScreen(userType: userType),
       ),
     );
+
+    // Al volver, recarga estado PRO
     _checkSubscriptionStatus();
   }
 
+  // Guarda una carta de presentación del kinesiólogo
   Future<void> _savePresentation(PresentationData data) async {
     try {
       await updateKinePresentation(
@@ -96,6 +110,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         experience: data.experience,
         presentation: data.presentation,
       );
+
+      // Actualiza estado interno del usuario
       if (_currentUserData != null && mounted) {
         setState(() {
           _currentUserData!['specialization'] = data.specialization;
@@ -103,7 +119,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _currentUserData!['carta_presentacion'] = data.presentation;
         });
       }
+
       _refreshProfile();
+
+      // Mensaje éxito
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -122,16 +141,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  // Navega a pantalla para activar cuenta profesional (kine)
   void _navigateToKineActivation() async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (ctx) => const KineActivationScreen(),
-      ),
+      MaterialPageRoute(builder: (ctx) => const KineActivationScreen()),
     );
     _refreshProfile();
   }
 
+  // Muestra el modal para editar presentación
   void _showEditPresentationModal({
     required String specialization,
     required String experience,
@@ -142,6 +161,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       experience: experience,
       presentation: presentation,
     );
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -152,6 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // Navega a mis citas como paciente
   void _navigateToMyAppointments() {
     Navigator.push(
       context,
@@ -159,6 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // Navega a la gestión de disponibilidad (si es KINE)
   void _navigateToManageAvailability() {
     Navigator.push(
       context,
@@ -166,31 +188,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ---------- helpers de UI ----------
-  Widget _statChip(String label, String value, {Color? valueColor}) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 17,
-            color: valueColor ?? AppColors.blue,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Color(0xFF9AA0A5),
-          ),
-        ),
-      ],
-    );
-  }
-
+  // TARJETA DE OPCIONES
   Widget _menuCard({
     required IconData icon,
     required String label,
@@ -216,11 +214,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: iconBg ?? AppColors.blue.withOpacity(.08),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(
-            icon,
-            color: iconColor ?? AppColors.text,
-            size: 19,
-          ),
+          child: Icon(icon, color: iconColor ?? AppColors.text, size: 19),
         ),
         title: Text(
           label,
@@ -237,10 +231,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ======= POPUP LOGOUT iOS-LIKE (con Cancelar outlined) =======
+  // POPUP de cierre de sesión
   Future<bool?> _showLogoutDialog() {
-    final destructive = const Color(0xFFE11D48); // rojo elegante
-    final cancelColor = const Color(0xFF6B7280); // gris texto + borde
+    final destructive = const Color(0xFFE11D48);
+    final cancelColor = const Color(0xFF6B7280);
 
     return showDialog<bool>(
       context: context,
@@ -248,14 +242,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (ctx) {
         return Dialog(
           insetPadding: const EdgeInsets.symmetric(horizontal: 28),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ícono
+                // Icono decorativo
                 Container(
                   height: 46,
                   width: 46,
@@ -263,10 +258,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     color: destructive.withOpacity(.12),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.logout_rounded,
-                      color: destructive, size: 24),
+                  child: Icon(
+                    Icons.logout_rounded,
+                    color: destructive,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(height: 12),
+
+                // Título
                 Text(
                   'Cerrar sesión',
                   textAlign: TextAlign.center,
@@ -276,7 +276,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     letterSpacing: -.2,
                   ),
                 ),
+
                 const SizedBox(height: 8),
+
+                // Subtítulo
                 const Text(
                   '¿Estás seguro de que quieres cerrar tu sesión?',
                   textAlign: TextAlign.center,
@@ -286,10 +289,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     height: 1.35,
                   ),
                 ),
+
                 const SizedBox(height: 16),
+
                 Row(
                   children: [
-                    // Cancelar outlined con el mismo color de texto/borde
+                    // Botón cancelar
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(ctx).pop(false),
@@ -300,15 +305,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             borderRadius: BorderRadius.circular(14),
                           ),
                           minimumSize: const Size(0, 44),
-                          textStyle: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                          ),
                         ),
                         child: const Text('Cancelar'),
                       ),
                     ),
+
                     const SizedBox(width: 10),
-                    // Confirmar destructivo
+
+                    // Botón confirmar cerrar sesión
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () => Navigator.of(ctx).pop(true),
@@ -320,9 +324,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             borderRadius: BorderRadius.circular(14),
                           ),
                           minimumSize: const Size(0, 44),
-                          textStyle: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                          ),
                         ),
                         child: const Text('Sí, salir'),
                       ),
@@ -336,8 +337,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
-  // =============================================================
 
+  // Cuerpo principal del perfil
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -345,44 +346,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: FutureBuilder<Map<String, dynamic>?>(
         future: _userDataFuture,
         builder: (context, snapshot) {
+          // Mientras carga datos o estado PRO
           if (snapshot.connectionState == ConnectionState.waiting ||
               _isLoadingProStatus) {
             return const Center(child: CircularProgressIndicator());
           }
 
+          // Error cargando perfil
           if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
             return const Center(child: Text('Error al cargar el perfil.'));
           }
 
+          // Datos del usuario
           final userData = snapshot.data!;
           final userName = userData['nombre_completo'] ?? 'Usuario';
+
           final userEmail =
               FirebaseAuth.instance.currentUser?.email ?? 'Sin correo';
+
           final userStatusName = userData['tipo_usuario_nombre'] ?? 'normal';
           final userStatusId = userData['tipo_usuario_id'] ?? 1;
 
-          final isKine = userStatusId == 3;
-          final isPending = userStatusId == 2;
-          final isNormal = userStatusId == 1;
+          final isKine = userStatusId == 3; // Profesional aprobado
+          final isPending = userStatusId == 2; // Profesional pendiente
+          final isNormal = userStatusId == 1; // Usuario paciente
           final userTypeString = isKine ? "kine" : "patient";
 
+          // Datos del kine (si aplica)
           final currentSpecialization = userData['specialization'] ?? '';
           final currentExperience = userData['experience']?.toString() ?? '';
           final currentPresentation = userData['carta_presentacion'] ?? '';
+
           final userImageUrl =
               userData['imagen_perfil'] ?? 'https://via.placeholder.com/120';
 
+          // ENVOLTORIO SCROLL + REFRESH
           return RefreshIndicator(
             onRefresh: () async => _refreshProfile(),
             child: CustomScrollView(
               slivers: [
-                // header
+                // ENCABEZADO
                 SliverToBoxAdapter(
                   child: SafeArea(
                     bottom: false,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Barra superior con botón de back
                         Container(
                           height: 56,
                           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -393,7 +403,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: Color(0x12000000),
                                 offset: Offset(0, 1),
                                 blurRadius: 6,
-                              )
+                              ),
                             ],
                           ),
                           child: Row(
@@ -407,6 +417,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                               const SizedBox(width: 8),
+
+                              // Título
                               const Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -431,7 +443,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ],
                           ),
                         ),
-                        // barra naranja
+
+                        // Línea naranja decorativa
                         Container(
                           margin: const EdgeInsets.fromLTRB(16, 10, 0, 14),
                           width: 44,
@@ -441,7 +454,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             borderRadius: BorderRadius.circular(99),
                           ),
                         ),
-                        // card perfil
+
+                        // TARJETA PRINCIPAL DEL PERFIL
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 16),
                           padding: const EdgeInsets.symmetric(
@@ -456,6 +470,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
+                              // FOTO + ETIQUETA DEL ROL
                               Stack(
                                 clipBehavior: Clip.none,
                                 children: [
@@ -464,6 +479,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     backgroundColor: Colors.grey.shade200,
                                     backgroundImage: NetworkImage(userImageUrl),
                                   ),
+
+                                  // Etiqueta del tipo de usuario (normal/kine/pending)
                                   Positioned(
                                     bottom: -12,
                                     left: 2,
@@ -477,8 +494,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         color: isKine
                                             ? AppColors.blue
                                             : (isPending
-                                                ? AppColors.orange
-                                                : AppColors.grey),
+                                                  ? AppColors.orange
+                                                  : AppColors.grey),
                                         borderRadius: BorderRadius.circular(99),
                                       ),
                                       child: Text(
@@ -494,7 +511,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                 ],
                               ),
+
                               const SizedBox(width: 14),
+
+                              // Nombre y correo del usuario
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -519,7 +539,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           ),
                                       ],
                                     ),
+
                                     const SizedBox(height: 3),
+
                                     Text(
                                       userEmail,
                                       style: const TextStyle(
@@ -527,15 +549,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         color: Color(0xFF9AA0A5),
                                       ),
                                     ),
+
                                     const SizedBox(height: 10),
                                   ],
                                 ),
-                              )
+                              ),
                             ],
                           ),
                         ),
+
                         const SizedBox(height: 14),
-                        // card PRO
+
+                        // TARJETA PLAN PRO (solo si NO es Pro)
                         if (!_isPro)
                           Container(
                             margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -547,7 +572,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                             child: ListTile(
-                              onTap: () => _navigateToSubscriptions(userTypeString),
+                              onTap: () =>
+                                  _navigateToSubscriptions(userTypeString),
                               leading: Container(
                                 width: 34,
                                 height: 34,
@@ -580,8 +606,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                           ),
+
                         const SizedBox(height: 18),
-                        // título opciones
+
+                        // Título categorías de opciones
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16),
                           child: Text(
@@ -593,14 +621,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ),
+
                         const SizedBox(height: 8),
                       ],
                     ),
                   ),
                 ),
-                // lista de opciones
+
+                // LISTA DE OPCIONES DEL PERFIL
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 2,
+                  ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       _menuCard(
@@ -608,6 +641,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         label: 'Editar perfil',
                         onTap: () {},
                       ),
+
+                      // Opción paciente
                       if (isNormal)
                         _menuCard(
                           icon: Icons.calendar_month_outlined,
@@ -616,6 +651,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           iconBg: AppColors.orange.withOpacity(.12),
                           iconColor: AppColors.orange,
                         ),
+
+                      // Opción profesional
                       if (isKine)
                         _menuCard(
                           icon: Icons.schedule_rounded,
@@ -624,6 +661,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           iconBg: AppColors.blue.withOpacity(.12),
                           iconColor: AppColors.blue,
                         ),
+
                       if (isKine)
                         _menuCard(
                           icon: Icons.article_outlined,
@@ -636,6 +674,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           iconBg: AppColors.grey.withOpacity(.15),
                           iconColor: AppColors.text,
                         ),
+
                       _menuCard(
                         icon: Icons.settings_outlined,
                         label: 'Configuración',
@@ -643,6 +682,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         iconBg: AppColors.grey.withOpacity(.12),
                         iconColor: AppColors.grey,
                       ),
+
                       _menuCard(
                         icon: Icons.notifications_outlined,
                         label: 'Notificaciones',
@@ -650,6 +690,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         iconBg: AppColors.blue.withOpacity(.12),
                         iconColor: AppColors.blue,
                       ),
+
+                      // Activar cuenta profesional
                       if (!isKine)
                         if (isNormal)
                           _menuCard(
@@ -660,6 +702,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             iconColor: AppColors.orange,
                             textColor: AppColors.text,
                           )
+                        // Estado pendiente
                         else if (isPending)
                           _menuCard(
                             icon: Icons.access_time_filled_rounded,
@@ -667,7 +710,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             onTap: () {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Tu solicitud está siendo revisada.'),
+                                  content: Text(
+                                    'Tu solicitud está siendo revisada.',
+                                  ),
                                 ),
                               );
                             },
@@ -675,6 +720,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             iconColor: AppColors.orange,
                             textColor: AppColors.orange,
                           ),
+
                       _menuCard(
                         icon: Icons.help_outline,
                         label: 'Ayuda y soporte',
@@ -682,9 +728,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         iconBg: AppColors.blue.withOpacity(.08),
                         iconColor: AppColors.blue,
                       ),
-                      // cerrar sesión
-                      Container
-                      (
+
+                      // CERRAR SESIÓN
+                      Container(
                         margin: const EdgeInsets.only(top: 4, bottom: 28),
                         decoration: BoxDecoration(
                           color: AppColors.white,
@@ -693,9 +739,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         child: ListTile(
                           onTap: () async {
+                            // Muestra popup
                             final bool? confirm = await _showLogoutDialog();
+
+                            // Si confirma, cerrar sesión
                             if (confirm == true) {
                               await FirebaseAuth.instance.signOut();
+
                               if (context.mounted) {
                                 Navigator.pushAndRemoveUntil(
                                   context,

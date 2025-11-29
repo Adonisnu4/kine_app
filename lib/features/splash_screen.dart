@@ -1,24 +1,34 @@
 import 'package:flutter/material.dart';
-// importa tus screens reales
+// Importación de pantallas reales
 import 'package:kine_app/features/auth/screens/login_screen.dart';
 import 'package:kine_app/features/auth/screens/register_screen.dart';
 
+/// =======================================================================
+/// Punto de entrada de la aplicación.
+/// =======================================================================
 void main() {
   runApp(const KineApp());
 }
 
-/// colores centralizados
+/// =======================================================================
+/// Paleta de colores centralizada.
+/// Se reutiliza en todas las pantallas principales.
+/// =======================================================================
 class AppColors {
   static const white = Color(0xFFFFFFFF);
   static const background = Color(0xFFF6F6F6);
 
-  static const blue = Color(0xFF47A5D6);    // primario (del logo)
-  static const grey = Color(0xFF7A8285);    // gris del logo
+  static const blue = Color(0xFF47A5D6); // color primario (logo)
+  static const grey = Color(0xFF7A8285); // gris del logo
   static const greyText = Color(0xFF8A9397);
-  static const orange = Color(0xFFE28825);  // acento
-  static const border = Color(0xFFE3E6E8);
+  static const orange = Color(0xFFE28825); // acento general
+  static const border = Color(0xFFE3E6E8); // borde sutil
 }
 
+/// =======================================================================
+/// Widget raíz de la aplicación.
+/// Configura el tema global y define la pantalla inicial.
+/// =======================================================================
 class KineApp extends StatelessWidget {
   const KineApp({super.key});
 
@@ -26,22 +36,37 @@ class KineApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+
+      // Tema principal para toda la app
       theme: ThemeData(
         scaffoldBackgroundColor: AppColors.white,
         primaryColor: AppColors.blue,
         useMaterial3: false,
+
+        // Estilo base para AppBar en toda la app
         appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.white,
           foregroundColor: Colors.black,
           elevation: 0,
         ),
+
         cardColor: AppColors.white,
       ),
+
+      // Pantalla que se mostrará al abrir la app
       home: const WelcomeScreen(),
     );
   }
 }
 
+/// =======================================================================
+/// Pantalla inicial de bienvenida.
+/// Contiene:
+///  - Logo principal
+///  - Título + texto descriptivo
+///  - Botón "Únete" (registro)
+///  - Botón "Iniciar sesión"
+/// =======================================================================
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
@@ -52,6 +77,7 @@ class WelcomeScreen extends StatelessWidget {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, c) {
+            // Cálculo responsivo del tamaño del logo
             final w = c.maxWidth;
             final logoH = (w * 0.22).clamp(90, 140).toDouble();
 
@@ -63,7 +89,10 @@ class WelcomeScreen extends StatelessWidget {
               child: Column(
                 children: [
                   const SizedBox(height: 48),
-                  // logo
+
+                  /// -----------------------------------------------------------
+                  /// LOGO PRINCIPAL
+                  /// -----------------------------------------------------------
                   Center(
                     child: Image.asset(
                       'assets/unkineamigo.png',
@@ -71,8 +100,12 @@ class WelcomeScreen extends StatelessWidget {
                       fit: BoxFit.contain,
                     ),
                   ),
+
                   const Spacer(),
-                  // acento naranja
+
+                  /// -----------------------------------------------------------
+                  /// Barra de acento naranja (recurso visual)
+                  /// -----------------------------------------------------------
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Container(
@@ -85,7 +118,10 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  // textos
+
+                  /// -----------------------------------------------------------
+                  /// TÍTULO + DESCRIPCIÓN DEL PROYECTO
+                  /// -----------------------------------------------------------
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Column(
@@ -112,11 +148,16 @@ class WelcomeScreen extends StatelessWidget {
                       ],
                     ),
                   ),
+
                   const SizedBox(height: 20),
-                  // botones
+
+                  /// -----------------------------------------------------------
+                  /// BOTONES: REGISTRO Y LOGIN
+                  /// -----------------------------------------------------------
                   Row(
                     children: [
-                      // PRIMARIO (azul)
+                      /// BOTÓN PRIMARIO (azul)
+                      /// Navega a la pantalla de registro
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
@@ -145,8 +186,11 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ),
                       ),
+
                       const SizedBox(width: 14),
-                      // SECUNDARIO (outline gris-azul y texto azul)
+
+                      /// BOTÓN SECUNDARIO (outline)
+                      /// Navega a login
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () {
@@ -177,33 +221,17 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-
-                      // 👉 si quieres que este sea naranja, reemplaza el OutlinedButton de arriba por:
-                      /*
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () { ... },
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(
-                              color: AppColors.orange,
-                              width: 1.1,
-                            ),
-                            foregroundColor: AppColors.orange,
-                            ...
-                          ),
-                          child: const Text('Iniciar sesión'),
-                        ),
-                      ),
-                      */
                     ],
                   ),
+
                   const SizedBox(height: 8),
+
+                  /// -----------------------------------------------------------
+                  /// TEXTO LEGAL / INFORMATICO
+                  /// -----------------------------------------------------------
                   const Text(
                     'Al continuar aceptas nuestros términos.',
-                    style: TextStyle(
-                      color: AppColors.greyText,
-                      fontSize: 11.5,
-                    ),
+                    style: TextStyle(color: AppColors.greyText, fontSize: 11.5),
                   ),
                 ],
               ),

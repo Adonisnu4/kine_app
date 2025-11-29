@@ -1,16 +1,16 @@
 // lib/screens/my_appointments_screen.dart
-import 'package:flutter/material.dart';
-// Import Firestore
-import 'package:kine_app/features/Appointments/models/appointment.dart'; // Importa tu modelo
-import 'package:kine_app/features/Appointments/services/appointment_service.dart'; // Importa tu servicio
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
-// 💡 IMPORT AÑADIDO
-import 'package:kine_app/shared/widgets/app_dialog.dart';
 
-// Puedes importar estas si quieres añadir navegación
-// import 'kine_presentation_screen.dart';
-// import 'chat_screen.dart';
+import 'package:flutter/material.dart';
+// Modelo que representa una cita
+import 'package:kine_app/features/Appointments/models/appointment.dart';
+// Servicio que gestiona lectura, actualización y eliminación de citas
+import 'package:kine_app/features/Appointments/services/appointment_service.dart';
+// Para obtener el usuario actual autenticado
+import 'package:firebase_auth/firebase_auth.dart';
+// Para formatear fechas y horas
+import 'package:intl/intl.dart';
+// Diálogos reutilizables personalizados
+import 'package:kine_app/shared/widgets/app_dialog.dart';
 
 class MyAppointmentsScreen extends StatefulWidget {
   const MyAppointmentsScreen({super.key});
@@ -20,42 +20,45 @@ class MyAppointmentsScreen extends StatefulWidget {
 }
 
 class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
+  // Servicio para interactuar con Firestore
   final AppointmentService _appointmentService = AppointmentService();
+
+  // UID del paciente actual (usuario autenticado)
   final String _currentUserId = FirebaseAuth.instance.currentUser!.uid;
+
+  // Stream que escucha en tiempo real las citas del usuario
   late Stream<List<Appointment>> _appointmentsStream;
 
   @override
   void initState() {
     super.initState();
-    // Obtiene el stream de citas para el usuario actual
+    // Obtiene un stream que escucha cambios en las citas del paciente
     _appointmentsStream = _appointmentService.getPatientAppointments(
       _currentUserId,
     );
   }
 
-  // --- Función para Cancelar Cita Pendiente ---
+  // Maneja la cancelación de una cita pendiente
   void _handleCancelAppointment(Appointment appointment) async {
-    // Pide confirmación (con el nuevo diálogo)
-    // 💡 --- CÓDIGO MODIFICADO AQUÍ ---
+    // Muestra diálogo de confirmación
     bool? confirm = await showAppConfirmationDialog(
       context: context,
-      icon: Icons.warning_amber_rounded, // Icono de advertencia
+      icon: Icons.warning_amber_rounded,
       title: 'Cancelar Cita',
       content: '¿Estás seguro de que quieres cancelar esta solicitud de cita?',
       confirmText: 'Sí, Cancelar',
       cancelText: 'No',
-      isDestructive: true, // ¡Esta sí es destructiva! (Botón rojo)
+      isDestructive: true, // Marca el botón confirm como acción destructiva
     );
-    // 💡 --- FIN DE CÓDIGO MODIFICADO ---
 
-    // Si confirma, llama al servicio para borrar
+    // Si confirma, procede
     if (confirm == true) {
       try {
-        // Llama a la función del servicio
+        // Elimina la cita desde Firestore usando el servicio
         await _appointmentService.deleteAppointment(appointment.id);
 
         if (mounted) {
-          // Muestra mensaje de éxito
+          // Muestra mensaje general de éxito
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Cita cancelada.'),
@@ -64,7 +67,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
           );
         }
       } catch (e) {
-        // Muestra mensaje de error
+        // Captura errores al eliminar cita
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -76,7 +79,6 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
       }
     }
   }
-  // --- Fin Función Cancelar ---
 
   @override
   Widget build(BuildContext context) {
@@ -86,20 +88,24 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
       ),
+
+      // Escucha el stream de citas en tiempo real
       body: StreamBuilder<List<Appointment>>(
-        stream: _appointmentsStream, // Escucha las citas del paciente
+        stream: _appointmentsStream,
         builder: (context, snapshot) {
-          // Estado de Carga
+          // Mientras carga los datos
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          // Estado de Error
+
+          // Si ocurre un error en la carga
           if (snapshot.hasError) {
             return Center(
               child: Text('Error al cargar citas: ${snapshot.error}'),
             );
           }
-          // Estado Sin Datos
+
+          // Si no hay citas
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
               child: Padding(
@@ -113,14 +119,14 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
             );
           }
 
-          // Estado con Datos Exitoso
+          // Lista de citas encontradas
           final appointments = snapshot.data!;
+
           return ListView.builder(
             padding: const EdgeInsets.all(10),
             itemCount: appointments.length,
             itemBuilder: (context, index) {
               final appointment = appointments[index];
-              // Dibuja una tarjeta por cada cita
               return _buildAppointmentCard(appointment);
             },
           );
@@ -129,27 +135,31 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     );
   }
 
-  // Widget que construye cada tarjeta de cita
+  // Construye cada tarjeta de cita individual
   Widget _buildAppointmentCard(Appointment appointment) {
+    // Variables para ícono, color y texto del estado
     IconData estadoIcon;
     Color estadoColor;
     String estadoTexto = appointment.estado.toUpperCase();
 
-    // Define ícono y color según el estado
+    // Determina el estilo según el estado de la cita
     switch (appointment.estado) {
       case 'confirmada':
         estadoIcon = Icons.check_circle;
         estadoColor = Colors.green;
         break;
+
       case 'denegada':
         estadoIcon = Icons.cancel;
         estadoColor = Colors.red;
         estadoTexto = 'RECHAZADA';
         break;
+
       case 'completada':
         estadoIcon = Icons.check_box;
         estadoColor = Colors.blueGrey;
         break;
+
       case 'pendiente':
       default:
         estadoIcon = Icons.hourglass_top;
@@ -157,19 +167,23 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         break;
     }
 
+    // Tarjeta contenedora con la información completa de la cita
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 5),
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+
       child: Padding(
         padding: const EdgeInsets.all(14.0),
+
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Cabecera: nombre del kine + estado de la cita
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Nombre del Kine
+                // Nombre del kinesiólogo
                 Flexible(
                   child: Text(
                     appointment.kineNombre,
@@ -181,7 +195,8 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                // Contenedor del Estado
+
+                // Indicador visual del estado
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -209,8 +224,10 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                 ),
               ],
             ),
+
             const Divider(height: 18),
-            // Detalles de Fecha y Hora
+
+            // Fecha de la cita
             Row(
               children: [
                 Icon(
@@ -228,7 +245,10 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                 ),
               ],
             ),
+
             const SizedBox(height: 5),
+
+            // Hora de la cita
             Row(
               children: [
                 Icon(
@@ -244,7 +264,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
               ],
             ),
 
-            // --- Botón Cancelar (Condicional) ---
+            // Botón para cancelar si está pendiente
             if (appointment.estado == 'pendiente') ...[
               const SizedBox(height: 12),
               Align(
@@ -260,15 +280,12 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                     ),
                     textStyle: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  onPressed: () => _handleCancelAppointment(
-                    appointment,
-                  ), // Llama a la función
+                  onPressed: () => _handleCancelAppointment(appointment),
                 ),
               ),
             ],
-            // --- Fin Botón Cancelar ---
 
-            // Botón Contactar (si está confirmada - Opcional)
+            // Botón "Contactar Kine" si está confirmada
             if (appointment.estado == 'confirmada') ...[
               const SizedBox(height: 12),
               Align(
@@ -285,7 +302,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                     textStyle: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   onPressed: () {
-                    // Aquí iría la navegación a tu pantalla de chat
+                    // Aquí va la navegación real a la pantalla de chat
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -302,4 +319,4 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
       ),
     );
   }
-} // Fin de la clase _MyAppointmentsScreenState
+}

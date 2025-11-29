@@ -1,11 +1,19 @@
 // lib/screens/subscription_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kine_app/features/Stripe/services/stripe_service.dart';
 
-// para claridad
+/// Enum que representa el ciclo de facturación posible.
+/// monthly = pago mensual
+/// annual = pago anual con descuento
 enum BillingCycle { monthly, annual }
 
+/// Pantalla donde un usuario (kine o paciente)
+/// puede visualizar su plan y contratar el plan PRO correspondiente.
+///
+/// Recibe como parámetro:
+/// - userType: "kine" o "patient"
 class SubscriptionScreen extends StatefulWidget {
   final String userType;
   const SubscriptionScreen({super.key, required this.userType});
@@ -15,22 +23,31 @@ class SubscriptionScreen extends StatefulWidget {
 }
 
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
-  // paleta que venimos usando
+  // Paleta de colores usada en la aplicación
   static const _blue = Color(0xFF47A5D6);
   static const _orange = Color(0xFFE28825);
   static const _bg = Color(0xFFF7F3F7);
 
+  /// Servicio que contiene las funciones para conectar con Stripe:
+  /// - createCheckoutSession()
+  /// - launchStripeCheckout()
   final StripeService _stripeService = StripeService();
+
+  /// Indica si se está ejecutando un proceso de pago
   bool _isLoading = false;
 
-  // IDs precio (los tuyos)
+  /// Price IDs configurados en Stripe para Kinesiólogos
   final String _kineMonthlyPriceId = 'price_1SNKvSPMEZlnmK1ZrZ3Sk99F';
   final String _kineAnnualPriceId = 'price_1SNKvSPMEZlnmK1Zwh0EzLu6';
+
+  /// Estos IDs deben reemplazarse si activas planes PRO para pacientes
   final String _patientMonthlyPriceId = 'price_TU_ID_PACIENTE_MENSUAL';
   final String _patientAnnualPriceId = 'price_TU_ID_PACIENTE_ANUAL';
 
-  // estado
+  /// Estado del ciclo de facturación seleccionado por el usuario
   BillingCycle _cycle = BillingCycle.monthly;
+
+  /// Variables que se actualizan al cambiar ciclo o tipo de usuario
   String _selectedPriceId = '';
   String _selectedPlanTitle = '';
   String _selectedPlanDescription = '';
@@ -40,13 +57,21 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   @override
   void initState() {
     super.initState();
+    // Carga inicial del plan según userType y ciclo de facturación
     _updateSelectedPlan(widget.userType, _cycle);
   }
 
+  /// Maneja la lógica para:
+  /// - Determinar precio según ciclo
+  /// - Determinar características del plan
+  /// - Actualizar textos y display del valor
+  ///
+  /// userType: "kine" o "patient"
+  /// cycle: mensual o anual
   void _updateSelectedPlan(String userType, BillingCycle cycle) {
     _cycle = cycle;
 
-    // por defecto: kine
+    // Configuración para Kinesiólogos
     if (userType == 'kine') {
       _selectedPlanTitle = 'Kine Pro';
       _selectedFeatures = [
@@ -66,7 +91,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             'Todos los beneficios de Kine Pro, con 2 meses de descuento.';
       }
     } else {
-      // paciente (si lo usas para patient)
+      // Configuración si activas planes para pacientes
       _selectedPlanTitle = 'Paciente Pro';
       _selectedFeatures = [
         'Reservas instantáneas',
@@ -77,8 +102,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       if (cycle == BillingCycle.monthly) {
         _selectedPriceId = _patientMonthlyPriceId;
         _selectedDisplayPrice = '\$4.990 / mes';
-        _selectedPlanDescription =
-            'Acceso prioritario y reserva instantánea.';
+        _selectedPlanDescription = 'Acceso prioritario y reserva instantánea.';
       } else {
         _selectedPriceId = _patientAnnualPriceId;
         _selectedDisplayPrice = '\$49.990 / año';
@@ -87,29 +111,42 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       }
     }
 
+    // Actualiza la UI
     setState(() {});
   }
 
+  /// Inicia el proceso de suscripción:
+  /// 1. Verifica usuario autenticado
+  /// 2. Valida el priceId
+  /// 3. Crea la sesión de Stripe (Checkout)
+  /// 4. Abre el navegador para procesar el pago
+  /// 5. Retorna a la pantalla anterior
   Future<void> _handleSubscription() async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception('Usuario no autenticado.');
+      if (user == null) {
+        throw Exception('Usuario no autenticado.');
+      }
 
-      final priceId = _selectedPriceId;
-      if (priceId.contains('TU_ID')) {
+      // Verifica que tengas configurado un priceId válido
+      if (_selectedPriceId.contains('TU_ID')) {
         throw Exception(
-          'Configura el priceId para ${_cycle == BillingCycle.monthly ? 'mensual' : 'anual'}.',
+          'Configura correctamente el priceId del plan seleccionado.',
         );
       }
 
-      final url = await _stripeService.createCheckoutSession(priceId);
+      // Crea sesión de Checkout en Stripe
+      final url = await _stripeService.createCheckoutSession(_selectedPriceId);
+
+      // Abre Stripe en el navegador
       await _stripeService.launchStripeCheckout(url);
 
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
+      // Muestra error en pantalla
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -119,10 +156,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         );
       }
     } finally {
+      // Termina el estado de carga
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  /// Construye un ítem de característica dentro de la tarjeta de beneficios
   Widget _buildFeatureRow(String text, Color accent) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5.5),
@@ -134,10 +173,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                fontSize: 15.5,
-                color: Color(0xFF4B5563),
-              ),
+              style: const TextStyle(fontSize: 15.5, color: Color(0xFF4B5563)),
             ),
           ),
         ],
@@ -147,11 +183,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Color activeColor =
-        _cycle == BillingCycle.monthly ? _blue : _orange;
+    final Color activeColor = _cycle == BillingCycle.monthly ? _blue : _orange;
 
     return Scaffold(
       backgroundColor: _bg,
+
+      // Barra superior
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -161,12 +198,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
+
+      // Contenido completo
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 26),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // selector tipo píldora
+            // Selector de ciclo (mensual / anual)
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
@@ -183,17 +222,17 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               ),
               child: Row(
                 children: [
+                  // Opción mensual
                   Expanded(
                     child: InkWell(
                       borderRadius: BorderRadius.circular(999),
-                      onTap: () =>
-                          _updateSelectedPlan(widget.userType, BillingCycle.monthly),
+                      onTap: () => _updateSelectedPlan(
+                        widget.userType,
+                        BillingCycle.monthly,
+                      ),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 8,
-                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
                           color: _cycle == BillingCycle.monthly
                               ? _blue
@@ -225,18 +264,20 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       ),
                     ),
                   ),
+
                   const SizedBox(width: 4),
+
+                  // Opción anual
                   Expanded(
                     child: InkWell(
                       borderRadius: BorderRadius.circular(999),
-                      onTap: () =>
-                          _updateSelectedPlan(widget.userType, BillingCycle.annual),
+                      onTap: () => _updateSelectedPlan(
+                        widget.userType,
+                        BillingCycle.annual,
+                      ),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 8,
-                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
                           color: _cycle == BillingCycle.annual
                               ? _orange
@@ -271,9 +312,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 ],
               ),
             ),
+
             const SizedBox(height: 22),
 
-            // tarjeta
+            // Tarjeta con información del plan
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -319,8 +361,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
+
                   Divider(color: Colors.grey.shade100, thickness: 1),
+
                   const SizedBox(height: 10),
+
                   const Text(
                     'Beneficios incluidos:',
                     style: TextStyle(
@@ -330,15 +375,18 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
+
+                  // Lista de beneficios
                   ..._selectedFeatures.map(
                     (f) => _buildFeatureRow(f, activeColor),
                   ),
                 ],
               ),
             ),
+
             const SizedBox(height: 26),
 
-            // botón
+            // Botón principal para iniciar la compra
             ElevatedButton(
               onPressed: _isLoading ? null : _handleSubscription,
               style: ElevatedButton.styleFrom(
@@ -367,14 +415,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       ),
                     ),
             ),
+
             const SizedBox(height: 16),
+
             const Text(
               'El pago es procesado de forma segura por Stripe. Puedes cancelar en cualquier momento.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11.5,
-                color: Color(0xFF9CA3AF),
-              ),
+              style: TextStyle(fontSize: 11.5, color: Color(0xFF9CA3AF)),
             ),
           ],
         ),

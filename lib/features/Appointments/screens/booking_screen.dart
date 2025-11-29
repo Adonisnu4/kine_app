@@ -1,17 +1,19 @@
-// lib/screens/booking_screen.dart
+// Pantalla donde el paciente agenda una cita con un kinesiólogo
+// Se encarga de: seleccionar día, cargar horarios disponibles,
+// validar si ya tiene citas pendientes/confirmadas y enviar la solicitud.
+
 import 'package:flutter/material.dart';
 import 'package:kine_app/features/Appointments/services/appointment_service.dart';
 import 'package:kine_app/features/Appointments/services/availability_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:kine_app/features/Chat/screens/chat_screen.dart';
-
-// diálogos base reutilizables (errores)
-import 'package:kine_app/shared/widgets/app_dialog.dart';
+import 'package:kine_app/shared/widgets/app_dialog.dart'; // *Diálogo de errores reutilizable
 
 class BookingScreen extends StatefulWidget {
-  final String kineId;
-  final String kineNombre;
+  final String kineId; // ID del profesional
+  final String kineNombre; // Nombre del profesional
+
   const BookingScreen({
     super.key,
     required this.kineId,
@@ -23,37 +25,53 @@ class BookingScreen extends StatefulWidget {
 }
 
 class _BookingScreenState extends State<BookingScreen> {
-  // Paleta central
+  // Paleta de colores / constantes
   static const _bg = Color(0xFFF6F6F7);
   static const _blue = Color(0xFF47A5D6);
   static const _orange = Color(0xFFE28825);
   static const _border = Color(0x11000000);
 
-  final AppointmentService _appointmentService = AppointmentService();
-  final AvailabilityService _availabilityService = AvailabilityService();
-  final String _currentUserId = FirebaseAuth.instance.currentUser!.uid;
+  // Servicios principales/
+  final AppointmentService _appointmentService =
+      AppointmentService(); // Lógica de citas
+  final AvailabilityService _availabilityService =
+      AvailabilityService(); // Lógica de horarios
 
-  DateTime _selectedDate = DateTime.now();
-  int? _selectedTimeSlot;
+  final String _currentUserId =
+      FirebaseAuth.instance.currentUser!.uid; // Usuario actual
 
-  bool _isCheckingPending = true;
-  bool _isLoadingSlots = true;
-  bool _isBooking = false;
+  //Estado UI
+  DateTime _selectedDate = DateTime.now(); // Día elegido
+  int? _selectedTimeSlot; // Índice del horario elegido
 
-  bool _hasPending = false;
-  bool _hasConfirmed = false;
+  bool _isCheckingPending = true; // Está verificando si ya tiene citas
+  bool _isLoadingSlots = true; // Está cargando los horarios disponibles
+  bool _isBooking = false; // Aún no está enviando la solicitud
 
-  List<TimeOfDay> _availableSlotsForDay = [];
+  bool _hasPending = false; // Aún no se sabe existe cita pendiente
+  bool _hasConfirmed = false; // Aún no se sabe cita confirmada
 
+  List<TimeOfDay> _availableSlotsForDay =
+      []; // Lista de horarios disponibles para ese día
+
+  //Inicialización
   @override
   void initState() {
     super.initState();
+
+    // Selecciona el próximo día hábil
     _selectedDate = _findNextAvailableWorkDay(DateTime.now());
+
+    // Verifica si el usuario ya tiene una cita
     _checkExistingAppointments();
+
+    // Carga horarios disponibles para el día inicial
     _loadSlotsForSelectedDay();
   }
 
-  /* ---------------- Popups rápidos ---------------- */
+  // POPUPS
+
+  // Popup de error simple
   Future<void> _showErrorPopup(String title, String content) async {
     if (!mounted) return;
     await showAppErrorDialog(
@@ -64,7 +82,7 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  // ✅ Popup “bonito” (mismo estilo iOS elegante que usamos en otras pantallas)
+  // Popup informativo
   Future<void> _showNiceInfoDialog({
     required IconData icon,
     required String title,
@@ -72,6 +90,7 @@ class _BookingScreenState extends State<BookingScreen> {
     Color color = _blue,
   }) async {
     if (!mounted) return;
+
     await showDialog(
       context: context,
       barrierDismissible: true,
@@ -87,6 +106,7 @@ class _BookingScreenState extends State<BookingScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Icono
                 Container(
                   height: 44,
                   width: 44,
@@ -97,6 +117,8 @@ class _BookingScreenState extends State<BookingScreen> {
                   child: Icon(icon, color: color, size: 22),
                 ),
                 const SizedBox(height: 14),
+
+                // Título
                 Text(
                   title,
                   textAlign: TextAlign.center,
@@ -107,6 +129,8 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
+
+                // Mensaje
                 Text(
                   message,
                   textAlign: TextAlign.center,
@@ -117,6 +141,8 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+
+                // Botón OK
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -144,47 +170,68 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  /* ---------------- Data / Reglas ---------------- */
+  // Carga de horarios
 
+  // Obtiene horarios disponibles para el día seleccionado
   Future<void> _loadSlotsForSelectedDay() async {
     if (!mounted) return;
+
     setState(() {
       _isLoadingSlots = true;
       _selectedTimeSlot = null;
       _availableSlotsForDay = [];
     });
+
     try {
       final slots = await _availabilityService.getAvailableSlotsForDay(
         widget.kineId,
         _selectedDate,
       );
+
       if (!mounted) return;
+
       setState(() => _availableSlotsForDay = slots);
     } catch (e) {
-      if (!mounted) return;
-      _showErrorPopup('Error al Cargar',
-          'No se pudieron cargar los horarios: ${e.toString()}');
+      _showErrorPopup(
+        'Error al Cargar',
+        'No se pudieron cargar los horarios: ${e.toString()}',
+      );
     } finally {
       if (mounted) setState(() => _isLoadingSlots = false);
     }
   }
 
+  // Reglas / lógica
+  // Encuentra el próximo día hábil (no fin de semana)
   DateTime _findNextAvailableWorkDay(DateTime date) {
     DateTime tempDate = date;
+
+    // Si ya pasó la hora laboral, mueve al siguiente día
     if (date.isAfter(DateTime(date.year, date.month, date.day, 16, 0))) {
       tempDate = tempDate.add(const Duration(days: 1));
     }
+
+    // Evita los sábados y domingos
     while (tempDate.weekday == DateTime.saturday ||
         tempDate.weekday == DateTime.sunday) {
       tempDate = tempDate.add(const Duration(days: 1));
     }
+    //Devolver el dia limpio sin citas
     return DateTime(tempDate.year, tempDate.month, tempDate.day);
   }
 
+  // Verifica si el usuario ya tiene una cita pendiente o confirmada con este kinesiólogo
   Future<void> _checkExistingAppointments() async {
-    if (!mounted) return;
-    setState(() => _isCheckingPending = true);
+    if (!mounted) return; // Evita continuar si la pantalla ya no está activa
+
+    setState(
+      () => _isCheckingPending = true,
+    ); // Activa el estado de "verificando"
+
     try {
+      // Ejecuta ambas consultas a Firebase al mismo tiempo
+      // results[0] → tiene cita pendiente?
+      // results[1] → tiene cita confirmada?
       final results = await Future.wait([
         _appointmentService.hasPendingAppointment(
           _currentUserId,
@@ -195,76 +242,86 @@ class _BookingScreenState extends State<BookingScreen> {
           widget.kineId,
         ),
       ]);
+
+      // Si el widget ya no está montado, detén aquí
       if (!mounted) return;
+
+      // Actualiza los resultados en la UI
       setState(() {
         _hasPending = results[0];
         _hasConfirmed = results[1];
       });
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _hasPending = false;
-        _hasConfirmed = false;
-      });
-      _showErrorPopup('Error de Verificación',
-          'No se pudo verificar tu historial: ${e.toString()}');
+      // Muestra un mensaje en caso de error
+      _showErrorPopup(
+        'Error de Verificación',
+        'No se pudo verificar tu historial: ${e.toString()}',
+      );
     } finally {
+      // Apaga el estado de "verificando" siempre, funcione o falle
       if (mounted) setState(() => _isCheckingPending = false);
     }
   }
 
-  /* ---------------- UI helpers ---------------- */
-
+  //Seleccionar día
+  // Abre el calendario para seleccionar un día hábil (lunes a viernes)
   Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
+    // Muestra el selector de fechas y espera la respuesta del usuario
+    final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 90)),
-      selectableDayPredicate: (DateTime day) =>
+      initialDate: _selectedDate, // Día actualmente seleccionado
+      firstDate: DateTime.now(), // No permite días pasados
+      lastDate: DateTime.now().add(
+        Duration(days: 90),
+      ), // Máximo 90 días hacia adelante
+      // Solo permite días que NO sean sábado ni domingo
+      selectableDayPredicate: (day) =>
           day.weekday != DateTime.saturday && day.weekday != DateTime.sunday,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: _blue,
-              onPrimary: Colors.white,
-              onSurface: Colors.black87,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
+
+    // Si el usuario seleccionó un día distinto al actual
     if (picked != null && picked != _selectedDate) {
       if (!mounted) return;
+
+      // Actualiza el día seleccionado
       setState(() => _selectedDate = picked);
+
+      // Carga los horarios disponibles para ese día
       _loadSlotsForSelectedDay();
     }
   }
 
+  // Navega a la pantalla de chat con el kinesiólogo seleccionado
   void _navigateToChat() {
     Navigator.push(
       context,
       MaterialPageRoute(
+        // Construye la pantalla del chat y le pasa los datos del receptor
         builder: (_) => ChatScreen(
-          receiverId: widget.kineId,
-          receiverName: widget.kineNombre,
+          receiverId: widget.kineId, // ID del kinesiólogo
+          receiverName: widget.kineNombre, // Nombre del kinesiólogo
         ),
       ),
     );
   }
 
-  /* ---------------- Booking ---------------- */
-
+  //Enviar cita
+  // Maneja todo el proceso de solicitud de una nueva cita
   Future<void> _handleBooking() async {
+    // Si no hay horario seleccionado, no hace nada
     if (_selectedTimeSlot == null) return;
+
+    // Evita errores si la pantalla ya no está activa
     if (!mounted) return;
 
+    // Activa estado de "enviando cita" (muestra loader en botón)
     setState(() => _isBooking = true);
 
     try {
+      // Obtiene el TimeOfDay elegido por el usuario
       final slot = _availableSlotsForDay[_selectedTimeSlot!];
+
+      // Combina fecha seleccionada con la hora seleccionada
       final fullDateTime = DateTime(
         _selectedDate.year,
         _selectedDate.month,
@@ -273,6 +330,8 @@ class _BookingScreenState extends State<BookingScreen> {
         slot.minute,
       );
 
+      // Revalidación final: se consulta a Firestore si el usuario
+      // ya tiene una cita pendiente o confirmada
       final recheck = await Future.wait([
         _appointmentService.hasPendingAppointment(
           _currentUserId,
@@ -283,59 +342,72 @@ class _BookingScreenState extends State<BookingScreen> {
           widget.kineId,
         ),
       ]);
-      if (!mounted) return;
+
+      // Resultados: si tiene cita pendiente o confirmada
       final hasPendingNow = recheck[0];
       final hasConfirmedNow = recheck[1];
 
+      // Actualiza el estado con esos datos
       setState(() {
         _hasPending = hasPendingNow;
         _hasConfirmed = hasConfirmedNow;
       });
 
+      //No permitir enviar una nueva cita si ya tiene una pendiente
       if (hasPendingNow) {
         throw Exception('Ya tienes una cita pendiente con este profesional.');
       }
+
+      // No permitir si ya hay una confirmada activa
       if (hasConfirmedNow) {
         throw Exception(
-            'Ya tienes una cita confirmada activa con este profesional.');
+          'Ya tienes una cita confirmada activa con este profesional.',
+        );
       }
 
-      final taken =
-          await _appointmentService.isSlotTaken(widget.kineId, fullDateTime);
+      //Revisa en tiempo real si el horario fue tomado por otra persona recién
+      final taken = await _appointmentService.isSlotTaken(
+        widget.kineId,
+        fullDateTime,
+      );
+
+      //Si el horario ya no está disponible, recarga los horarios
       if (taken) {
         _loadSlotsForSelectedDay();
         throw Exception('Ese horario acaba de ser tomado por otra persona.');
       }
 
+      //Enviar solicitud de cita a Firestore
       await _appointmentService.requestAppointment(
         kineId: widget.kineId,
         kineNombre: widget.kineNombre,
         fechaCita: fullDateTime,
       );
 
-      if (!mounted) return;
-
-      // 🔵 Popup de éxito con nuestro estilo
+      //Mostrar popup de éxito
       await _showNiceInfoDialog(
         icon: Icons.check_circle_outline_rounded,
         title: '¡Solicitud enviada!',
         message: 'Te avisaremos cuando ${widget.kineNombre} confirme tu hora.',
-        color: _blue,
       );
 
-      if (mounted) Navigator.pop(context);
+      //Volver atrás después de solicitar la cita
+      Navigator.pop(context);
     } catch (e) {
-      if (!mounted) return;
+      // Si ocurre cualquier error en el proceso, mostrar popup de error
       _showErrorPopup('Error al Solicitar', e.toString());
     } finally {
+      // Siempre desactiva el estado "enviando"
       if (mounted) setState(() => _isBooking = false);
     }
   }
 
-  /* ---------------- Build ---------------- */
+  // BUILD (UI)
 
   @override
   Widget build(BuildContext context) {
+    //Mientras se verifica en Firebase si el usuario tiene citas previas,
+    //mostramos un loader ocupando toda la pantalla.
     if (_isCheckingPending) {
       return const Scaffold(
         backgroundColor: _bg,
@@ -343,19 +415,21 @@ class _BookingScreenState extends State<BookingScreen> {
       );
     }
 
+    //Si el usuario TIENE una cita pendiente o confirmada,
+    //se bloquea el proceso de agendar y se muestra una advertencia.
     if (_hasPending || _hasConfirmed) {
-      final isPending = _hasPending;
+      final isPending = _hasPending; // Para distinguir qué mensaje mostrar
+
       return Scaffold(
         backgroundColor: _bg,
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
           foregroundColor: Colors.black87,
-          title: const Text(
-            'Agendar cita',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
+          title: const Text('Agendar cita'),
         ),
+
+        //Contenedor blanco con mensaje de advertencia
         body: Padding(
           padding: const EdgeInsets.all(20),
           child: Container(
@@ -368,6 +442,7 @@ class _BookingScreenState extends State<BookingScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Icono informativo (azul si es pendiente, verde si está confirmada)
                 Container(
                   height: 44,
                   width: 44,
@@ -376,32 +451,36 @@ class _BookingScreenState extends State<BookingScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    isPending
-                        ? Icons.info_outline
-                        : Icons.check_circle_outline,
+                    isPending ? Icons.info_outline : Icons.check_circle_outline,
                     color: isPending ? _blue : Colors.green,
                   ),
                 ),
                 const SizedBox(height: 12),
+
+                //Título del mensaje
                 Text(
                   isPending
                       ? 'Ya tienes una cita pendiente'
                       : 'Cita ya confirmada',
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 18,
                   ),
-                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
+
+                //Explicación según el tipo de cita
                 Text(
                   isPending
                       ? 'Espera a que ${widget.kineNombre} confirme o rechace antes de agendar una nueva.'
                       : 'Ya tienes una hora confirmada con ${widget.kineNombre}.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.black87, height: 1.35),
                 ),
+
                 const SizedBox(height: 16),
+
+                //Botón para volver atrás
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -410,15 +489,8 @@ class _BookingScreenState extends State<BookingScreen> {
                       backgroundColor: _blue,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      minimumSize: const Size(0, 44),
                     ),
-                    child: const Text(
-                      'Entendido',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
+                    child: const Text('Entendido'),
                   ),
                 ),
               ],
@@ -430,22 +502,25 @@ class _BookingScreenState extends State<BookingScreen> {
 
     // Pantalla principal
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: _bg, // Color de fondo de toda la pantalla
+
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: Colors.black87,
+        backgroundColor: Colors.white, // Color del AppBar
+        elevation: 0, // Sin sombra
+        foregroundColor: Colors.black87, // Color del texto/íconos
         title: Text(
-          'Agendar con ${widget.kineNombre}',
+          'Agendar con ${widget.kineNombre}', // Título dinámico con nombre del kine
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
+
+      // Cuerpo de la pantalla: Scroll para evitar overflow
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Acento naranja
+            // Línea decorativa naranja bajo título
             Align(
               alignment: Alignment.centerLeft,
               child: Container(
@@ -459,53 +534,59 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
             ),
 
-            // Card: Selecciona el día
+            // === PASO 1: Selección de día ===
             _SectionCard(
               title: '1. Selecciona el día',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Muestra la fecha seleccionada + botón "Cambiar"
                   Row(
                     children: [
                       Text(
-                        DateFormat('EEE, dd MMMM yyyy', 'es_ES')
-                            .format(_selectedDate),
+                        DateFormat(
+                          'EEE, dd MMMM yyyy',
+                          'es_ES',
+                        ).format(_selectedDate), // Día formateado
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           letterSpacing: -.1,
                         ),
                       ),
-                      const Spacer(),
+
+                      const Spacer(), // Empuja el botón hacia la derecha
+                      // Botón cambiar fecha (abre date picker)
                       OutlinedButton.icon(
                         onPressed: () => _selectDate(context),
-                        icon: const Icon(Icons.calendar_today_rounded, size: 18),
+                        icon: const Icon(
+                          Icons.calendar_today_rounded,
+                          size: 18,
+                        ),
                         label: const Text('Cambiar'),
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: _blue, width: 1),
+                          side: const BorderSide(color: _blue),
                           foregroundColor: _blue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                          textStyle: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                          ),
                         ),
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 6),
+
+                  // Línea divisoria
                   Container(height: 1, color: Colors.black12),
                 ],
               ),
             ),
+
             const SizedBox(height: 10),
 
-            // Card: Selecciona la hora
+            // Selección de hora
             _SectionCard(
               title: '2. Selecciona la hora',
+
+              // Muestra loader o la grilla de horarios
               child: _isLoadingSlots
                   ? const Padding(
                       padding: EdgeInsets.symmetric(vertical: 24),
@@ -518,28 +599,31 @@ class _BookingScreenState extends State<BookingScreen> {
 
             const SizedBox(height: 16),
 
-            // Chat
+            // Botón para escribirle al kine (Chat)
             Center(
               child: TextButton.icon(
-                onPressed: _navigateToChat,
+                onPressed: _navigateToChat, // Ir al chat
                 icon: const Icon(Icons.chat_bubble_outline),
-                label: Text('¿Dudas? Enviar Mensaje a ${widget.kineNombre}'),
-                style: TextButton.styleFrom(
-                  foregroundColor: _blue,
-                  textStyle: const TextStyle(fontWeight: FontWeight.w600),
+                label: Text(
+                  '¿Dudas? Enviar Mensaje a ${widget.kineNombre}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
+                style: TextButton.styleFrom(foregroundColor: _blue),
               ),
             ),
 
             const SizedBox(height: 10),
 
-            // CTA
+            // BOTÓN ENVIAR SOLICITUD DE CITA
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
+                // Solo permite presionar si hay horario seleccionado y no está enviando
                 onPressed: (_selectedTimeSlot == null || _isBooking)
                     ? null
                     : _handleBooking,
+
+                // Ícono: loader o check según estado
                 icon: _isBooking
                     ? const SizedBox(
                         width: 20,
@@ -550,20 +634,16 @@ class _BookingScreenState extends State<BookingScreen> {
                         ),
                       )
                     : const Icon(Icons.check_circle_outline_rounded),
+
+                // Texto dinámico
                 label: Text(_isBooking ? 'Solicitando...' : 'Solicitar Cita'),
+
+                // Estilo del botón
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _orange,
-                  disabledBackgroundColor: Colors.black12,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   minimumSize: const Size(0, 52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  textStyle: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -.05,
-                  ),
                 ),
               ),
             ),
@@ -573,9 +653,10 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  /* ---------------- Auxiliares ---------------- */
+  //Grid de horarios disponibles
 
   Widget _buildTimeSlotGrid() {
+    // Si no hay horarios disponibles para este día, muestra un mensaje
     if (_availableSlotsForDay.isEmpty) {
       return Container(
         width: double.infinity,
@@ -588,11 +669,11 @@ class _BookingScreenState extends State<BookingScreen> {
         child: const Text(
           'No hay horarios disponibles para este día.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.black87),
         ),
       );
     }
 
+    // Si sí hay horarios, muestra la grilla con horas disponibles
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
@@ -604,9 +685,10 @@ class _BookingScreenState extends State<BookingScreen> {
         crossAxisSpacing: 12,
       ),
       itemBuilder: (context, index) {
-        final slot = _availableSlotsForDay[index];
-        final isSelected = _selectedTimeSlot == index;
+        final slot = _availableSlotsForDay[index]; // Hora actual del listado
+        final isSelected = _selectedTimeSlot == index; // ¿Está seleccionada?
 
+        // Genera la fecha completa combinando el día y la hora seleccionada
         final fullDateTime = DateTime(
           _selectedDate.year,
           _selectedDate.month,
@@ -615,6 +697,7 @@ class _BookingScreenState extends State<BookingScreen> {
           slot.minute,
         );
 
+        // Si el horario ya pasó (hora anterior al momento actual), se bloquea
         if (fullDateTime.isBefore(DateTime.now())) {
           return _TimeChip(
             label: slot.format(context),
@@ -627,12 +710,13 @@ class _BookingScreenState extends State<BookingScreen> {
           );
         }
 
+        // Valida si el horario está tomado consultando Firestore
         return FutureBuilder<bool>(
           future: _appointmentService.isSlotTaken(widget.kineId, fullDateTime),
           builder: (context, snap) {
             final loading = snap.connectionState == ConnectionState.waiting;
             final taken = snap.data == true;
-
+            // Mientras carga la validación de disponibilidad, muestra chip gris
             if (loading) {
               return _TimeChip(
                 label: slot.format(context),
@@ -644,6 +728,7 @@ class _BookingScreenState extends State<BookingScreen> {
               );
             }
 
+            // Si el horario está tomado, lo muestra bloqueado y en rojo
             if (taken) {
               return _TimeChip(
                 label: slot.format(context),
@@ -656,11 +741,14 @@ class _BookingScreenState extends State<BookingScreen> {
               );
             }
 
+            // Si el horario está disponible, permite seleccionarlo
             return _TimeChip(
               label: slot.format(context),
               selected: isSelected,
               onTap: () {
-                setState(() => _selectedTimeSlot = isSelected ? null : index);
+                setState(
+                  () => _selectedTimeSlot = isSelected ? null : index,
+                ); // Selecciona o deselecciona el horario
               },
               border: isSelected ? _blue : Colors.grey.shade300,
               bg: isSelected ? _blue : Colors.white,
@@ -673,11 +761,12 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 }
 
-/* ---------------- Subwidgets ---------------- */
-
+// Sub-Widgets
+// Tarjeta básica para cada sección
 class _SectionCard extends StatelessWidget {
-  final String title;
-  final Widget child;
+  final String title; // Título de la sección (ej: "1. Selecciona el día")
+  final Widget child; // Contenido que estará dentro de la tarjeta
+
   const _SectionCard({required this.title, required this.child});
 
   @override
@@ -692,6 +781,7 @@ class _SectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Título de la sección (texto en negrita)
           Text(
             title,
             style: const TextStyle(
@@ -701,21 +791,23 @@ class _SectionCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          child,
+          child, // Contenido dinámico de la tarjeta (fecha, horarios, etc.)
         ],
       ),
     );
   }
 }
 
+//omponente visual que representa un horario individual
 class _TimeChip extends StatelessWidget {
   final String label;
-  final bool selected;
-  final VoidCallback? onTap;
+  final bool selected; // Indica si está seleccionado por el usuario
+  final VoidCallback? onTap; // Acción al tocarlo (o null si no se puede tocar)
   final Color border;
   final Color bg;
   final Color fg;
-  final bool striked;
+  final bool
+  striked; //¿El texto va tachado? (usado para horarios no disponibles)
 
   const _TimeChip({
     required this.label,
@@ -724,7 +816,7 @@ class _TimeChip extends StatelessWidget {
     required this.border,
     required this.bg,
     required this.fg,
-    this.striked = false,
+    this.striked = false, // Por defecto no está tachado
   });
 
   @override
@@ -748,6 +840,7 @@ class _TimeChip extends StatelessWidget {
               color: fg,
               fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               decoration: striked ? TextDecoration.lineThrough : null,
+              // Si striked == true → texto tachado (usado para horarios tomados o pasados)
             ),
           ),
         ),

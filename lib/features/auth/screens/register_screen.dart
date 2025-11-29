@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kine_app/shared/widgets/app_dialog.dart';
-import 'package:kine_app/features/auth/services/push_token_service.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Para crear usuarios y login
+import 'package:cloud_firestore/cloud_firestore.dart'; // Para guardar el usuario en la BD
+import 'package:kine_app/shared/widgets/app_dialog.dart'; // Diálogos personalizados
+import 'package:kine_app/features/auth/services/push_token_service.dart'; // Registrar token FCM
 
-/// misma paleta que splash/login
+/// Paleta de colores compartida con splash/login
 class AppColors {
   static const blue = Color(0xFF47A5D6);
   static const orange = Color(0xFFE28825);
@@ -12,6 +12,7 @@ class AppColors {
   static const border = Color(0xFFDDDDDD);
 }
 
+// WIDGET PRINCIPAL DE REGISTRO
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -19,21 +20,27 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
+// STATE DEL REGISTRO
 class _RegisterScreenState extends State<RegisterScreen> {
+  // Llave del formulario para validar los campos
   final _formKey = GlobalKey<FormState>();
+
+  // Controladores del input
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
   final _ageController = TextEditingController();
 
+  // Instancias de Firebase
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  bool _isLoading = false;
-  bool _showPassword = false;
-  String? _selectedGender;
+  bool _isLoading = false; // Para bloquear la UI mientras se registra
+  bool _showPassword = false; // Para mostrar/ocultar contraseña
+  String? _selectedGender; // Sexo seleccionado del dropdown
 
+  // Lista de opciones para el dropdown
   final List<String> _genders = const [
     'Masculino',
     'Femenino',
@@ -41,6 +48,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     'Prefiero no decirlo',
   ];
 
+  // Limpia controladores al salir del widget
   @override
   void dispose() {
     _emailController.dispose();
@@ -51,38 +59,56 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  //
+  // FUNCIÓN DE REGISTRO PRINCIPAL
   Future<void> _register() async {
+    // Valida el formulario completo
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    setState(() => _isLoading = true); // Activa el loading
+
     try {
+      // 1️CREA USUARIO EN AUTH
       final cred = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
+      // cred.user es el usuario creado
       final user = cred.user;
+
       if (user != null) {
+        // ENVÍA CORREO DE VERIFICACIÓN
         await user.sendEmailVerification();
 
+        // CREA EL DOCUMENTO EN FIRESTORE
         final userData = {
           'nombre_completo': _nameController.text.trim(),
           'nombre_usuario': _usernameController.text.trim(),
           'email': _emailController.text.trim(),
           'edad': int.tryParse(_ageController.text.trim()),
           'sexo': _selectedGender,
-          'tipo_usuario': _firestore.collection('tipo_usuario').doc('1'),
+          'tipo_usuario': _firestore
+              .collection('tipo_usuario')
+              .doc('1'), // Tipo paciente
           'fecha_registro': FieldValue.serverTimestamp(),
           'plan': 'estandar',
           'perfilDestacado': false,
           'limitePacientes': 50,
         };
 
+        // Guarda el documento del usuario
         await _firestore.collection('usuarios').doc(user.uid).set(userData);
+
+        // GUARDAR TOKEN DE NOTIFICACIONES FCM
         await PushTokenService().registerTokenForUser(user.uid);
+
+        // CERRAR SESIÓN PARA OBLIGAR A VERIFICAR CORREO
         await _auth.signOut();
 
+        // MOSTRAR MENSAJE DE ÉXITO
         if (!mounted) return;
+
         await showAppInfoDialog(
           context: context,
           icon: Icons.mark_email_read_rounded,
@@ -91,9 +117,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
               'Te enviamos un correo de verificación. Revísalo antes de iniciar sesión.',
           confirmText: 'Ok',
         );
+
+        // Cerrar pantalla
         if (mounted) Navigator.pop(context);
       }
     } on FirebaseAuthException catch (e) {
+      // MANEJO DE ERRORES DE AUTH
       String title;
       String message;
       IconData icon;
@@ -111,13 +140,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         message = 'Revisa el formato del correo.';
         icon = Icons.email_outlined;
       } else {
+        // Error desconocido
         title = 'Error';
         message = e.message ?? 'Ocurrió un error inesperado.';
         icon = Icons.error_outline_rounded;
       }
 
+      // Quita loading
       if (mounted) setState(() => _isLoading = false);
 
+      // Muestra error
       await showAppErrorDialog(
         context: context,
         icon: icon,
@@ -125,17 +157,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
         content: message,
       );
     } finally {
+      // Asegura que loading se apague
       if (mounted && _isLoading) {
         setState(() => _isLoading = false);
       }
     }
   }
 
+  // UI PRINCIPAL
   @override
   Widget build(BuildContext context) {
+    // Radio redondeado estándar para inputs
     const inputRadius = 28.0;
     const fieldHeight = 56.0;
 
+    // Builder de bordes reutilizable
     InputBorder border([Color c = AppColors.border]) => OutlineInputBorder(
       borderRadius: BorderRadius.circular(inputRadius),
       borderSide: BorderSide(color: c, width: 1.3),
@@ -143,6 +179,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFDFDFD),
+
+      //APP BAR
       appBar: AppBar(
         leading: IconButton(
           onPressed: _isLoading ? null : () => Navigator.pop(context),
@@ -157,17 +195,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
+
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
+
+              // FORMULARIO
               child: Form(
                 key: _formKey,
                 child: Column(
                   children: [
-                    // acento naranja
+                    // Línea naranja decorativa
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Container(
@@ -179,7 +220,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 14),
+
+                    // Título principal
                     const Text(
                       'Ingresa tus datos\npara registrarte.',
                       textAlign: TextAlign.center,
@@ -189,7 +233,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
+
                     const SizedBox(height: 20),
+
+                    // Subtítulo
                     const Text(
                       'Completa los campos para crear tu perfil.',
                       textAlign: TextAlign.center,
@@ -198,8 +245,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         fontSize: 13.5,
                       ),
                     ),
+
                     const SizedBox(height: 26),
 
+                    // INPUT: Nombre completo
                     _LabeledField(
                       height: fieldHeight,
                       controller: _nameController,
@@ -211,6 +260,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderBuilder: border,
                     ),
                     const SizedBox(height: 14),
+
+                    // INPUT: Nombre de usuario
                     _LabeledField(
                       height: fieldHeight,
                       controller: _usernameController,
@@ -228,6 +279,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderBuilder: border,
                     ),
                     const SizedBox(height: 14),
+
+                    // INPUT: Email
                     _LabeledField(
                       height: fieldHeight,
                       controller: _emailController,
@@ -244,12 +297,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderBuilder: border,
                     ),
                     const SizedBox(height: 14),
+
+                    // INPUT: Contraseña
                     _LabeledField(
                       height: fieldHeight,
                       controller: _passwordController,
                       hintText: 'Contraseña* (mín. 6 caracteres)',
                       prefix: const Icon(Icons.lock_outline),
-                      obscureText: !_showPassword,
+                      obscureText: !_showPassword, // ocultar/mostrar
                       suffix: IconButton(
                         onPressed: () =>
                             setState(() => _showPassword = !_showPassword),
@@ -266,6 +321,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderBuilder: border,
                     ),
                     const SizedBox(height: 14),
+
+                    // INPUT: Edad
                     _LabeledField(
                       height: fieldHeight,
                       controller: _ageController,
@@ -274,7 +331,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       prefix: const Icon(Icons.numbers),
                       validator: (v) {
                         final age = int.tryParse((v ?? '').trim());
-                        if (age == null || age < 1 || age > 120) {
+                        if (age == null || age < 1 || age > 90) {
                           return 'Ingresa una edad válida (1-120).';
                         }
                         return null;
@@ -283,27 +340,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // 🔥 dropdown sin iconos en cada opción
+                    // SELECTOR: SEXO
                     DropdownButtonFormField<String>(
                       isExpanded: true,
-                      value: _selectedGender,
+                      initialValue: _selectedGender,
                       onChanged: (v) => setState(() => _selectedGender = v),
                       validator: (v) =>
                           v == null ? 'El sexo es obligatorio.' : null,
                       items: _genders.map((g) {
                         return DropdownMenuItem<String>(
                           value: g,
-                          child: Text(g), // <- solo texto
+                          child: Text(g), // solo texto
                         );
                       }).toList(),
                       icon: const Icon(Icons.keyboard_arrow_down_rounded),
                       borderRadius: BorderRadius.circular(20),
                       dropdownColor: Colors.white,
+
                       decoration: InputDecoration(
                         hintText: 'Selecciona tu sexo*',
-                        prefixIcon: const Icon(
-                          Icons.wc,
-                        ), // <- aquí el único icono
+                        prefixIcon: const Icon(Icons.wc), // único icono
                         filled: true,
                         fillColor: Colors.white,
                         contentPadding: const EdgeInsets.symmetric(
@@ -318,6 +374,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 26),
 
+                    // BOTÓN DE REGISTRO
                     SizedBox(
                       width: double.infinity,
                       height: 52,
@@ -350,6 +407,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
+
+                    // BOTÓN: Ir a iniciar sesión
                     TextButton(
                       onPressed: _isLoading
                           ? null
@@ -382,6 +441,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 }
 
+// WIDGET REUTILIZABLE PARA CAMPOS DE TEXTO
 class _LabeledField extends StatelessWidget {
   const _LabeledField({
     required this.controller,
@@ -395,15 +455,15 @@ class _LabeledField extends StatelessWidget {
     this.height = 56,
   });
 
-  final TextEditingController controller;
-  final String hintText;
-  final Widget? prefix;
-  final Widget? suffix;
-  final String? Function(String?)? validator;
+  final TextEditingController controller; // Controlador del input
+  final String hintText; // Placeholder
+  final Widget? prefix; // Ícono prefix
+  final Widget? suffix; // Ícono suffix (opcional)
+  final String? Function(String?)? validator; // Función de validación
   final TextInputType? keyboardType;
-  final bool obscureText;
+  final bool obscureText; // Para contraseña
   final double height;
-  final InputBorder Function([Color]) borderBuilder;
+  final InputBorder Function([Color]) borderBuilder; // Borde reutilizable
 
   @override
   Widget build(BuildContext context) {
@@ -414,6 +474,8 @@ class _LabeledField extends StatelessWidget {
         validator: validator,
         keyboardType: keyboardType,
         obscureText: obscureText,
+
+        // Estilo visual del input
         decoration: InputDecoration(
           hintText: hintText,
           prefixIcon: prefix,
@@ -424,6 +486,8 @@ class _LabeledField extends StatelessWidget {
             horizontal: 18,
             vertical: 18,
           ),
+
+          // Bordes reutilizando borderBuilder
           enabledBorder: borderBuilder(),
           focusedBorder: borderBuilder(AppColors.blue),
           errorBorder: borderBuilder(Colors.redAccent),

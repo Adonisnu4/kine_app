@@ -1,9 +1,10 @@
 // lib/screens/manage_availability_screen.dart
+
 import 'package:flutter/material.dart';
-import 'package:kine_app/features/Appointments/services/availability_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
-import 'package:table_calendar/table_calendar.dart';
+import 'package:kine_app/features/Appointments/services/availability_service.dart'; // Servicio para gestionar la disponibilidad
+import 'package:firebase_auth/firebase_auth.dart'; // Para obtener el UID del kinesiólogo autenticado
+import 'package:intl/intl.dart'; // Para formatear fechas
+import 'package:table_calendar/table_calendar.dart'; // Calendario semanal
 import 'package:kine_app/shared/widgets/app_dialog.dart';
 
 class ManageAvailabilityScreen extends StatefulWidget {
@@ -15,18 +16,23 @@ class ManageAvailabilityScreen extends StatefulWidget {
 }
 
 class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
-  // ====== PALETA CENTRAL ======
+  // Paleta de colores utilizada en la pantalla
   static const _bg = Color(0xFFF3F3F3);
   static const _blue = Color(0xFF47A5D6);
   static const _orange = Color(0xFFE28825);
   static const _border = Color(0x11000000);
 
+  // Servicio para interactuar con Firestore
   final AvailabilityService _availabilityService = AvailabilityService();
+
+  // UID del kinesiólogo conectado
   final String _currentKineId = FirebaseAuth.instance.currentUser!.uid;
 
+  // Día seleccionado y día enfocado por el calendario
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
 
+  // Horarios base que el kinesiólogo puede habilitar
   final List<TimeOfDay> _baseTimeSlots = [
     const TimeOfDay(hour: 8, minute: 0),
     const TimeOfDay(hour: 9, minute: 0),
@@ -40,20 +46,25 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
     const TimeOfDay(hour: 17, minute: 0),
   ];
 
+  // Conjunto de horarios seleccionados para el día actual
   Set<String> _selectedSlots = {};
-  bool _isLoading = false;
-  bool _isSaving = false;
-  bool _isSavingWeek = false;
+
+  // Estados de carga
+  bool _isLoading = false; // Cargando disponibilidad del día
+  bool _isSaving = false; // Guardando un día específico
+  bool _isSavingWeek = false; // Guardando disponibilidad para toda la semana
 
   @override
   void initState() {
     super.initState();
+    // Selecciona el siguiente día hábil por defecto
     _selectedDay = _findNextAvailableWorkDay(DateTime.now());
     _focusedDay = _selectedDay;
+    // Carga la disponibilidad guardada para ese día
     _loadAvailabilityForSelectedDay();
   }
 
-  // ---------- helper para dialog elegante ----------
+  // Muestra un diálogo informativo reutilizable
   Future<void> _showNiceInfoDialog({
     required IconData icon,
     required Color color,
@@ -82,11 +93,7 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
                     color: color.withOpacity(.12),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    icon,
-                    color: color,
-                    size: 22,
-                  ),
+                  child: Icon(icon, color: color, size: 22),
                 ),
                 const SizedBox(height: 14),
                 Text(
@@ -135,8 +142,8 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
       },
     );
   }
-  // --------------------------------------------------
 
+  // Busca el siguiente día hábil (evita sábado y domingo)
   DateTime _findNextAvailableWorkDay(DateTime date) {
     DateTime tempDate = date;
     while (tempDate.weekday == DateTime.saturday ||
@@ -146,8 +153,10 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
     return tempDate;
   }
 
+  // Carga la disponibilidad ya guardada para un día específico
   Future<void> _loadAvailabilityForSelectedDay() async {
     if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _selectedSlots = {};
@@ -164,7 +173,6 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
         _selectedSlots = Set.from(savedSlots);
       });
     } catch (e) {
-      if (!mounted) return;
       await showAppErrorDialog(
         context: context,
         icon: Icons.cloud_off_rounded,
@@ -180,6 +188,7 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
     }
   }
 
+  // Guarda la disponibilidad del día seleccionado
   Future<void> _saveAvailabilityForSelectedDay() async {
     if (!mounted) return;
 
@@ -210,13 +219,11 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
         await _showNiceInfoDialog(
           icon: Icons.check_circle_outline_rounded,
           color: _blue,
-          title: '¡Guardado!',
-          message:
-              'Disponibilidad guardada para este día. (${slotsToSave.length} horarios)',
+          title: 'Guardado',
+          message: 'Disponibilidad guardada. (${slotsToSave.length} horarios)',
         );
       }
     } catch (e) {
-      if (!mounted) return;
       await showAppErrorDialog(
         context: context,
         icon: Icons.error_outline_rounded,
@@ -232,10 +239,10 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
     }
   }
 
+  // Guarda los mismos horarios seleccionados en todos los días de lunes a viernes
   Future<void> _saveAvailabilityForWeek() async {
     if (!mounted) return;
 
-    // 🔸 Aquí estaba el popup feo. Ahora usamos nuestro helper bonito:
     if (_selectedSlots.isEmpty) {
       await _showNiceInfoDialog(
         icon: Icons.warning_amber_rounded,
@@ -248,7 +255,7 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
 
     final qty = _selectedSlots.length;
 
-    // popup de confirmación
+    // Confirmación
     final bool? confirm = await showDialog<bool>(
       context: context,
       barrierDismissible: true,
@@ -312,9 +319,7 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
                         ),
                         child: const Text(
                           'Cancelar',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),
@@ -368,17 +373,16 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
           ),
         );
       }
+
       await Future.wait(futures);
 
-      if (!mounted) return;
       await _showNiceInfoDialog(
         icon: Icons.check_circle_outline_rounded,
         color: _blue,
-        title: '¡Semana actualizada!',
-        message: 'Disponibilidad aplicada a L-V de esta semana.',
+        title: 'Semana actualizada',
+        message: 'Disponibilidad aplicada a lunes-viernes.',
       );
     } catch (e) {
-      if (!mounted) return;
       await showAppErrorDialog(
         context: context,
         icon: Icons.error_outline_rounded,
@@ -394,6 +398,7 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
     }
   }
 
+  // Obtiene el lunes de la semana del día seleccionado
   DateTime _getMonday(DateTime date) {
     final daysToSubtract = date.weekday - DateTime.monday;
     return date.subtract(Duration(days: daysToSubtract));
@@ -403,10 +408,7 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
   Widget build(BuildContext context) {
     final dateLabel = DateFormat('EEEE, d MMMM yyyy', 'es_ES')
         .format(_selectedDay)
-        .replaceFirstMapped(
-          RegExp(r'^[a-z]'),
-          (m) => m[0]!.toUpperCase(),
-        );
+        .replaceFirstMapped(RegExp(r'^[a-z]'), (m) => m[0]!.toUpperCase());
 
     return Scaffold(
       backgroundColor: _bg,
@@ -432,8 +434,10 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: _blue, width: 1),
                 backgroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 0,
+                ),
                 minimumSize: const Size(0, 32),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(999),
@@ -518,7 +522,9 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
                   day.weekday != DateTime.sunday,
               onDaySelected: (selectedDay, focusedDay) {
                 if (selectedDay.weekday == DateTime.saturday ||
-                    selectedDay.weekday == DateTime.sunday) return;
+                    selectedDay.weekday == DateTime.sunday) {
+                  return;
+                }
                 if (!isSameDay(_selectedDay, selectedDay)) {
                   setState(() {
                     _selectedDay = selectedDay;
@@ -556,9 +562,7 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
           const SizedBox(height: 4),
           Expanded(
             child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: _blue),
-                  )
+                ? const Center(child: CircularProgressIndicator(color: _blue))
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
                     itemCount: _baseTimeSlots.length,
@@ -574,8 +578,9 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color:
-                                isSelected ? _blue.withOpacity(.25) : _border,
+                            color: isSelected
+                                ? _blue.withOpacity(.25)
+                                : _border,
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -597,8 +602,9 @@ class _ManageAvailabilityScreenState extends State<ManageAvailabilityScreen> {
                             });
                           },
                           activeColor: _blue,
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                          ),
                           title: Text(
                             timeSlot.format(context),
                             style: const TextStyle(
