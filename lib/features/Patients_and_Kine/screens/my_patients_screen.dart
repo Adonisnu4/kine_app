@@ -1,5 +1,7 @@
 // Pantalla que muestra todos los pacientes asignados a un kinesiólogo.
 // Tiene navegación a progreso, historial, chat y verificación del plan
+//Mostrar la lista completa de pacientes asignados a un kinesiólogo.
+//Permitir revisar su progreso, historial de citas y abrir el chat.
 
 import 'package:flutter/material.dart';
 import 'package:kine_app/features/Chat/screens/chat_screen.dart';

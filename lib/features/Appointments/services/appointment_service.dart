@@ -1,4 +1,7 @@
 // lib/services/appointment_service.dart
+// Servicio encargado de gestionar todas las operaciones relacionadas con citas.
+// Centraliza la lógica para solicitar, validar, actualizar, cancelar, eliminar y consultar citas tanto de pacientes como kinesiólogos.
+// streams en tiempo real para mantener la información actualizada en la app.
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';

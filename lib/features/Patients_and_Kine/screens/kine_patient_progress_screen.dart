@@ -1,3 +1,8 @@
+// Pantalla completa de análisis y seguimiento clínico del paciente,
+// diseñada para que el kinesiólogo visualice el progreso acumulado
+// de un usuario a través del tiempo. Actúa como un dashboard avanzado,
+// combinando métricas cuantitativas, gráficos visuales y el historial
+// de planes terapéuticos asignados.
 // Estilos visuales de Flutter
 import 'package:flutter/material.dart';
 

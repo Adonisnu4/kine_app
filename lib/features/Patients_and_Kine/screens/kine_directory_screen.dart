@@ -1,3 +1,8 @@
+// Pantalla encargada de mostrar el directorio completo de kinesiólogos
+// disponibles dentro de la aplicación. Obtiene los datos desde KineService
+// y construye una lista interactiva donde cada profesional se muestra con su
+// nombre, foto de perfil y especialidad.
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kine_app/features/Patients_and_Kine/services/kine_service.dart';

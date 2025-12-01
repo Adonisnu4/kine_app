@@ -1,5 +1,8 @@
-// Pantalla que muestra el historial de citas entre un kinesiólogo y un paciente.
-// Incluye filtrado por el paciente elegido y estado visual coherente con el resto de la aplicación.
+// Pantalla que muestra el historial completo de citas entre un kinesiólogo y un paciente.
+// Filtra automáticamente todas las citas según el paciente seleccionado.
+// Muestra fecha, hora y estado de cada cita con estilos visuales coherentes con la app.
+// Usa un Stream de Firestore para ver cambios en tiempo real.
+// Es solo de visualización: no permite modificar el estado de las citas.
 
 import 'package:flutter/material.dart';
 import 'package:kine_app/features/Appointments/models/appointment.dart';

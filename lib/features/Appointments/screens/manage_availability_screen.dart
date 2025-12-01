@@ -1,4 +1,8 @@
-// lib/screens/manage_availability_screen.dart
+// Pantalla donde el kinesiólogo gestiona su disponibilidad semanal.
+// Permite seleccionar un día hábil, cargar los horarios ya guardados,
+// habilitar o deshabilitar bloques de atención y guardar los cambios.
+// También permite aplicar los mismos horarios a toda la semana (L–V).
+// Se conecta con AvailabilityService para leer y escribir en Firestore.
 
 import 'package:flutter/material.dart';
 import 'package:kine_app/features/Appointments/services/availability_service.dart'; // Servicio para gestionar la disponibilidad

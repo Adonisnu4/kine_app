@@ -3,15 +3,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-/// Obtiene los datos completos del usuario autenticado desde Firestore.
-/// Incluye resolución del campo "tipo_usuario", que puede almacenarse
-/// como una referencia a otro documento dentro de la colección tipo_usuario.
-///
-/// Retorna:
-/// - Un Map<String, dynamic> con todos los datos del usuario, incluyendo:
-///   * tipo_usuario_id    → ID numérico del rol (1, 2, 3)
-///   * tipo_usuario_nombre → Nombre del rol según Firestore
-/// - Null si el usuario no está autenticado o el documento no existe.
+// Servicio auxiliar encargado de obtener toda la información del usuario
+// autenticado desde Firestore. Lee el documento principal de la colección
+// "usuarios" y resuelve correctamente el campo "tipo_usuario", que se almacena
+// como una referencia a otro documento dentro de la colección "tipo_usuario".
+// Este servicio retorna un mapa completo con todos los datos del usuario
+
 Future<Map<String, dynamic>?> getUserData() async {
   // Obtiene el UID del usuario autenticado actualmente
   final String? userId = FirebaseAuth.instance.currentUser?.uid;

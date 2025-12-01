@@ -1,3 +1,8 @@
+// Panel administrativo del kinesiólogo para gestionar sus citas.
+// Muestra agenda diaria, permite confirmar o denegar solicitudes,
+// escucha actualizaciones en tiempo real y ofrece una vista completa
+// de todas las citas del día seleccionado mediante un calendario.
+
 // Importa estilos y componentes visuales
 import 'package:flutter/material.dart';
 

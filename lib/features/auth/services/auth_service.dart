@@ -1,24 +1,18 @@
-// Importa funcionalidades de Firebase Authentication
+// Servicio responsable del manejo integral de la autenticación en la app.
+// Contiene los flujos de login con email, Google y Facebook, la creación de
+// usuarios nuevos en Firestore cuando acceden por primera vez, el registro y
+// eliminación de tokens FCM para las notificaciones push, la recuperación de
+// contraseñas y el cierre de sesión seguro. Centraliza toda la interacción con
+// FirebaseAuth, Firestore y proveedores externos, permitiendo que las pantallas
+// solo consuman métodos simples sin exponer la complejidad interna.
+
 import 'package:firebase_auth/firebase_auth.dart';
-
-// Utilidades de Flutter para identificar plataforma y para impresión de logs
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
-
-// SDK para autenticación con Facebook
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
-
-// Firestore para persistencia de datos del usuario
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-// SDK para autenticación con Google
 import 'package:google_sign_in/google_sign_in.dart';
-
-// Servicio propio para registrar y eliminar tokens de notificaciones push
 import 'package:kine_app/features/auth/services/notification_tokens.dart';
 
-/// Servicio centralizado de autenticación.
-/// Gestiona inicio de sesión con email, Google, Facebook, registro de tokens
-/// para notificaciones y cierre de sesión.
 class AuthService {
   // Instancia principal de Firebase Authentication
   final FirebaseAuth _auth = FirebaseAuth.instance;

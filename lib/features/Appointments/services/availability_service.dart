@@ -1,3 +1,8 @@
+// Servicio encargado de gestionar la disponibilidad horaria de los kinesiólogos.
+// Centraliza toda la lógica relacionada con crear, leer y procesar los horarios
+// disponibles en Firestore, tanto para el kinesiólogo (que configura su agenda)
+// como para el paciente (que consulta qué horas puede reservar).
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart'; // Necesario para TimeOfDay
 import 'package:intl/intl.dart'; // Para formatear fechas

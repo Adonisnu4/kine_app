@@ -1,3 +1,11 @@
+// Pantalla usada para gestionar la solicitud de activación como kinesiólogo.
+// Permite al usuario elegir un archivo desde su dispositivo mediante FilePicker,
+// subirlo al bucket "kine_app" de Supabase Storage y registrar una solicitud
+// en Firestore bajo la colección "solicitudes_kinesiologo". Durante el proceso
+// se muestra un indicador de carga y se notifica al usuario sobre el éxito o
+// error de la operación. Es el módulo responsable de iniciar el flujo de
+// verificación profesional dentro de la app.
+
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';

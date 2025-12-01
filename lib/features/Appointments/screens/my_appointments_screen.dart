@@ -1,4 +1,10 @@
 // lib/screens/my_appointments_screen.dart
+// Pantalla donde el paciente visualiza todas sus citas solicitadas.
+// Escucha en tiempo real las citas del usuario, mostrando su estado
+// (pendiente, confirmada, rechazada o completada) y la información
+// del kinesiólogo, fecha y hora. Permite cancelar solicitudes aún
+// pendientes y contactar al kinesiólogo cuando la cita está confirmada.
+// Se conecta con AppointmentService para leer, eliminar y actualizar datos.
 
 import 'package:flutter/material.dart';
 // Modelo que representa una cita
