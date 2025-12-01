@@ -22,6 +22,35 @@ class ChatService {
     return ids.join("_"); // Devuelve un identificador único.
   }
 
+  //Crea el documento principal del chat si no existe (solo al abrir la pantalla)
+  Future<void> ensureChatRoomExists(String userId1, String userId2) async {
+    String chatRoomId = getChatRoomId(userId1, userId2);
+    final chatDocRef = _firestore.collection('chats').doc(chatRoomId);
+
+    try {
+      print("Tratando de crear chat");
+      final docSnapshot = await chatDocRef.get();
+
+      if (!docSnapshot.exists) {
+        // El chat no existe, lo creamos con campos iniciales
+        await chatDocRef.set({
+          'participants': [userId1, userId2],
+          'createdAt': Timestamp.now(),
+          'lastMessage': '',
+          'lastMessageTimestamp': Timestamp.fromMillisecondsSinceEpoch(
+            0,
+          ), // O null
+          'updatedAt': Timestamp.now(),
+        }, SetOptions(merge: true));
+
+        print("✅ Documento de sala de chat creado: $chatRoomId");
+      }
+    } catch (e) {
+      print("❌ Error al asegurar la existencia de la sala de chat: $e");
+      // No relanzamos el error para no bloquear la carga de la UI
+    }
+  }
+
   // Envía un nuevo mensaje y actualiza los datos del chat correspondiente.
   Future<void> sendMessage(String receiverId, String content) async {
     // Obtiene datos del usuario emisor.
