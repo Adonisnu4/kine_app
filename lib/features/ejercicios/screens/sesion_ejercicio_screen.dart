@@ -28,8 +28,11 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
   String _videoUrl = '';
   String _sesionNombre = '';
 
-  // Estado que indica si toda la sesión está completada
+  // Estado que indica si toda la sesión está completada (para mostrar la UI de finalización)
   bool _isSessionCompletedAndFinished = false;
+  
+  // *** NUEVO ESTADO: Indica si el plan completo está terminado ***
+  bool _isPlanCompleted = false;
 
   // Timer para contar reproducción total del video
   late Timer _durationTimer;
@@ -82,6 +85,7 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
       _videoController = null;
       _totalPlayed = Duration.zero;
       _isSessionCompletedAndFinished = false;
+      _isPlanCompleted = false; // Resetear
     });
 
     try {
@@ -122,7 +126,14 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
 
       // Si todos están completados, terminar la sesión
       if (currentKey.isEmpty) {
-        _endSessionSuccess(sesion['nombre'] ?? 'Sesión ${sesionActual + 1}');
+        // Lógica para determinar si el plan completo está terminado
+        final isPlanCompletedOnLoad = (sesionActual + 1) >= sesiones.length && _isSessionCompleted(sesion);
+        
+        // *** CAMBIO APLICADO: Pasar isPlanCompleted a _endSessionSuccess ***
+        _endSessionSuccess(
+          sesion['nombre'] ?? 'Sesión ${sesionActual + 1}',
+          isPlanCompleted: isPlanCompletedOnLoad,
+        );
         return;
       }
 
@@ -157,8 +168,8 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
       // Nombre de la sesión (si no tiene, usa Sesión N)
       final sesionNombre =
           (sesion['nombre'] != null && (sesion['nombre'] as String).isNotEmpty)
-          ? sesion['nombre']
-          : 'Sesión ${sesionActual + 1}';
+              ? sesion['nombre']
+              : 'Sesión ${sesionActual + 1}';
 
       // Prepara el controlador de video
       final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
@@ -265,15 +276,22 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
         } else {
           updates['sesion_actual'] = nextSessionIndex;
         }
-      }
 
-      // Guardar datos actualizados
-      await docRef.update(updates);
+        // Guardar datos actualizados
+        await docRef.update(updates);
 
-      // Redirigir según corresponda
-      if (currentSessionCompleted) {
-        _endSessionSuccess(sesion['nombre'] ?? 'Sesión ${sesionActual + 1}');
+        // Redirigir según corresponda
+        // *** CAMBIO APLICADO: Pasar isPlanCompleted a _endSessionSuccess ***
+        if (currentSessionCompleted) {
+          _endSessionSuccess(
+            sesion['nombre'] ?? 'Sesión ${sesionActual + 1}',
+            isPlanCompleted: isPlanCompleted,
+          );
+        } else {
+          _loadExercise();
+        }
       } else {
+        await docRef.update(updates); // Solo actualiza el ejercicio
         _loadExercise();
       }
     } catch (e) {
@@ -281,7 +299,7 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
     }
   }
 
-  //  CONTROL DEL TIEMPO
+  //  CONTROL DEL TIEMPO
 
   /// Inicia el contador de ejecución del ejercicio
   void _startDurationTimer() {
@@ -303,12 +321,14 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
   // ======================= FIN DE SESIÓN ================================
 
   /// Marca que la sesión actual se completó correctamente
-  void _endSessionSuccess(String sessionName) {
+  // *** CAMBIO APLICADO: Añadir parámetro isPlanCompleted ***
+  void _endSessionSuccess(String sessionName, {bool isPlanCompleted = false}) {
     setState(() {
       _isLoading = false;
       _isSessionCompletedAndFinished = true;
       _sesionNombre = 'Sesión completada';
       _nombre = sessionName;
+      _isPlanCompleted = isPlanCompleted; // Guardar estado de plan completado
     });
   }
 
@@ -329,10 +349,10 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: _blue))
           : _isSessionCompletedAndFinished
-          ? _buildSessionCompletedUI()
-          : _videoController == null || !_videoController!.value.isInitialized
-          ? _buildVideoErrorUI()
-          : _buildVideoPlayerUI(),
+              ? _buildSessionCompletedUI()
+              : _videoController == null || !_videoController!.value.isInitialized
+                  ? _buildVideoErrorUI()
+                  : _buildVideoPlayerUI(),
     );
   }
 
@@ -386,9 +406,10 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Sesión completada',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              // El título del modal debe cambiar si el plan está completo
+              Text(
+                _isPlanCompleted ? 'Plan Completado' : 'Sesión completada',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 6),
               Text(_nombre, textAlign: TextAlign.center),
@@ -411,23 +432,26 @@ class _SesionEjercicioScreenState extends State<SesionEjercicioScreen> {
                     ),
                   ),
 
-                  const SizedBox(width: 12),
+                  // *** CAMBIO APLICADO: Mostrar "Continuar" solo si el plan NO está completo ***
+                  if (!_isPlanCompleted) ...[
+                    const SizedBox(width: 12),
 
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _loadExercise,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _orange,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _loadExercise,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _orange,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          minimumSize: const Size(0, 46),
                         ),
-                        minimumSize: const Size(0, 46),
+                        child: const Text('Continuar'),
                       ),
-                      child: const Text('Continuar'),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ],

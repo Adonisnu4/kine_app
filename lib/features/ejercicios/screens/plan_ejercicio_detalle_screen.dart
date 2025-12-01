@@ -6,6 +6,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:kine_app/features/ejercicios/screens/sesion_ejercicio_screen.dart';
 
+import 'package:kine_app/features/ejercicios/service/plan_service.dart';
+
+import 'package:kine_app/shared/widgets/app_dialog.dart';
+
 class AppColors {
   static const background = Color(0xFFF6F6F7);
   static const white = Color(0xFFFFFFFF);
@@ -46,6 +50,17 @@ class _PlanEjercicioDetalleScreenState
   // Método que crea un registro en "plan_tomados_por_usuarios"
   // y marca el inicio de un plan para un usuario
   Future<void> _comenzarPlan(List<dynamic> sesionesMaestras) async {
+
+    if (await PlanService().planPendiente()) {
+      showAppWarningDialog(
+        context: context,
+        icon: Icons.error_outline_rounded, // Ícono de error
+        title: 'Plan en curso',
+        content: 'Ya tienes un plan en progreso. No puedes iniciar otro hasta terminarlo.',
+      );
+      return;
+    }
+
     final firestore = FirebaseFirestore.instance;
 
     // Obtiene el ID del usuario actual

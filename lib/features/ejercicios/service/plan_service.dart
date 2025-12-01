@@ -176,4 +176,38 @@ class PlanService {
       sesiones: dataTomado['sesiones'] as List<dynamic>? ?? [],
     );
   }
+
+  Future<bool> planPendiente() async {
+    final user = _auth.currentUser;
+
+    // Si no hay usuario logueado, no puede tener planes
+    if (user == null) return false;
+
+    final DocumentReference usuarioRef = _db
+        .collection('usuarios')
+        .doc(user.uid);
+
+    try {
+      // Hacemos una consulta ligera usando limit(1)
+      final querySnapshot = await _db
+          .collection('plan_tomados_por_usuarios')
+          .where('usuario', isEqualTo: usuarioRef)
+          .where('estado', isEqualTo: 'en_progreso') 
+          .limit(1) // Optimización: Apenas encuentra 1, deja de buscar
+          .get();
+
+      // Si la lista de documentos no está vacía, es que tiene un plan pendiente
+      return querySnapshot.docs.isNotEmpty;
+      
+    } on FirebaseException catch (e) {
+      print('ERROR al verificar plan pendiente: ${e.message}');
+      // En caso de error, asumimos false para no bloquear la UI, 
+      // o puedes lanzar la excepción si prefieres.
+      return false; 
+    }
+  }
+
 }
+
+
+
