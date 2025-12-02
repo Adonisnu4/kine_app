@@ -6,6 +6,11 @@ import 'package:kine_app/features/ejercicios/models/plan_tomado.dart';
 import 'package:kine_app/features/ejercicios/screens/sesion_ejercicio_screen.dart';
 import 'package:kine_app/features/ejercicios/service/plan_service.dart';
 
+//Para mostrar si tiene una cita
+import 'package:kine_app/features/Appointments/models/appointment.dart';
+import 'package:kine_app/features/Appointments/services/appointment_service.dart';
+import 'package:intl/intl.dart';
+
 /// Paleta general usada en esta pantalla.
 /// Coincide con la usada en pantallas como login y splash.
 class AppColors {
@@ -27,6 +32,7 @@ class Index extends StatefulWidget {
   final Function(int)? onTabChange;
   const Index({super.key, this.onTabChange});
 
+
   @override
   State<Index> createState() => _IndexState();
 }
@@ -34,6 +40,8 @@ class Index extends StatefulWidget {
 class _IndexState extends State<Index> {
   // Servicio para obtener los planes en progreso desde Firestore
   final PlanService _planService = PlanService();
+  
+  final AppointmentService _appointmentService = AppointmentService();
 
   // Future usado por FutureBuilder para cargar planes
   late Future<List<PlanTomado>> _plansFuture;
@@ -167,7 +175,7 @@ class _IndexState extends State<Index> {
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 20, 16, 4),
                 child: Text(
-                  'KineApp | Guías',
+                  'UN KINE AMIGO',
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w700,
@@ -190,7 +198,7 @@ class _IndexState extends State<Index> {
               ),
 
               /// Bloque fijo de guía de salud
-              const _HealthGuideSection(),
+              // const _HealthGuideSection(),
 
               /// Título de tips dinámicos
               const Padding(
@@ -204,6 +212,7 @@ class _IndexState extends State<Index> {
                   ),
                 ),
               ),
+              
 
               /// Tarjeta animada que muestra el tip actual
               Padding(
@@ -214,6 +223,71 @@ class _IndexState extends State<Index> {
                   total: _allTips.length,
                 ),
               ),
+
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 10, 16, 8),
+                child: Text(
+                  'Tu próxima cita con el kine',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+
+            
+            
+            
+            
+
+            
+
+              FutureBuilder<Appointment?>(
+  future: _appointmentService.getNextPatientAppointment(),
+  builder: (context, snapshot) {
+    // Si está cargando, muestra un espacio o indicador de carga
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Center(child: LinearProgressIndicator()),
+      );
+    }
+    
+    // Si hay datos (la cita no es null), muestra el widget
+    if (snapshot.hasData && snapshot.data != null) {
+      // Nota: Aquí necesitarías que _ProximaCitaSection reciba el Appointment
+      // para evitar llamar a la BD por segunda vez.
+      return _ProximaCitaSection(appointment: snapshot.data!);
+    }
+
+    // Si no hay datos (snapshot.data es null), retorna un contenedor vacío
+    return Center(
+  child: ElevatedButton.icon(
+                              onPressed: () {
+                                // Envía al tab de ejercicios (índice 1)
+                                if (widget.onTabChange != null) {
+                                  widget.onTabChange!(2);
+                                }
+                              },
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Agendar'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.blue,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 26,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
+);
+  },
+),
 
               /// Separador visual
               const Padding(
@@ -413,11 +487,120 @@ class _TipChangingCard extends StatelessWidget {
 }
 
 /// Sección superior fija que muestra una mini guía informativa.
-class _HealthGuideSection extends StatelessWidget {
-  const _HealthGuideSection();
+// class _HealthGuideSection extends StatelessWidget {
+//   const _HealthGuideSection();
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//       width: double.infinity,
+//       margin: const EdgeInsets.symmetric(horizontal: 16),
+//       padding: const EdgeInsets.all(16.0),
+//       decoration: BoxDecoration(
+//         color: AppColors.white,
+//         borderRadius: BorderRadius.circular(14),
+//         border: Border.all(color: AppColors.lightBorder),
+//       ),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           const Text(
+//             'Tu Guía de Kinesiología',
+//             style: TextStyle(
+//               fontSize: 16,
+//               fontWeight: FontWeight.w600,
+//               color: Colors.black,
+//             ),
+//           ),
+//           const SizedBox(height: 6),
+//           const Text(
+//             'Mantén tu rutina, respeta las cargas y sigue lo que te indicó tu kine.',
+//             style: TextStyle(fontSize: 13, color: Colors.black54, height: 1.4),
+//           ),
+//           const SizedBox(height: 12),
+
+//           /// Chip informativo con el estado de la guía
+//           Container(
+//             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+//             decoration: BoxDecoration(
+//               color: AppColors.blue.withOpacity(.08),
+//               borderRadius: BorderRadius.circular(8),
+//             ),
+//             child: Row(
+//               mainAxisSize: MainAxisSize.min,
+//               children: const [
+//                 Icon(Icons.timelapse, size: 16, color: AppColors.blue),
+//                 SizedBox(width: 6),
+//                 Text(
+//                   'Estado: en progreso',
+//                   style: TextStyle(
+//                     fontSize: 12.5,
+//                     fontWeight: FontWeight.w500,
+//                     color: AppColors.blue,
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
+
+
+class _ProximaCitaSection extends StatelessWidget {
+  // 1. Recibe la cita en el constructor
+  final Appointment appointment;
+  
+  // 2. Hace que el constructor requiera la cita
+  const _ProximaCitaSection({super.key, required this.appointment});
+  
+  // Widget auxiliar para construir el chip de estado
+  Widget _buildStatusChip({
+    required String text,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.08),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Formateo de datos
+    final DateFormat dateFormatter = DateFormat('EEEE d \'de\' MMMM', 'es_ES');
+    final DateFormat timeFormatter = DateFormat('HH:mm');
+
+    final String fecha = dateFormatter.format(appointment.fechaCitaDT);
+    final String hora = timeFormatter.format(appointment.fechaCitaDT);
+    final String status = appointment.estado;
+
+    // Lógica de presentación para el chip
+    Color statusColor = status == 'confirmada' ? Colors.green.shade600 : AppColors.blue;
+    IconData statusIcon = status == 'confirmada' ? Icons.check_circle : Icons.timelapse;
+    String statusText = status == 'confirmada' ? 'Confirmada' : 'Pendiente';
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -430,49 +613,36 @@ class _HealthGuideSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Tu Guía de Kinesiología',
-            style: TextStyle(
+          // Título actualizado con el nombre del Kine
+          Text(
+            'Tu próxima cita con ${appointment.kineNombre}',
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
               color: Colors.black,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Mantén tu rutina, respeta las cargas y sigue lo que te indicó tu kine.',
-            style: TextStyle(fontSize: 13, color: Colors.black54, height: 1.4),
+          // Fecha y hora de la cita
+          Text(
+            'El $fecha a las $hora hrs. ¡No olvides asistir!',
+            style: const TextStyle(fontSize: 13, color: Colors.black54, height: 1.4),
           ),
           const SizedBox(height: 12),
 
-          /// Chip informativo con el estado de la guía
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.blue.withOpacity(.08),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.timelapse, size: 16, color: AppColors.blue),
-                SizedBox(width: 6),
-                Text(
-                  'Estado: en progreso',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.blue,
-                  ),
-                ),
-              ],
-            ),
+          // Chip informativo con el estado real
+          _buildStatusChip(
+            text: 'Estado: $statusText',
+            color: statusColor,
+            icon: statusIcon,
           ),
         ],
       ),
     );
   }
 }
+
+
 
 /// Tarjeta que muestra un plan de ejercicios tomado.
 /// Incluye:

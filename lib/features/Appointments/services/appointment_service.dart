@@ -289,4 +289,40 @@ class AppointmentService {
               .toList(),
         );
   }
+
+
+  Future<Appointment?> getNextPatientAppointment() async {
+  final user = _auth.currentUser;
+  if (user == null) {
+    // Retorna null si no hay un usuario autenticado
+    return null;
+  }
+
+  // 1. Establece la hora actual como punto de inicio para buscar citas futuras
+  final nowTimestamp = Timestamp.fromDate(DateTime.now());
+
+  final query = await _citasCollection
+      .where('pacienteId', isEqualTo: user.uid)
+      // 2. Solo considera citas que aún no han sido completadas
+      .where('estado', whereIn: ['pendiente', 'confirmada'])
+      // 3. Filtra: Solo citas posteriores a este momento
+      .where('fechaCita', isGreaterThan: nowTimestamp)
+      // 4. Ordena: De la más cercana a la más lejana (ascendente)
+      .orderBy('fechaCita', descending: false)
+      // 5. Limita: Solo necesitamos la primera (la próxima)
+      .limit(1)
+      .get();
+
+  print(query.docs);
+  if (query.docs.isEmpty) {
+    // Retorna null si no se encontraron citas futuras
+    print("No se encontraron citas futuras");
+    return null;
+  }
+
+  // Retorna la primera cita, convertida a objeto Appointment
+  return Appointment.fromFirestore(query.docs.first);
 }
+}
+
+
