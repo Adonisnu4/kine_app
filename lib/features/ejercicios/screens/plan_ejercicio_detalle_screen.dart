@@ -50,13 +50,13 @@ class _PlanEjercicioDetalleScreenState
   // Método que crea un registro en "plan_tomados_por_usuarios"
   // y marca el inicio de un plan para un usuario
   Future<void> _comenzarPlan(List<dynamic> sesionesMaestras) async {
-
     if (await PlanService().planPendiente()) {
       showAppWarningDialog(
         context: context,
         icon: Icons.error_outline_rounded, // Ícono de error
         title: 'Plan en curso',
-        content: 'Ya tienes un plan en progreso. No puedes iniciar otro hasta terminarlo.',
+        content:
+            'Ya tienes un plan en progreso. No puedes iniciar otro hasta terminarlo.',
       );
       return;
     }
@@ -91,16 +91,15 @@ class _PlanEjercicioDetalleScreenState
     }).toList();
 
     // Crea un nuevo documento en la colección "plan_tomados_por_usuarios"
-    final ejecucionRef = await firestore
-        .collection('plan_tomados_por_usuarios')
-        .add({
-          'usuario': userRef, // referencia al usuario
-          'plan': planRef, // referencia al plan
-          'estado': 'en_progreso', // estado inicial
-          'fecha_inicio': FieldValue.serverTimestamp(), // fecha desde servidor
-          'sesion_actual': 0, // índice de sesión actual
-          'sesiones': sesionesProgreso, // copia de sesiones
-        });
+    final ejecucionRef =
+        await firestore.collection('plan_tomados_por_usuarios').add({
+      'usuario': userRef, // referencia al usuario
+      'plan': planRef, // referencia al plan
+      'estado': 'en_progreso', // estado inicial
+      'fecha_inicio': FieldValue.serverTimestamp(), // fecha desde servidor
+      'sesion_actual': 0, // índice de sesión actual
+      'sesiones': sesionesProgreso, // copia de sesiones
+    });
 
     // Verifica si la pantalla sigue montada antes de navegar
     if (!mounted) return;
@@ -161,6 +160,10 @@ class _PlanEjercicioDetalleScreenState
               (planData['descripcion'] as String?) ?? 'Sin descripción.';
           final duracionSemanas = planData['duracion_semanas'] ?? 0;
 
+          // 💡 NUEVO: Extraer la referencia de zona_trabajo
+          final zonaTrabajoRef =
+              planData['zona_trabajo'] as DocumentReference?;
+
           // Si el plan no tiene sesiones
           if (sesiones.isEmpty) {
             return const Center(
@@ -182,6 +185,8 @@ class _PlanEjercicioDetalleScreenState
                 duracionSemanas: duracionSemanas,
                 totalSesiones: totalSesiones,
                 totalEjercicios: totalEjercicios,
+                // 💡 Pasar la referencia a la tarjeta
+                zonaTrabajoRef: zonaTrabajoRef,
               ),
 
               // Lista de sesiones
@@ -218,9 +223,7 @@ class _PlanEjercicioDetalleScreenState
                         child: const Text('Ver tips'),
                       ),
                     ),
-
                     const SizedBox(width: 12),
-
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () => _comenzarPlan(sesiones),
@@ -265,6 +268,8 @@ class _PlanEjercicioDetalleScreenState
     required int duracionSemanas,
     required int totalSesiones,
     required int totalEjercicios,
+    // 💡 NUEVO CAMPO: Referencia a la zona de trabajo
+    DocumentReference? zonaTrabajoRef,
   }) {
     // Texto para duración
     final duracionText = duracionSemanas > 0
@@ -292,7 +297,34 @@ class _PlanEjercicioDetalleScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Primera fila con indicadores
+          // 💡 ZONA DE TRABAJO (Nuevo StreamBuilder para obtener el nombre)
+          if (zonaTrabajoRef != null)
+            StreamBuilder<DocumentSnapshot>(
+              stream: zonaTrabajoRef.snapshots(),
+              builder: (context, snapshot) {
+                String zonaTrabajoName = 'Cargando zona...';
+
+                if (snapshot.hasData && snapshot.data!.exists) {
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+                  // Asume que el campo se llama 'nombre' en 'zona_trabajo'
+                  zonaTrabajoName =
+                      (data['nombre'] as String?) ?? 'Zona Desconocida';
+                } else if (snapshot.hasError) {
+                  zonaTrabajoName = 'Error al cargar zona';
+                }
+
+                // Renderiza la "Zona de trabajo" como un _Badge
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: _Badge(
+                    icon: Icons.place_rounded, // Ícono de ubicación o similar
+                    label: zonaTrabajoName,
+                  ),
+                );
+              },
+            ),
+
+          // Primera fila con indicadores (Duración, Sesiones, Ejercicios)
           Row(
             children: [
               _Badge(icon: Icons.calendar_month_rounded, label: duracionText),
@@ -444,11 +476,11 @@ class _PlanEjercicioDetalleScreenState
                     ),
                   ),
 
-                  // Chip de estado
-                  _StatusChip(
-                    text: sesionCompletada ? 'Completada' : 'Pendiente',
-                    color: sesionCompletada ? Colors.green : AppColors.blue,
-                  ),
+                  // Chip de estado (comentado, pero incluido por si se descomenta)
+                  // _StatusChip(
+                  //   text: sesionCompletada ? 'Completada' : 'Pendiente',
+                  //   color: sesionCompletada ? Colors.green : AppColors.blue,
+                  // ),
                 ],
               ),
 

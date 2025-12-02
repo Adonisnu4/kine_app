@@ -1,15 +1,9 @@
-// Importa las herramientas base de Flutter para construir la interfaz.
 import 'package:flutter/material.dart';
-
-// Importa Firebase Firestore para acceder a la base de datos en la nube.
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-// Importa FirebaseAuth para obtener información del usuario autenticado.
 import 'package:firebase_auth/firebase_auth.dart';
-
-// Importa la pantalla que muestra el detalle del plan seleccionado.
 import 'plan_ejercicio_detalle_screen.dart';
 
+// --- Estilos de color (se mantienen igual) ---
 class AppColors {
   static const background = Color(0xFFF4F4F4);
   static const white = Color(0xFFFFFFFF);
@@ -18,6 +12,14 @@ class AppColors {
   static const text = Color(0xFF101010);
   static const textMuted = Color(0xFF6D6D6D);
   static const border = Color(0x11000000);
+}
+
+// --- Modelo de Zona de Trabajo para el filtro ---
+class ZonaTrabajo {
+  final String id;
+  final String nombre;
+
+  ZonaTrabajo({required this.id, required this.nombre});
 }
 
 // Pantalla que muestra todos los planes disponibles.
@@ -29,22 +31,98 @@ class PlanEjercicioScreen extends StatefulWidget {
 }
 
 class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
-  // Instancia de Firestore para leer los datos.
+  // Instancias de Firestore y Auth.
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  // Instancia de FirebaseAuth para obtener el usuario actual.
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  //  LÓGICA FIRESTORE – TOMAR PLAN
-  // Método para asociar un plan al usuario actual (crear un plan en progreso).
+  // --- NUEVO ESTADO PARA EL FILTRO ---
+  // Lista de zonas de trabajo disponibles (incluye una opción "Todos").
+  List<ZonaTrabajo> _zonasDisponibles = [];
+  // ID de la zona de trabajo seleccionada para filtrar. 'todos' por defecto.
+  String _zonaSeleccionadaId = 'todos';
+  // Referencia al documento 'zona_trabajo' de la zona seleccionada, o null para 'todos'.
+  DocumentReference? _zonaSeleccionadaRef;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarZonasDeTrabajo();
+  }
+
+  // --- NUEVA LÓGICA FIRESTORE – CARGAR ZONAS DE TRABAJO ---
+  Future<void> _cargarZonasDeTrabajo() async {
+    try {
+      // 1. Carga la colección de zonas de trabajo.
+      final snapshot = await _firestore.collection('zona_trabajo').get();
+
+      // 2. Mapea los documentos a objetos ZonaTrabajo.
+      final zonas = snapshot.docs.map((doc) {
+        return ZonaTrabajo(
+          id: doc.id,
+          nombre: doc.data()['nombre'] ?? 'Sin Nombre',
+        );
+      }).toList();
+
+      // 3. Agrega la opción "Todos" al inicio de la lista.
+      zonas.insert(
+          0, ZonaTrabajo(id: 'todos', nombre: 'Todos los planes'));
+
+      // 4. Actualiza el estado con las zonas disponibles.
+      setState(() {
+        _zonasDisponibles = zonas;
+        // La zona seleccionada inicial es 'todos'.
+        _zonaSeleccionadaRef = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('Error al cargar zonas de trabajo: $e'),
+        ),
+      );
+    }
+  }
+
+  // --- NUEVA LÓGICA DE FILTRADO ---
+  void _seleccionarZona(String? newZonaId) {
+    if (newZonaId == null || newZonaId == _zonaSeleccionadaId) return;
+
+    setState(() {
+      _zonaSeleccionadaId = newZonaId;
+      if (newZonaId == 'todos') {
+        _zonaSeleccionadaRef = null; // No aplica filtro
+      } else {
+        // Crea la referencia al documento de zona de trabajo
+        _zonaSeleccionadaRef =
+            _firestore.collection('zona_trabajo').doc(newZonaId);
+      }
+    });
+  }
+
+  // --- LÓGICA FIRESTORE – CONSULTA DE PLANES FILTRADA ---
+  Stream<QuerySnapshot> _planesStream() {
+    Query query = _firestore.collection('plan');
+
+    // Aplica el filtro si no se ha seleccionado 'todos'.
+    if (_zonaSeleccionadaRef != null) {
+      // El campo 'zona_trabajo' en el documento 'plan' es de tipo DocumentReference
+      query = query.where('zona_trabajo', isEqualTo: _zonaSeleccionadaRef);
+    }
+
+    // Opcionalmente, puedes ordenar la consulta.
+    query = query.orderBy('nombre');
+
+    return query.snapshots();
+  }
+
+  // LÓGICA FIRESTORE – TOMAR PLAN (se mantiene igual)
   Future<void> _tomarPlan({
     required String planId,
     required String planNombre,
   }) async {
-    // Obtiene el usuario actualmente autenticado.
     final User? usuarioActual = _auth.currentUser;
 
-    // Verifica si el usuario no ha iniciado sesión.
     if (usuarioActual == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -56,7 +134,6 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
       return;
     }
 
-    // Verifica si el ID del plan es válido.
     if (planId.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -68,21 +145,17 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
       return;
     }
 
-    // Obtiene el UID del usuario.
     final String usuarioId = usuarioActual.uid;
 
     try {
-      // Consulta si el usuario ya tiene un plan activo.
       final planesActivosQuery = _firestore
           .collection('plan_tomados_por_usuarios')
           .where('usuarioId', isEqualTo: usuarioId)
           .where('activo', isEqualTo: true)
           .limit(1);
 
-      // Ejecuta la consulta.
       final querySnapshot = await planesActivosQuery.get();
 
-      // Si existe un plan activo, mostrar mensaje y no permitir agregar otro.
       if (querySnapshot.docs.isNotEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -94,7 +167,6 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
         return;
       }
     } catch (e) {
-      // Error al consultar planes activos.
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -105,18 +177,16 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
       return;
     }
 
-    // Datos del nuevo plan tomado.
     final Map<String, dynamic> planTomadoData = {
-      'usuarioId': usuarioId, // usuario que toma el plan
-      'planId': planId, // ID del plan
-      'planNombre': planNombre, // nombre del plan
-      'fecha_inicio': FieldValue.serverTimestamp(), // fecha desde servidor
-      'activo': true, // marca que está en curso
-      'progreso': {}, // progreso vacío al inicio
+      'usuarioId': usuarioId,
+      'planId': planId,
+      'planNombre': planNombre,
+      'fecha_inicio': FieldValue.serverTimestamp(),
+      'activo': true,
+      'progreso': {},
     };
 
     try {
-      // Guarda el registro en la colección.
       await _firestore
           .collection('plan_tomados_por_usuarios')
           .add(planTomadoData);
@@ -129,7 +199,6 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
         ),
       );
     } catch (e) {
-      // Error al añadir el plan.
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -144,17 +213,12 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Color de fondo de la pantalla.
       backgroundColor: AppColors.background,
-
-      // SafeArea evita que el contenido quede detrás de elementos del sistema.
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Espacio superior inicial.
             const SizedBox(height: 6),
-
             // Título de la sección.
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
@@ -171,7 +235,6 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                 ],
               ),
             ),
-
             // Subtítulo descriptivo.
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
@@ -180,8 +243,7 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                 style: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
               ),
             ),
-
-            // Línea decorativa debajo del título.
+            // Línea decorativa.
             Padding(
               padding: const EdgeInsets.only(left: 16, bottom: 8),
               child: Container(
@@ -194,13 +256,53 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
               ),
             ),
 
+            // --- NUEVO WIDGET DE FILTRO (Dropdown) ---
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x05000000),
+                      offset: Offset(0, 2),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    value: _zonaSeleccionadaId,
+                    icon: const Icon(Icons.filter_list),
+                    hint: const Text('Filtrar por zona de trabajo'),
+                    style: const TextStyle(
+                      color: AppColors.text,
+                      fontSize: 15.0,
+                    ),
+                    items: _zonasDisponibles.map((ZonaTrabajo zona) {
+                      return DropdownMenuItem<String>(
+                        value: zona.id,
+                        child: Text(zona.nombre),
+                      );
+                    }).toList(),
+                    onChanged: _seleccionarZona,
+                  ),
+                ),
+              ),
+            ),
+            // --- FIN WIDGET DE FILTRO ---
+
             // LISTA DE PLANES - Contenido dinámico con StreamBuilder.
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                // Escucha en tiempo real la colección 'plan'.
-                stream: _firestore.collection('plan').snapshots(),
+                // Usa la nueva función de Stream que aplica el filtro.
+                stream: _planesStream(),
                 builder: (context, snapshot) {
-                  // Error al cargar información.
+                  // Manejo de errores y estados de carga/vacío (se mantiene igual)
                   if (snapshot.hasError) {
                     return Center(
                       child: Padding(
@@ -214,13 +316,13 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                     );
                   }
 
-                  // Estado de espera mientras se conecta al Stream.
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  // Si no hay planes disponibles.
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  final docs = snapshot.data!.docs;
+
+                  if (docs.isEmpty) {
                     return Center(
                       child: Padding(
                         padding: const EdgeInsets.all(24.0),
@@ -243,7 +345,7 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Pronto se añadirán nuevos planes de ejercicio.',
+                              'No hay planes para la zona seleccionada.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 13,
@@ -257,20 +359,14 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                     );
                   }
 
-                  // Obtiene la lista de documentos retornados por Firestore.
-                  final docs = snapshot.data!.docs;
-
-                  // Construye la lista visualmente.
+                  // Construye la lista visualmente. (Se mantiene igual)
                   return ListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
                       final DocumentSnapshot document = docs[index];
-
-                      // Convierte los datos del documento a Map.
                       final data = document.data() as Map<String, dynamic>;
 
-                      // Obtiene los datos del plan.
                       final String planName =
                           data['nombre'] ?? 'Plan sin título';
                       final String planId = document.id;
@@ -291,15 +387,11 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                             ),
                           ],
                         ),
-
-                        // Contenido interactivo del plan.
                         child: ListTile(
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 14.0,
                             vertical: 10.0,
                           ),
-
-                          // Icono a la izquierda.
                           leading: Container(
                             height: 42,
                             width: 42,
@@ -313,8 +405,6 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                               size: 22,
                             ),
                           ),
-
-                          // Nombre del plan.
                           title: Text(
                             planName,
                             style: const TextStyle(
@@ -323,51 +413,33 @@ class _PlanEjercicioScreenState extends State<PlanEjercicioScreen> {
                               color: AppColors.text,
                             ),
                           ),
-
-                          // Descripción del plan, si existe.
                           subtitle:
                               descripcion != null && descripcion.isNotEmpty
-                              ? Padding(
-                                  padding: const EdgeInsets.only(top: 4.0),
-                                  child: Text(
-                                    descripcion,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 12.5,
-                                      color: AppColors.textMuted,
-                                      height: 1.25,
-                                    ),
-                                  ),
-                                )
-                              : null,
-
-                          // Abre la pantalla de detalle del plan.
+                                  ? Padding(
+                                      padding: const EdgeInsets.only(top: 4.0),
+                                      child: Text(
+                                        descripcion,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 12.5,
+                                          color: AppColors.textMuted,
+                                          height: 1.25,
+                                        ),
+                                      ),
+                                    )
+                                  : null,
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    PlanEjercicioDetalleScreen(
-                                      planId: planId,
-                                      planName: planName,
-                                    ),
+                                builder: (context) => PlanEjercicioDetalleScreen(
+                                  planId: planId,
+                                  planName: planName,
+                                ),
                               ),
                             );
                           },
-
-                          // Botón para tomar el plan en progreso.
-                          trailing: IconButton(
-                            tooltip: 'Tomar plan',
-                            onPressed: () => _tomarPlan(
-                              planId: planId,
-                              planNombre: planName,
-                            ),
-                            icon: const Icon(
-                              Icons.add_circle_outline,
-                              color: AppColors.text,
-                            ),
-                          ),
                         ),
                       );
                     },

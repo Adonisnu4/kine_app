@@ -110,19 +110,19 @@ class _HomeScreenState extends State<HomeScreen>
   /// Retorna la lista de pantallas según el tipo de usuario.
   List<Widget> _getTabViews() {
     if (_isKineVerified) {
-      return const [
-        Index(),
-        PlanEjercicioScreen(),
-        KinePanelScreen(),
-        ContactsScreen(),
-        MyPatientsScreen(),
+      return [
+        Index(onTabChange: (index) => _tabController.animateTo(index)),
+        const PlanEjercicioScreen(),
+        const KinePanelScreen(),
+        const ContactsScreen(),
+        const MyPatientsScreen(),
       ];
     } else {
-      return const [
-        Index(),
-        PlanEjercicioScreen(),
-        KineDirectoryScreen(),
-        ContactsScreen(),
+      return [
+        Index(onTabChange: (index) => _tabController.animateTo(index)),
+        const PlanEjercicioScreen(),
+        const KineDirectoryScreen(),
+        const ContactsScreen(),
       ];
     }
   }
@@ -323,20 +323,17 @@ class _HomeScreenState extends State<HomeScreen>
 
     final views = _getTabViews();
 
-    return DefaultTabController(
-      length: _tabController.length,
-      child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark,
-        child: Scaffold(
-          appBar: _buildHeader(),
-          body: TabBarView(
-            controller: _tabController,
-            physics: const NeverScrollableScrollPhysics(),
-            children: views,
-          ),
-          bottomNavigationBar: _buildBottomBar(),
-          backgroundColor: AppColors.background,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        appBar: _buildHeader(),
+        body: TabBarView(
+          controller: _tabController,
+          physics: const NeverScrollableScrollPhysics(),
+          children: views,
         ),
+        bottomNavigationBar: _buildBottomBar(),
+        backgroundColor: AppColors.background,
       ),
     );
   }

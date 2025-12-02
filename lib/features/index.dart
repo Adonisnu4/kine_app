@@ -24,7 +24,8 @@ class AppColors {
 ///  - Tip animado que cambia cada 10s
 ///  - Lista de planes de ejercicios en progreso
 class Index extends StatefulWidget {
-  const Index({super.key});
+  final Function(int)? onTabChange;
+  const Index({super.key, this.onTabChange});
 
   @override
   State<Index> createState() => _IndexState();
@@ -282,10 +283,10 @@ class _IndexState extends State<Index> {
                           Center(
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                // Envía al tab de ejercicios
-                                final TabController controller =
-                                    DefaultTabController.of(context);
-                                controller.animateTo(1);
+                                // Envía al tab de ejercicios (índice 1)
+                                if (widget.onTabChange != null) {
+                                  widget.onTabChange!(1);
+                                }
                               },
                               icon: const Icon(Icons.add, size: 18),
                               label: const Text('Comenzar ahora'),
